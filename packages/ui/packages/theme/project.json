@@ -1,0 +1,19 @@
+{
+  "name": "theme",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/theme/src",
+  "projectType": "library",
+  "tags": ["shared", "theme"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/packages/theme",
+        "main": "packages/theme/src/index.ts",
+        "tsConfig": "packages/theme/tsconfig.lib.json",
+        "assets": ["packages/theme/*.md"]
+      }
+    }
+  }
+}

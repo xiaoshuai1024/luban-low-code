@@ -1,0 +1,10 @@
+{
+  "name": "@luban-ui/luban-ui-e2e",
+  "version": "0.0.1",
+  "private": true,
+  "nx": {
+    "implicitDependencies": [
+      "@luban-ui/luban-ui"
+    ]
+  }
+}

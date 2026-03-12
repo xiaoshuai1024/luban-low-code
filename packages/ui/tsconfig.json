@@ -8,6 +8,27 @@
     },
     {
       "path": "./apps/luban-ui"
+    },
+    {
+      "path": "./packages/components/button"
+    },
+    {
+      "path": "./packages/theme"
+    },
+    {
+      "path": "./packages/types"
+    },
+    {
+      "path": "./packages/luban-base"
+    },
+    {
+      "path": "./packages/luban-low-code"
+    },
+    {
+      "path": "./packages/luban-utils"
+    },
+    {
+      "path": "./packages/luban-utils/format-utils"
     }
   ]
 }

@@ -13,21 +13,23 @@
     "e2e:open": "cypress open"
   },
   "dependencies": {
-    "vue": "^3.5.13",
-    "vue-router": "^4.4.5",
-    "pinia": "^2.2.6",
+    "@element-plus/icons-vue": "^2.3.2",
+    "axios": "^1.7.7",
     "element-plus": "^2.8.4",
-    "axios": "^1.7.7"
+    "luban-low-code": "^0.0.1",
+    "pinia": "^2.2.6",
+    "vue": "^3.5.13",
+    "vue-router": "^4.4.5"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.0",
+    "@vue/test-utils": "^2.4.6",
+    "cypress": "^13.16.0",
+    "jsdom": "^25.0.1",
+    "sass": "^1.81.0",
     "typescript": "~5.6.3",
     "vite": "^6.0.1",
-    "vue-tsc": "^2.1.10",
-    "sass": "^1.81.0",
     "vitest": "^2.1.4",
-    "@vue/test-utils": "^2.4.6",
-    "jsdom": "^25.0.1",
-    "cypress": "^13.16.0"
+    "vue-tsc": "^2.1.10"
   }
 }

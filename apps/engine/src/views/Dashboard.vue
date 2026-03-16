@@ -8,6 +8,8 @@ const siteCount = ref(0)
 const userCount = ref(0)
 
 onMounted(async () => {
+    console.log('[Dashboard] onMounted')
+
   try {
     const [sitesRes, usersRes] = await Promise.all([
       getSites().catch(() => ({ data: [] })),

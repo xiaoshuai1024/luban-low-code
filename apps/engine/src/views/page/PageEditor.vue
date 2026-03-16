@@ -20,12 +20,12 @@ const designerError = ref<string | null>(null)
 const DesignerComponent = shallowRef<unknown>(null)
 
 onMounted(() => {
-  import(/* @vite-ignore */ '@luban-ui/luban-low-code')
+  import(/* @vite-ignore */ 'luban-low-code')
     .then((m: { LubanDesigner: unknown }) => {
       DesignerComponent.value = m.LubanDesigner
     })
     .catch(() => {
-      designerError.value = '未安装 @luban-ui/luban-low-code，无法使用页面设计器。请通过 npm 安装并配置。'
+      designerError.value = '未安装 luban-low-code，无法使用页面设计器。请通过 npm 安装并配置。'
     })
 })
 

@@ -16,6 +16,7 @@ import {
   ElPagination,
 } from 'element-plus'
 import { getUsers, createUser, updateUser, setUserStatus, type User, type UserCreatePayload } from '@/api/user'
+import { formatDateTime } from '@/utils/datetime'
 
 const list = ref<User[]>([])
 const total = ref(0)
@@ -157,7 +158,11 @@ onMounted(fetchList)
           </ElTag>
         </template>
       </ElTableColumn>
-      <ElTableColumn prop="createdAt" label="创建时间" width="180" />
+      <ElTableColumn prop="createdAt" label="创建时间" width="180">
+        <template #default="{ row }">
+          {{ formatDateTime(row.createdAt) }}
+        </template>
+      </ElTableColumn>
       <ElTableColumn label="操作" width="180" fixed="right">
         <template #default="{ row }">
           <ElButton link type="primary" @click="openEdit(row)">编辑</ElButton>

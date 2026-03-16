@@ -6,6 +6,17 @@ import type { User, UserCreatePayload, UserUpdatePayload } from '@/api/user'
 import type { SystemSettings } from '@/api/settings'
 import type { PageSchema } from '@/types/schema'
 
+// 统一时间格式：YYYY-MM-DD HH:mm:ss
+function formatDateTime(date: Date = new Date()): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+}
+
 interface MockContext {
   sites: Site[]
   pages: PageMeta[]
@@ -154,7 +165,7 @@ function handleSites(config: AxiosRequestConfig): AxiosResponse | null {
     const authError = requireAuth(config)
     if (authError) return authError
     const body = (config.data ?? {}) as Omit<Site, 'id' | 'createdAt' | 'updatedAt'>
-    const now = new Date().toISOString()
+    const now = formatDateTime()
     const site: Site = {
       id: `site-${mockContext.sites.length + 1}`,
       name: body.name,
@@ -189,7 +200,7 @@ function handleSites(config: AxiosRequestConfig): AxiosResponse | null {
       mockContext.sites[index] = {
         ...mockContext.sites[index],
         ...body,
-        updatedAt: new Date().toISOString(),
+        updatedAt: formatDateTime(),
       }
       return createResponse(config, mockContext.sites[index])
     }
@@ -243,7 +254,7 @@ function handlePages(config: AxiosRequestConfig): AxiosResponse | null {
       mockContext.pages[index] = {
         ...mockContext.pages[index],
         ...body,
-        updatedAt: new Date().toISOString(),
+        updatedAt: formatDateTime(),
       }
       return createResponse(config, mockContext.pages[index])
     }
@@ -262,7 +273,7 @@ function handlePages(config: AxiosRequestConfig): AxiosResponse | null {
       path: string
       schema?: PageSchema
     }
-    const now = new Date().toISOString()
+    const now = formatDateTime()
     const page: PageMeta = {
       id: `page-${mockContext.pages.length + 1}`,
       siteId,
@@ -314,7 +325,7 @@ function handleUsers(config: AxiosRequestConfig): AxiosResponse | null {
     const authError = requireAuth(config)
     if (authError) return authError
     const payload = (config.data ?? {}) as UserCreatePayload
-    const now = new Date().toISOString()
+    const now = formatDateTime()
     const user: User = {
       id: `user-${mockContext.users.length + 1}`,
       username: payload.username,
@@ -350,7 +361,7 @@ function handleUsers(config: AxiosRequestConfig): AxiosResponse | null {
       mockContext.users[index] = {
         ...mockContext.users[index],
         ...body,
-        updatedAt: new Date().toISOString(),
+        updatedAt: formatDateTime(),
       }
       if (body.password && mockContext.users[index].username) {
         mockPasswords[mockContext.users[index].username] = body.password
@@ -374,7 +385,7 @@ function handleUsers(config: AxiosRequestConfig): AxiosResponse | null {
     }
     const body = (config.data ?? {}) as { status?: string }
     mockContext.users[index].status = body.status ?? mockContext.users[index].status
-    mockContext.users[index].updatedAt = new Date().toISOString()
+    mockContext.users[index].updatedAt = formatDateTime()
     return createResponse(config, mockContext.users[index])
   }
 

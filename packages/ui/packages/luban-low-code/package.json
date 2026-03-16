@@ -1,6 +1,6 @@
 {
   "name": "luban-low-code",
-  "version": "0.0.1",
+  "version": "0.0.15",
   "private": false,
   "type": "module",
   "main": "./dist/index.js",
@@ -22,6 +22,13 @@
       "type:library"
     ],
     "targets": {
+      "version": {
+        "executor": "nx:run-commands",
+        "options": {
+          "cwd": "packages/luban-low-code",
+          "command": "pnpm version patch --no-git-tag-version"
+        }
+      },
       "publish": {
         "executor": "nx:run-commands",
         "dependsOn": [
@@ -36,7 +43,7 @@
     }
   },
   "dependencies": {
-    "luban-base": "workspace:*",
+    "luban-base": "^0.0.2",
     "sortablejs": "^1.15.3",
     "vue": "^3.5.13"
   }

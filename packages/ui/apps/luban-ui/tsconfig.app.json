@@ -31,15 +31,5 @@
     "eslint.config.mjs"
   ],
   "include": ["src/**/*.js", "src/**/*.jsx", "src/**/*.ts", "src/**/*.vue"],
-  "references": [
-    {
-      "path": "../../packages/luban-utils/tsconfig.lib.json"
-    },
-    {
-      "path": "../../packages/luban-low-code/tsconfig.lib.json"
-    },
-    {
-      "path": "../../packages/luban-base/tsconfig.lib.json"
-    }
-  ]
+  "references": []
 }

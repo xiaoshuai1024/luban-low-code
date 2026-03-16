@@ -1,10 +1,5 @@
 {
   "name": "@luban-ui/luban-ui",
   "version": "0.0.1",
-  "private": true,
-  "dependencies": {
-    "@luban-ui/luban-base": "0.0.1",
-    "@luban-ui/luban-low-code": "0.0.1",
-    "@luban-ui/luban-utils": "0.0.1"
-  }
+  "private": true
 }

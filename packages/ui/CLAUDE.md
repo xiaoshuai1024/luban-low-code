@@ -31,3 +31,6 @@
 
 # 输出
 - 任务结束后不要输出summary
+
+# 代码提交规范
+@docs/COMMIT.md

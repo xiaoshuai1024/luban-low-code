@@ -45,7 +45,8 @@ export default defineConfig(() => ({
     watch: false,
     globals: true,
     environment: 'jsdom',
-    include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    // 单元测试和 e2e 测试都放在 packages/luban-base/test 下
+    include: ['{src,test}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     reporters: ['default'],
     coverage: {
       reportsDirectory: './test-output/vitest/coverage',

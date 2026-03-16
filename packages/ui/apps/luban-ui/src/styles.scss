@@ -1,5 +1,11 @@
 @use 'sass:map';
 
+/* Base component library styles (designer-rendered components) */
+@use '../../../packages/luban-base/src/styles/button.scss';
+@use '../../../packages/luban-base/src/styles/form.scss';
+@use '../../../packages/luban-base/src/styles/layout.scss';
+@use '../../../packages/luban-base/src/styles/content.scss';
+
 body {
   margin: 0;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;

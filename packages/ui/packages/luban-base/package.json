@@ -1,7 +1,7 @@
 {
-  "name": "@luban-ui/luban-base",
+  "name": "luban-base",
   "version": "0.0.1",
-  "private": true,
+  "private": false,
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -20,7 +20,20 @@
     "tags": [
       "lib:base",
       "type:library"
-    ]
+    ],
+    "targets": {
+      "publish": {
+        "executor": "nx:run-commands",
+        "dependsOn": [
+          "build",
+          "test"
+        ],
+        "options": {
+          "cwd": "packages/luban-base",
+          "command": "npm publish --access public"
+        }
+      }
+    }
   },
   "dependencies": {
     "vue": "^3.5.13"

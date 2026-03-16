@@ -1,4 +1,6 @@
-export const getPageTitle = () => cy.get('[data-cy="page-title"]');
-export const getPrimaryButton = () =>
-  cy.get('[data-cy="primary-contained-btn"]');
-export const getLayoutCards = () => cy.get('[data-cy^="layout-card-"]');
+export const getDesignerRoot = () => cy.get('[data-cy="designer-root"]');
+export const getDesignerPalette = () => cy.get('[data-cy="designer-palette"]');
+export const getDesignerDropZone = () =>
+  cy.get('[data-cy="designer-drop-zone"]');
+export const getPaletteGroups = () =>
+  cy.get('[data-cy^="designer-palette-group-"]');

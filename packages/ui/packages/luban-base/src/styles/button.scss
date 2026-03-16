@@ -1,3 +1,4 @@
+@use 'sass:color';
 @use 'variables';
 
 .lb-button {
@@ -27,21 +28,21 @@
       background-color: variables.$lb-primary;
       color: #fff;
       &:not(:disabled):hover {
-        background-color: darken(variables.$lb-primary, 8%);
+        background-color: color.adjust(variables.$lb-primary, $lightness: -8%);
       }
     }
     &.lb-button--secondary {
       background-color: variables.$lb-secondary;
       color: #fff;
       &:not(:disabled):hover {
-        background-color: darken(variables.$lb-secondary, 8%);
+        background-color: color.adjust(variables.$lb-secondary, $lightness: -8%);
       }
     }
     &.lb-button--surface {
       background-color: variables.$lb-surface;
       color: variables.$lb-text-primary;
       &:not(:disabled):hover {
-        background-color: darken(variables.$lb-surface, 5%);
+        background-color: color.adjust(variables.$lb-surface, $lightness: -5%);
       }
     }
   }

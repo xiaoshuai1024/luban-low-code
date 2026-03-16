@@ -9,13 +9,14 @@ PACKAGES_DIRS := $(wildcard packages/*)
 # 所有需要处理的目录 = 根目录 + apps所有一级子目录 + packages所有一级子目录
 ALL_DIRS := $(ROOT) $(APPS_DIRS) $(PACKAGES_DIRS)
 
-.PHONY: clean install help
+.PHONY: clean install help publish-packages
 
 # 帮助
 help:
 	@echo "可用命令:"
 	@echo "  make clean     清理：根目录 + apps所有子目录 + packages所有子目录 的 node_modules"
 	@echo "  make install   在上述所有目录执行 install"
+	@echo "  make publish-packages NPM_TOKEN=xxxx  构建并通过 Nx 一键发布 packages 下的所有 npm 包"
 	@echo "  make help      查看帮助"
 
 # 清理：只删除 node_modules，不删代码
@@ -40,3 +41,23 @@ install:
 		fi; \
 	done
 	@echo "=== 所有依赖安装完成 ==="
+
+# 构建并发布 packages 下的包到 npm（依赖 Nx 的 publish 目标）
+# 使用方式：
+#   make publish-packages NPM_TOKEN=your_token
+publish-packages:
+	@# 优先使用环境变量 NPM_TOKEN；若未设置，则尝试从根目录 .env 中加载
+	@if [ -z "$$NPM_TOKEN" ]; then \
+		if [ -f ".env" ]; then \
+			echo "从 .env 加载 NPM_TOKEN..."; \
+			set -a; . ./.env; set +a; \
+		fi; \
+	fi; \
+	if [ -z "$$NPM_TOKEN" ]; then \
+		echo "NPM_TOKEN 未设置，请在环境变量或根目录 .env 中配置 NPM_TOKEN=your_token"; \
+		exit 1; \
+	fi
+	@echo "=== 使用 Nx 执行 build + test + publish（run-many: publish） ==="
+	@cd $(ROOT) && npm config set //registry.npmjs.org/:_authToken "$$NPM_TOKEN" >/dev/null 2>&1 && \
+		$(PKG_MANAGER) exec nx run-many --target=publish --projects=luban-base,luban-low-code --skip-nx-cache
+	@echo "=== 所有 packages 发布完成 ==="

@@ -1,7 +1,7 @@
 {
-  "name": "@luban-ui/luban-low-code",
+  "name": "luban-low-code",
   "version": "0.0.1",
-  "private": true,
+  "private": false,
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -20,10 +20,24 @@
     "tags": [
       "lib:low-code",
       "type:library"
-    ]
+    ],
+    "targets": {
+      "publish": {
+        "executor": "nx:run-commands",
+        "dependsOn": [
+          "build",
+          "test"
+        ],
+        "options": {
+          "cwd": "packages/luban-low-code",
+          "command": "npm publish --access public"
+        }
+      }
+    }
   },
   "dependencies": {
-    "@luban-ui/luban-base": "workspace:*",
+    "luban-base": "workspace:*",
+    "sortablejs": "^1.15.3",
     "vue": "^3.5.13"
   }
 }

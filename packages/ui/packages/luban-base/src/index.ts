@@ -4,7 +4,12 @@ export type { ButtonVariant, ButtonColor, LubanButtonProps } from './lib/button/
 export { default as LubanContainer } from './lib/layout/LubanContainer.vue';
 export { default as LubanRow } from './lib/layout/LubanRow.vue';
 export { default as LubanCol } from './lib/layout/LubanCol.vue';
+export { default as LubanSidePanel } from './lib/layout/LubanSidePanel.vue';
 
+export { default as LubanBanner } from './lib/content/LubanBanner.vue';
+export { default as LubanText } from './lib/content/LubanText.vue';
+
+export { default as LubanForm } from './lib/form/LubanForm.vue';
 export { default as LubanInput } from './lib/form/LubanInput.vue';
 export { default as LubanTextArea } from './lib/form/LubanTextArea.vue';
 export { default as LubanSelect } from './lib/form/LubanSelect.vue';

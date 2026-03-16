@@ -1,15 +1,17 @@
 import {
-  getLayoutCards,
-  getPageTitle,
-  getPrimaryButton,
+  getDesignerRoot,
+  getDesignerPalette,
+  getDesignerDropZone,
+  getPaletteGroups,
 } from '../support/app.po';
 
 describe('@luban-ui/luban-ui-e2e', () => {
   beforeEach(() => cy.visit('/'));
 
-  it('should render layout and primary button', () => {
-    getPageTitle().should('contain.text', 'Luban UI 低代码设计器');
-    getLayoutCards().should('have.length', 2);
-    getPrimaryButton().should('contain.text', '主按钮').click();
+  it('should render designer palette and drop zone', () => {
+    getDesignerRoot().should('exist');
+    getDesignerPalette().should('exist');
+    getDesignerDropZone().should('exist');
+    getPaletteGroups().should('have.length.at.least', 1);
   });
 });

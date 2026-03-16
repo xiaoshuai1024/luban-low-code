@@ -4,19 +4,25 @@ import {
   LubanContainer,
   LubanRow,
   LubanCol,
+  LubanBanner,
+  LubanText,
+  LubanForm,
   LubanInput,
   LubanTextArea,
   LubanSelect,
   LubanCheckbox,
   LubanRadioGroup,
   LubanSwitch,
-} from '@luban-ui/luban-base';
+} from 'luban-base';
 
 const registry: Record<string, Component> = {
   LubanButton,
   LubanContainer,
   LubanRow,
   LubanCol,
+  LubanBanner,
+  LubanText,
+  LubanForm,
   LubanInput,
   LubanTextArea,
   LubanSelect,

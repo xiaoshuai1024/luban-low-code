@@ -45,3 +45,5 @@ vite.config.*.timestamp*
 vitest.config.*.timestamp*
 test-output
 .pnpm-store
+.env
+.env**

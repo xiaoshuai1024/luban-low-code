@@ -20,6 +20,57 @@ export const defaultDemoSchema: PageSchema = {
     props: { maxWidth: 'md', padded: true },
     children: [
       {
+        id: 'banner-row',
+        type: 'LubanRow',
+        props: { gap: 0 },
+        children: [
+          {
+            id: 'banner-col',
+            type: 'LubanCol',
+            props: { basis: 100 },
+            children: [
+              {
+                id: 'banner',
+                type: 'LubanBanner',
+                props: {
+                  src: 'https://picsum.photos/960/240',
+                  alt: '活动 Banner',
+                  height: 240,
+                  objectFit: 'cover',
+                },
+                children: [],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: 'title-row',
+        type: 'LubanRow',
+        props: { gap: 0 },
+        children: [
+          {
+            id: 'title-col',
+            type: 'LubanCol',
+            props: { basis: 100 },
+            children: [
+              {
+                id: 'title-text',
+                type: 'LubanText',
+                props: { tag: 'h1', variant: 'h1', content: '欢迎留下联系方式' },
+                children: [],
+              },
+              {
+                id: 'subtitle-text',
+                type: 'LubanText',
+                props: { variant: 'body2', secondary: true, content: '填写下方表单，我们会尽快与您联系。' },
+                children: [],
+              },
+            ],
+          },
+        ],
+      },
+      {
         id: 'main-row',
         type: 'LubanRow',
         props: { gap: 16 },
@@ -121,7 +172,12 @@ export const defaultDemoSchema: PageSchema = {
                   {
                     id: 'input-name',
                     type: 'LubanInput',
-                    props: { name: 'name', label: '姓名', placeholder: '请输入姓名' },
+                    props: {
+                      name: 'name',
+                      label: '姓名',
+                      placeholder: '请输入姓名',
+                      rules: [{ required: true, message: '请输入姓名' }],
+                    },
                     children: [],
                   },
                   {
@@ -132,6 +188,10 @@ export const defaultDemoSchema: PageSchema = {
                       label: '邮箱',
                       type: 'email',
                       placeholder: 'name@example.com',
+                      rules: [
+                        { required: true, message: '请输入邮箱' },
+                        { type: 'email', message: '请输入有效的邮箱地址' },
+                      ],
                     },
                     children: [],
                   },
@@ -143,6 +203,10 @@ export const defaultDemoSchema: PageSchema = {
                       label: '手机号',
                       type: 'tel',
                       placeholder: '请输入手机号',
+                      rules: [
+                        { required: true, message: '请输入手机号' },
+                        { type: 'tel', message: '请输入有效的手机号' },
+                      ],
                     },
                     children: [],
                   },
@@ -158,6 +222,7 @@ export const defaultDemoSchema: PageSchema = {
                         { label: '广告投放', value: 'ads' },
                         { label: '线下活动', value: 'offline' },
                       ],
+                      rules: [{ required: true, message: '请选择获客渠道' }],
                     },
                     children: [],
                   },
@@ -183,13 +248,18 @@ export const defaultDemoSchema: PageSchema = {
                       label: '需求说明',
                       placeholder: '请简要描述',
                       rows: 3,
+                      rules: [{ maxLength: 500, message: '最多 500 字' }],
                     },
                     children: [],
                   },
                   {
                     id: 'checkbox-agree',
                     type: 'LubanCheckbox',
-                    props: { name: 'agree', label: '同意《隐私政策》' },
+                    props: {
+                      name: 'agree',
+                      label: '同意《隐私政策》',
+                      rules: [{ required: true, message: '请先同意《隐私政策》' }],
+                    },
                     children: [],
                   },
                   {

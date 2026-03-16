@@ -3,8 +3,16 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
+    "dev": "nx run @luban-ui/luban-ui:dev",
     "storybook": "pnpm exec storybook dev -p 6006",
-    "build-storybook": "pnpm exec storybook build"
+    "build-storybook": "pnpm exec storybook build",
+    "test": "nx test @luban-ui/luban-ui",
+    "test:e2e": "nx e2e @luban-ui/luban-ui-e2e",
+    "test:base": "nx test luban-base",
+    "test:base:e2e": "cd packages/luban-base && vitest run -c vitest.e2e.config.mts",
+    "test:lowcode": "nx test luban-low-code",
+    "test:lowcode:e2e": "cd packages/luban-low-code && vitest run -c vitest.e2e.config.mts",
+    "release:packages": "pnpm exec nx run-many --target=build --projects=luban-base,luban-low-code && cd packages/luban-base && npm publish --access public && cd ../luban-low-code && npm publish --access public"
   },
   "private": true,
   "dependencies": {
@@ -61,7 +69,8 @@
     "vue-tsc": "^2.2.8"
   },
   "workspaces": [
-    "apps/*"
+    "apps/*",
+    "packages/*"
   ],
   "pnpm": {
     "peerDependencyRules": {

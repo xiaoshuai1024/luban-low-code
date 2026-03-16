@@ -77,6 +77,8 @@ flowchart LR
 | LubanContainer | 无值 | maxWidth, padded | — | — | default |
 | LubanRow | 无值 | align, justify, direction, gap, wrap | — | — | default |
 | LubanCol | 无值 | grow, basis, alignSelf | — | — | default |
+| LubanBanner | 无值 | src, alt, href?, height?, objectFit? | — | click | — |
+| LubanText | 无值 | tag, variant, secondary?, content? | — | — | default |
 | LubanInput | 值 | label, type, placeholder, required, disabled, name, helperText, error, errorMessage | string | update:modelValue, blur, focus | — |
 | LubanTextArea | 值 | label, placeholder, required, disabled, rows, name, helperText, error, errorMessage | string | update:modelValue, blur, focus | — |
 | LubanSelect | 值 | label, placeholder, options, required, disabled, name, helperText, error, errorMessage | string \| number \| null | update:modelValue, blur, focus | — |
@@ -124,6 +126,12 @@ flowchart LR
 
 - low-code 的 **运行时** 根据 schema 从 **组件注册表** 取到对应的 base 组件（如 `LubanButton`、`LubanInput`），将 schema 中的 props 透传给 base 组件；对“值组件”将 v-model 绑定到运行时数据模型（如 `formState[key]`）。
 - 事件（如 `update:modelValue`、`click`）回写到 low-code 的数据层或事件总线，由上层处理。
+
+### 表单校验（设计器可配置）
+
+- 表单项节点可在 **props.rules** 中配置校验规则（`ValidationRule[]`），由运行时在值变更与失焦时执行 `validate(value, rules)`，并将结果通过 **error** / **errorMessage** 传给 base 组件。
+- 支持的规则（均为 JSON 可序列化，便于设计器配置）：**required**、**type**（email / tel / url / number）、**minLength** / **maxLength**、**min** / **max**、**pattern**（正则字符串）、每条规则可配 **message**。Checkbox/Switch 的 required 表示“必须勾选”。
+- 类型与 API：`@luban-ui/luban-low-code` 导出 `ValidationRule`、`validate()`，供设计器或外部校验复用。
 
 ```mermaid
 flowchart TB

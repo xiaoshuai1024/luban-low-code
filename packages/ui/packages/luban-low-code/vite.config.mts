@@ -37,15 +37,17 @@ export default defineConfig(() => ({
       formats: ['es' as const],
     },
     rollupOptions: {
-      external: ['vue', '@luban-ui/luban-base'],
+      // 将 vue 和 luban-base 作为外部依赖，由使用方或 workspace 提供
+      external: ['vue', 'luban-base'],
     },
   },
   test: {
     name: 'luban-low-code',
     watch: false,
     globals: true,
-    environment: 'node',
-    include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    environment: 'jsdom',
+    // 单元测试和 e2e 测试都放在 packages/luban-low-code/test 下
+    include: ['{src,test}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     reporters: ['default'],
     coverage: {
       reportsDirectory: './test-output/vitest/coverage',

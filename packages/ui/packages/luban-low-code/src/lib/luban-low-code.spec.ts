@@ -1,7 +1,13 @@
-import { lubanLowCode } from './luban-low-code.js';
+import { describe, it, expect } from 'vitest';
+import { getComponent } from './registry';
 
-describe('lubanLowCode', () => {
-  it('should work', () => {
-    expect(lubanLowCode()).toEqual('luban-low-code');
+describe('luban-low-code', () => {
+  it('registry returns component for LubanButton', () => {
+    const Comp = getComponent('LubanButton');
+    expect(Comp).toBeDefined();
+  });
+
+  it('registry returns undefined for unknown type', () => {
+    expect(getComponent('Unknown')).toBeUndefined();
   });
 });

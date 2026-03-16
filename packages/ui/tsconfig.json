@@ -10,15 +10,6 @@
       "path": "./apps/luban-ui"
     },
     {
-      "path": "./packages/components/button"
-    },
-    {
-      "path": "./packages/theme"
-    },
-    {
-      "path": "./packages/types"
-    },
-    {
       "path": "./packages/luban-base"
     },
     {

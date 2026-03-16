@@ -1,13 +1,15 @@
-import { getGreeting } from '../support/app.po';
+import {
+  getLayoutCards,
+  getPageTitle,
+  getPrimaryButton,
+} from '../support/app.po';
 
 describe('@luban-ui/luban-ui-e2e', () => {
   beforeEach(() => cy.visit('/'));
 
-  it('should display welcome message', () => {
-    // Custom command example, see `../support/commands.ts` file
-    cy.login('my-email@something.com', 'myPassword');
-
-    // Function helper example, see `../support/app.po.ts` file
-    getGreeting().contains(/Welcome/);
+  it('should render layout and primary button', () => {
+    getPageTitle().should('contain.text', 'Luban UI 低代码设计器');
+    getLayoutCards().should('have.length', 2);
+    getPrimaryButton().should('contain.text', '主按钮').click();
   });
 });

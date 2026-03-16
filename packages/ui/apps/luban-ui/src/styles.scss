@@ -1,3 +1,71 @@
+@use 'sass:map';
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-header {
+  padding-block: 32px 24px;
+}
+
+.app-subtitle {
+  margin: 8px 0 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.app-section {
+  margin-bottom: 24px;
+}
+
+.app-section-title {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.app-section-desc {
+  margin: 0 0 16px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.app-button-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.demo-card {
+  padding: 16px;
+  border-radius: 12px;
+  background-color: #ffffff;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.12),
+    0 1px 3px rgba(15, 23, 42, 0.18);
+  font-size: 14px;
+}
+
+.app-form {
+  max-width: 100%;
+}
+
+.app-form-row {
+  margin: 8px 0;
+}
+
+@media (max-width: 600px) {
+  .app-button-group {
+    flex-direction: column;
+  }
+}
+
 html {
   -webkit-text-size-adjust: 100%;
   font-family:

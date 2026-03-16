@@ -1,0 +1,13 @@
+// Theme-related variables for theming; use !default so consumers can override.
+$lb-primary: #1976d2 !default;
+$lb-secondary: #9c27b0 !default;
+$lb-surface: #f5f5f5 !default;
+$lb-error: #d32f2f !default;
+$lb-text-primary: rgba(0, 0, 0, 0.87) !default;
+$lb-text-secondary: rgba(0, 0, 0, 0.6) !default;
+$lb-border-radius: 4px !default;
+$lb-spacing-unit: 8px !default;
+$lb-shadow: 0 1px 3px rgba(0, 0, 0, 0.12) !default;
+$lb-breakpoint-sm: 600px !default;
+$lb-breakpoint-md: 960px !default;
+$lb-breakpoint-lg: 1280px !default;

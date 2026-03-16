@@ -1,0 +1,120 @@
+@use 'variables';
+
+.lb-form-field {
+  margin-bottom: variables.$lb-spacing-unit * 2;
+
+  .lb-form-field__label {
+    display: block;
+    margin-bottom: variables.$lb-spacing-unit;
+    font-size: 14px;
+    font-weight: 500;
+    color: variables.$lb-text-primary;
+
+    &.lb-form-field__label--required::after {
+      content: ' *';
+      color: variables.$lb-error;
+    }
+  }
+
+  .lb-form-field__helper,
+  .lb-form-field__error {
+    font-size: 12px;
+    margin-top: variables.$lb-spacing-unit;
+  }
+
+  .lb-form-field__helper {
+    color: variables.$lb-text-secondary;
+  }
+
+  .lb-form-field__error {
+    color: variables.$lb-error;
+  }
+}
+
+.lb-input,
+.lb-textarea,
+.lb-select__native {
+  width: 100%;
+  padding: variables.$lb-spacing-unit (variables.$lb-spacing-unit * 1.5);
+  border: 1px solid rgba(0, 0, 0, 0.23);
+  border-radius: variables.$lb-border-radius;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+
+  &:focus {
+    outline: none;
+    border-color: variables.$lb-primary;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &.lb-input--error,
+  &.lb-textarea--error,
+  &.lb-select--error {
+    border-color: variables.$lb-error;
+  }
+}
+
+.lb-textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.lb-select__native {
+  appearance: auto;
+  cursor: pointer;
+}
+
+.lb-checkbox,
+.lb-radio-group,
+.lb-switch {
+  display: flex;
+  align-items: center;
+  gap: variables.$lb-spacing-unit;
+}
+
+.lb-radio-group__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: variables.$lb-spacing-unit * 2;
+}
+
+.lb-switch__track {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  background-color: rgba(0, 0, 0, 0.38);
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &.lb-switch__track--checked {
+    background-color: variables.$lb-primary;
+  }
+
+  &.lb-switch__track--disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.lb-switch__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #fff;
+  box-shadow: variables.$lb-shadow;
+  transition: transform 0.2s;
+}
+
+.lb-switch__track--checked .lb-switch__thumb {
+  transform: translateX(16px);
+}

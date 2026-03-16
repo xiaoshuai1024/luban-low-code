@@ -65,7 +65,7 @@ func InitRouter() *gin.Engine {
 	pages.DELETE("/:pageId", pageH.Delete)
 
 	// Users
-	users := api.Group("/users", mw.RequireAdmin())
+	users := api.Group("/users", mw.RequireUser(), mw.RequireAdmin())
 	users.GET("", userH.List)
 	users.POST("", userH.Create)
 	users.GET("/:id", userH.Get)

@@ -14,7 +14,7 @@ interface PageMeta {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { siteId: string } }
+  { params }: { params: Promise<{ siteId: string }> }
 ) {
   const payload = parseTokenFromRequest(req);
   if (!payload) {
@@ -23,11 +23,12 @@ export async function GET(
       { status: 401 }
     );
   }
+  const { siteId } = await params;
   const headers: HeadersInit = {
     "X-User-ID": payload.sub,
     "X-User-Role": payload.role,
   };
-  const list = await callBackend<PageMeta[]>(`/sites/${params.siteId}/pages`, {
+  const list = await callBackend<PageMeta[]>(`/sites/${siteId}/pages`, {
     method: "GET",
     headers,
   });
@@ -36,7 +37,7 @@ export async function GET(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { siteId: string } }
+  { params }: { params: Promise<{ siteId: string }> }
 ) {
   const payload = parseTokenFromRequest(req);
   if (!payload) {
@@ -45,12 +46,13 @@ export async function POST(
       { status: 401 }
     );
   }
+  const { siteId } = await params;
   const headers: HeadersInit = {
     "X-User-ID": payload.sub,
     "X-User-Role": payload.role,
   };
   const body = await req.json();
-  const page = await callBackend<PageMeta>(`/sites/${params.siteId}/pages`, {
+  const page = await callBackend<PageMeta>(`/sites/${siteId}/pages`, {
     method: "POST",
     headers,
     body: JSON.stringify(body),

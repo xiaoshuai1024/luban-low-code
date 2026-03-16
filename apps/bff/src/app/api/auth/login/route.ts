@@ -9,7 +9,7 @@ interface LoginPayload {
 
 interface LoginResult {
   token: string;
-  user?: { id: string; username: string; name?: string };
+  user?: { id: string; username: string; name?: string; role?: string };
 }
 
 export async function POST(req: Request) {
@@ -37,6 +37,7 @@ export async function POST(req: Request) {
       id: backendRes.user.id,
       username: backendRes.user.username,
       name: backendRes.user.name,
+      role: backendRes.user.role,
     },
   };
 

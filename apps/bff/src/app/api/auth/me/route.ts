@@ -16,13 +16,19 @@ export async function GET(req: NextRequest) {
     "X-User-Role": payload.role,
   };
 
-  const me = await callBackend<{ id: string; username: string; name?: string }>(
+  const backendMe = await callBackend<{ id: string; role?: string }>(
     "/auth/me",
     {
       method: "GET",
       headers,
     }
   );
+
+  const me = {
+    id: backendMe.id,
+    username: payload.username,
+    role: backendMe.role ?? payload.role,
+  };
 
   return NextResponse.json(me);
 }

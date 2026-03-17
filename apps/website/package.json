@@ -1,0 +1,21 @@
+{
+  "name": "luban-website",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview"
+  },
+  "dependencies": {
+    "luban-base": "^0.0.2",
+    "luban-low-code": "^0.0.15",
+    "nuxt": "^3.14.0",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

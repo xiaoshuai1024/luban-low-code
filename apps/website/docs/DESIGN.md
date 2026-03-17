@@ -66,18 +66,10 @@ luban-website/
 │   └── DESIGN.md          # 本设计文档
 ├── server/                # 可选：Nuxt server API 代理/转发
 ├── public/
+├── router/                # 路由配置（SPA 风格）：routes.ts 中配置 path + 懒加载 component，resolveRoute(path) 解析当前 URL
+├── views/                 # 由 router 引用的页面组件（Home.vue、DynamicPage.vue 等）
 └── pages/
-    ├── index.vue          # 首页（可重定向或固定 schema）
-    └── [...path].vue       # 动态路由：/xxx 或 /slug/xxx，根据 path 调 BFF 取 schema 再渲染
-```
-
-或按站点拆路由（若多站点需不同 layout）：
-
-```
-pages/
-├── index.vue
-├── [site]/
-│   └── [...path].vue      # /:site/... 对应 BFF 的 site slug
+    └── [[...all]].vue     # 唯一 Nuxt 页面：根据 path 调用 resolveRoute，渲染对应 view 组件
 ```
 
 - **类型**：在 `types/` 或同目录下定义与 BFF 契约一致的 TS 类型（如 `PageSchema` 可从 `luban-low-code` 直接导入，页面数据接口 `PagePayload` 等自行定义）。

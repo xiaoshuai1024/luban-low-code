@@ -1,21 +1,37 @@
 <script setup lang="ts">
 import { LubanPage } from "luban-low-code";
 import type { PageSchema } from "luban-low-code";
+import { DEFAULT_SITE_SLUG } from "~/utils/routes";
+import { useSitePageStore } from "~/stores/sitePage";
 
-const route = useRoute();
+const props = withDefaults(
+  defineProps<{ site?: string; path?: string }>(),
+  { site: "", path: "/" }
+);
+
 const config = useRuntimeConfig().public;
-const defaultSiteSlug = (config.defaultSiteSlug as string) || "default";
+const defaultSiteSlug = (config.defaultSiteSlug as string) || DEFAULT_SITE_SLUG;
+const sitePageStore = useSitePageStore();
 
-// 单站点：site 可能为空，用 defaultSiteSlug；多站点：site 为第一段
-const siteSlug = (route.params.site as string) || defaultSiteSlug;
-const pathSegments = (route.params.path as string[]) || [];
-const path = pathSegments.length > 0 ? `/${pathSegments.join("/")}` : "/";
+const siteSlug = computed(() => props.site || defaultSiteSlug);
+const path = computed(() => {
+  const p = props.path;
+  if (!p || p === "") return "/";
+  return p.startsWith("/") ? p : `/${p}`;
+});
 
 const { data: page, error, status } = usePageByPath(siteSlug, path);
 
 const schema = computed<PageSchema | null>(() => page.value?.schema ?? null);
 
-// BFF 无数据或 404 时展示错误
+watch([page, error], () => {
+  sitePageStore.setPage(siteSlug.value, path.value, page.value ?? null, error.value ?? null);
+}, { immediate: true });
+
+onBeforeUnmount(() => {
+  sitePageStore.clearPage();
+});
+
 useHead({
   title: page.value?.name ?? "Page",
 });

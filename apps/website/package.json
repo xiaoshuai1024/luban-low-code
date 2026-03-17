@@ -10,9 +10,11 @@
     "preview": "nuxt preview"
   },
   "dependencies": {
+    "@pinia/nuxt": "^0.5.4",
     "luban-base": "^0.0.2",
     "luban-low-code": "^0.0.15",
     "nuxt": "^3.14.0",
+    "pinia": "^2.2.6",
     "vue": "^3.5.13"
   },
   "devDependencies": {

@@ -1,9 +1,10 @@
 <script setup lang="ts">
-// 首页：重定向到默认站点根路径（由 [[site]]/[[...path]] 渲染）
-const config = useRuntimeConfig().public;
-const defaultSlug = (config.defaultSiteSlug as string) || "default";
+import { homePath, DEFAULT_SITE_SLUG } from "~/utils/routes";
 
-await navigateTo(`/${defaultSlug}/`, { replace: true });
+const config = useRuntimeConfig().public;
+const defaultSlug = (config.defaultSiteSlug as string) || DEFAULT_SITE_SLUG;
+
+await navigateTo(homePath(defaultSlug), { replace: true });
 </script>
 
 <template>

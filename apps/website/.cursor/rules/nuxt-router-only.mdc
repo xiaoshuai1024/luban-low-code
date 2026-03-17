@@ -1,0 +1,11 @@
+---
+description: Nuxt 路由架构约束：禁用 pages，完全使用 router 配置
+globs: ["**/nuxt.config.*", "**/app/router.options.*", "**/router/**", "**/pages/**"]
+---
+
+# Nuxt 路由架构约束（强制）
+
+- 本项目**禁用 Nuxt 文件路由**：`nuxt.config.ts` 必须保持 `pages: false`。
+- 路由必须通过 `router/routes.ts` 配置，并由 `app/router.options.ts` 生成 Vue Router 路由表。
+- **禁止新增 `pages/` 目录或任何页面文件**（例如 `pages/[[...all]].vue`）。如需新增页面，新增 `views/*` 组件并在 `router/routes.ts` 注册。
+

@@ -1,13 +1,17 @@
-import { getGreeting } from '../support/app.po';
+import {
+  getDesignerRoot,
+  getDesignerPalette,
+  getDesignerDropZone,
+  getPaletteGroups,
+} from '../support/app.po';
 
 describe('@luban-ui/luban-ui-e2e', () => {
   beforeEach(() => cy.visit('/'));
 
-  it('should display welcome message', () => {
-    // Custom command example, see `../support/commands.ts` file
-    cy.login('my-email@something.com', 'myPassword');
-
-    // Function helper example, see `../support/app.po.ts` file
-    getGreeting().contains(/Welcome/);
+  it('should render designer palette and drop zone', () => {
+    getDesignerRoot().should('exist');
+    getDesignerPalette().should('exist');
+    getDesignerDropZone().should('exist');
+    getPaletteGroups().should('have.length.at.least', 1);
   });
 });

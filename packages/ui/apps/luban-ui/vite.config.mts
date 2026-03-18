@@ -1,6 +1,7 @@
 /// <reference types='vitest' />
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
+import * as path from 'path';
 
 export default defineConfig(() => ({
   root: import.meta.dirname,
@@ -12,6 +13,22 @@ export default defineConfig(() => ({
   preview: {
     port: 4300,
     host: 'localhost',
+  },
+  resolve: {
+    alias: {
+      '@luban-ui/luban-base': path.resolve(
+        import.meta.dirname,
+        '../../packages/luban-base/src/index.ts',
+      ),
+      '@luban-ui/luban-low-code': path.resolve(
+        import.meta.dirname,
+        '../../packages/luban-low-code/src/index.ts',
+      ),
+      '@luban-ui/luban-utils': path.resolve(
+        import.meta.dirname,
+        '../../packages/luban-utils/src/index.ts',
+      ),
+    },
   },
   plugins: [vue()],
   // Uncomment this if you are using workers.

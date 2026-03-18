@@ -1,0 +1,48 @@
+{
+  "name": "luban-base",
+  "version": "0.0.18",
+  "private": false,
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "@luban-ui/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "nx": {
+    "name": "luban-base",
+    "tags": [
+      "lib:base",
+      "type:library"
+    ],
+    "targets": {
+      "version": {
+        "executor": "nx:run-commands",
+        "options": {
+          "cwd": "packages/luban-base",
+          "command": "pnpm version patch --no-git-tag-version"
+        }
+      },
+      "publish": {
+        "executor": "nx:run-commands",
+        "dependsOn": [
+          "build",
+          "test"
+        ],
+        "options": {
+          "cwd": "packages/luban-base",
+          "command": "npm publish --access public"
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "vue": "^3.5.13"
+  }
+}

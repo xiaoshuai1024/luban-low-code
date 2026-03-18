@@ -1,0 +1,96 @@
+@use 'sass:color';
+@use 'variables';
+
+.lb-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: variables.$lb-spacing-unit;
+  padding: variables.$lb-spacing-unit (variables.$lb-spacing-unit * 2);
+  border-radius: variables.$lb-border-radius;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.2s, box-shadow 0.2s;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &.lb-button--block {
+    width: 100%;
+  }
+
+  &.lb-button--contained {
+    &.lb-button--primary {
+      background-color: variables.$lb-primary;
+      color: #fff;
+      &:not(:disabled):hover {
+        background-color: color.adjust(variables.$lb-primary, $lightness: -8%);
+      }
+    }
+    &.lb-button--secondary {
+      background-color: variables.$lb-secondary;
+      color: #fff;
+      &:not(:disabled):hover {
+        background-color: color.adjust(variables.$lb-secondary, $lightness: -8%);
+      }
+    }
+    &.lb-button--surface {
+      background-color: variables.$lb-surface;
+      color: variables.$lb-text-primary;
+      &:not(:disabled):hover {
+        background-color: color.adjust(variables.$lb-surface, $lightness: -5%);
+      }
+    }
+  }
+
+  &.lb-button--outlined {
+    background: transparent;
+    &.lb-button--primary {
+      color: variables.$lb-primary;
+      border: 1px solid variables.$lb-primary;
+      &:not(:disabled):hover {
+        background-color: rgba(variables.$lb-primary, 0.08);
+      }
+    }
+    &.lb-button--secondary {
+      color: variables.$lb-secondary;
+      border: 1px solid variables.$lb-secondary;
+      &:not(:disabled):hover {
+        background-color: rgba(variables.$lb-secondary, 0.08);
+      }
+    }
+    &.lb-button--surface {
+      color: variables.$lb-text-primary;
+      border: 1px solid rgba(0, 0, 0, 0.23);
+      &:not(:disabled):hover {
+        background-color: rgba(0, 0, 0, 0.04);
+      }
+    }
+  }
+
+  &.lb-button--text {
+    background: transparent;
+    &.lb-button--primary {
+      color: variables.$lb-primary;
+      &:not(:disabled):hover {
+        background-color: rgba(variables.$lb-primary, 0.08);
+      }
+    }
+    &.lb-button--secondary {
+      color: variables.$lb-secondary;
+      &:not(:disabled):hover {
+        background-color: rgba(variables.$lb-secondary, 0.08);
+      }
+    }
+    &.lb-button--surface {
+      color: variables.$lb-text-primary;
+      &:not(:disabled):hover {
+        background-color: rgba(0, 0, 0, 0.04);
+      }
+    }
+  }
+}

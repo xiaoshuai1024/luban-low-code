@@ -1,82 +1,121 @@
-# LubanUi
+# LubanUI
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+<p align="center">
+  <img src="https://img.shields.io/npm/v/luban-base.svg" alt="npm version">
+  <img src="https://img.shields.io/npm/v/luban-low-code.svg" alt="npm version">
+  <img src="https://img.shields.io/github/license/luban-ui/luban-ui.svg" alt="license">
+  <a href="https://nx.dev"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="30" alt="Nx"></a>
+</p>
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is almost ready ✨.
+LubanUI 是一个基于 Vue 3 的低代码平台核心组件库，提供基础组件、低代码运行时和可视化设计器能力。
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/getting-started/tutorials/vue-standalone-tutorial?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
+## 特性
 
-## Finish your CI setup
+- **Material Design** - 遵循 Google Material Design 设计规范
+- **响应式** - 适配多种屏幕尺寸
+- **类型安全** - 完整的 TypeScript 类型声明
+- **可扩展** - 灵活的自定义组件机制
+- **可视化设计** - 支持拖拽式页面构建
 
-[Click here to finish setting up your workspace!](https://cloud.nx.app/connect/kdFzyEMh6e)
+## 包结构
 
+| 包                                          | 说明                                     |
+| ------------------------------------------- | ---------------------------------------- |
+| [luban-base](./packages/luban-base)         | 基础 UI 组件库（按钮、输入框、选择器等） |
+| [luban-low-code](./packages/luban-low-code) | 低代码运行时与可视化设计器               |
+| [luban-utils](./packages/luban-utils)       | 工具函数与通用逻辑                       |
 
-## Run tasks
+## 快速开始
 
-To run the dev server for your app, use:
+### 安装
 
-```sh
-npx nx serve luban-ui
+```bash
+# 安装基础组件库
+pnpm add luban-base
+
+# 或者安装低代码组件库（包含基础组件）
+pnpm add luban-low-code
 ```
 
-To create a production bundle:
+### 使用基础组件
 
-```sh
-npx nx build luban-ui
+```vue
+<template>
+  <luban-button type="primary" @click="handleClick"> 提交 </luban-button>
+</template>
+
+<script setup>
+import { LubanButton } from 'luban-base';
+
+const handleClick = () => {
+  console.log('clicked');
+};
+</script>
 ```
 
-To see all available targets to run for a project, run:
+### 使用低代码运行时
 
-```sh
-npx nx show project luban-ui
+```vue
+<template>
+  <LubanPage :schema="schema" />
+</template>
+
+<script setup>
+import { LubanPage } from 'luban-low-code';
+import type { PageSchema } from 'luban-low-code';
+
+const schema = {
+  root: {
+    id: 'root',
+    type: 'LubanContainer',
+    props: {},
+    children: []
+  },
+  formState: {}
+};
+</script>
 ```
 
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
+## 开发
 
-[More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+```bash
+# 安装依赖
+pnpm install
 
-## Add new projects
+# 启动开发服务器
+pnpm dev
 
-While you could add new projects to your workspace manually, you might want to leverage [Nx plugins](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) and their [code generation](https://nx.dev/features/generate-code?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) feature.
+# 启动 Storybook
+pnpm storybook
 
-Use the plugin's generator to create new projects.
+# 运行测试
+pnpm test
 
-To generate a new application, use:
+# 运行 e2e 测试
+pnpm test:e2e
 
-```sh
-npx nx g @nx/vue:app demo
+# 构建所有包
+pnpm exec nx run-many --target=build --projects=luban-base,luban-low-code
 ```
 
-To generate a new library, use:
+## 项目结构
 
-```sh
-npx nx g @nx/vue:lib mylib
+```
+luban-ui/
+├── apps/
+│   └── luban-ui/           # Demo 应用
+├── packages/
+│   ├── luban-base/        # 基础组件库
+│   ├── luban-low-code/    # 低代码组件库
+│   └── luban-utils/       # 工具函数库
+├── docs/                   # 项目文档
+└── nx.json                # Nx 配置
 ```
 
-You can use `npx nx list` to get a list of installed plugins. Then, run `npx nx list <plugin-name>` to learn about more specific capabilities of a particular plugin. Alternatively, [install Nx Console](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) to browse plugins and generators in your IDE.
+## 贡献
 
-[Learn more about Nx plugins &raquo;](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) | [Browse the plugin registry &raquo;](https://nx.dev/plugin-registry?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+欢迎提交 Issue 和 Pull Request。请先阅读 [贡献指南](./CONTRIBUTING.md)。
 
+## 许可证
 
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Install Nx Console
-
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
-
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Useful links
-
-Learn more:
-
-- [Learn more about this workspace setup](https://nx.dev/getting-started/tutorials/vue-standalone-tutorial?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-And join the Nx community:
-- [Discord](https://go.nx.dev/community)
-- [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [Our Youtube channel](https://www.youtube.com/@nxdevtools)
-- [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+MIT License - 见 [LICENSE](./LICENSE) 文件。

@@ -47,3 +47,7 @@ test-output
 .pnpm-store
 .env
 .env**
+.temdeps/**
+.nx/**
+.cursor/
+.tmpdeps/

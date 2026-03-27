@@ -8,11 +8,10 @@ describe('Router', () => {
     expect(route?.meta?.public).toBe(true)
   })
 
-  it('has dashboard as child of root', () => {
-    const root = router.getRoutes().find((r) => r.path === '/')
-    expect(root?.children).toBeDefined()
-    const dashboard = root?.children?.find((c) => c.path === 'dashboard')
+  it('has dashboard route', () => {
+    const dashboard = router.getRoutes().find((r) => r.name === 'Dashboard')
     expect(dashboard).toBeDefined()
+    expect(dashboard?.path).toBe('/dashboard')
   })
 
   it('has sites, users, settings routes', () => {

@@ -37,3 +37,13 @@
 ## 联调清单入口
 
 - 统一联调清单：`docs/NEXT_VERSION_INTEGRATION_CHECKLIST.md`
+
+## Git 提交流程约束（避免 `unknown option trailer`）
+
+- 问题现象：使用环境默认 `git` 提交时，可能报错 `unknown option 'trailer'`。
+- 固定做法：提交和推送统一使用系统 Git：`/usr/bin/git`。
+- 命令模板：
+  - 查看状态：`/usr/bin/git status --short`
+  - 提交：`/usr/bin/git commit -m "<message>"`
+  - 推送：`/usr/bin/git push -u origin <branch>`
+- 分支策略：禁止直接推送 `master`，统一在 `dev` 或 feature 分支提交并通过 PR 合并。

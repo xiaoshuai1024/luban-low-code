@@ -20,28 +20,6 @@ export async function GET(req: NextRequest) {
       { status: 401 }
     );
   }
-  // #region agent log
-  fetch("http://127.0.0.1:7896/ingest/7e684da9-fd62-4bcf-a26b-76516de9ccd8", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "6eb26e",
-    },
-    body: JSON.stringify({
-      sessionId: "6eb26e",
-      runId: "users-403",
-      hypothesisId: "H1",
-      location: "src/app/api/users/route.ts:GET",
-      message: "BFF users GET payload and headers",
-      data: {
-        sub: payload.sub,
-        role: payload.role,
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion agent log
-
   const headers: HeadersInit = {
     "X-User-ID": payload.sub,
     "X-User-Role": payload.role,
@@ -65,28 +43,6 @@ export async function GET(req: NextRequest) {
     });
     return NextResponse.json(res);
   } catch (err) {
-    // #region agent log
-    fetch("http://127.0.0.1:7896/ingest/7e684da9-fd62-4bcf-a26b-76516de9ccd8", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "6eb26e",
-      },
-      body: JSON.stringify({
-        sessionId: "6eb26e",
-        runId: "users-403",
-        hypothesisId: "H2",
-        location: "src/app/api/users/route.ts:GET",
-        message: "BFF users GET backend error",
-        data: {
-          isBackendHttpError: err instanceof BackendHttpError,
-          status: err instanceof BackendHttpError ? err.status : null,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion agent log
-
     if (err instanceof BackendHttpError && err.status === 403) {
       return NextResponse.json(
         { code: "PERMISSION_DENIED", message: "无权限访问用户管理，请使用管理员账号登录" },

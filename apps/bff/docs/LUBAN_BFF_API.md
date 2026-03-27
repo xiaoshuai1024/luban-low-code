@@ -381,3 +381,84 @@ X-User-Role: <role>
 ## 7. 未来扩展
 
 - **多租户支持**：通过 `X-Tenant-ID` 头或 JWT claims 传递租户信息，在 BFF/back
+
+## 8. Low-Code 数据源执行与版本管理契约（V1）
+
+本节为 low-code 运行时新增的 BFF 契约，供 `luban-ui` 运行时与管理后台统一使用。
+
+### 8.1 数据源执行网关
+
+- **方法**：`POST /api/lowcode/datasource/execute`
+- **用途**：统一执行页面 schema 中声明的数据源（REST/聚合），由 BFF 负责鉴权透传、错误统一与 trace 贯通。
+
+请求体（推荐）：
+
+```json
+{
+  "schemaId": "schema_home",
+  "version": "1.2.0",
+  "env": "dev",
+  "dataSourceId": "getRooms",
+  "payload": {
+    "gender": "male"
+  },
+  "traceId": "trace-123"
+}
+```
+
+响应 200（推荐）：
+
+```json
+{
+  "traceId": "trace-123",
+  "data": {
+    "list": [
+      { "label": "A101", "value": "A101" }
+    ]
+  }
+}
+```
+
+错误响应：
+
+```json
+{
+  "code": "DATASOURCE_EXECUTE_FAILED",
+  "message": "Failed to execute datasource",
+  "details": {
+    "dataSourceId": "getRooms"
+  },
+  "traceId": "trace-123"
+}
+```
+
+### 8.2 schema 版本管理接口
+
+- **POST** `/api/lowcode/schema/draft`
+  - 说明：保存草稿（可覆盖最新草稿）
+- **POST** `/api/lowcode/schema/publish`
+  - 说明：发布草稿为不可变版本（建议语义化版本或时间戳版本）
+- **POST** `/api/lowcode/schema/rollback`
+  - 说明：回滚到历史版本（推荐“复制目标版本生成新发布版本”）
+- **GET** `/api/lowcode/schema/:schemaId/versions`
+  - 说明：查询版本历史与状态
+
+版本接口通用字段（建议）：
+
+```json
+{
+  "schemaId": "schema_home",
+  "version": "1.2.0",
+  "status": "draft",
+  "schema": {},
+  "operator": "user-1",
+  "traceId": "trace-123"
+}
+```
+
+### 8.3 BFF 侧职责边界（针对本契约）
+
+- 仅暴露统一 low-code API，屏蔽后端内部实现差异。
+- 负责 JWT 解析后向后端透传 `X-User-ID`、`X-User-Role`。
+- 统一返回 `{ code, message, details?, traceId? }` 错误结构。
+- 保证字段命名与语义语言中立，为后续 Go 版本对齐预留空间。

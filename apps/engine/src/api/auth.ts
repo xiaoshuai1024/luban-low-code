@@ -7,7 +7,7 @@ export interface LoginPayload {
 
 export interface LoginResult {
   token: string
-  user?: { id: string; username: string; name?: string }
+  user?: { id: string; username: string; name?: string; role?: string }
 }
 
 export function login(payload: LoginPayload) {
@@ -19,5 +19,5 @@ export function logout(): void {
 }
 
 export function getCurrentUser() {
-  return request.get<{ id: string; username: string; name?: string }>('/auth/me')
+  return request.get<{ id: string; username: string; name?: string; role?: string }>('/auth/me')
 }

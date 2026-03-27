@@ -11,11 +11,14 @@ import {
 } from 'element-plus'
 import { getPages, deletePage, type PageMeta } from '@/api/page'
 import { getSite, type Site } from '@/api/site'
+import { buildPublishedPagePreviewUrl } from '@/utils/publicPage'
 
 const route = useRoute()
 const router = useRouter()
 const siteId = computed(() => route.params.siteId as string)
 const siteName = ref('')
+const siteSlug = ref('')
+const siteBaseUrl = ref('')
 const list = ref<PageMeta[]>([])
 const loading = ref(false)
 
@@ -24,8 +27,12 @@ async function fetchSite() {
   try {
     const { data } = await getSite(siteId.value)
     siteName.value = data.name
+    siteSlug.value = data.slug ?? ''
+    siteBaseUrl.value = data.baseUrl ?? ''
   } catch {
     siteName.value = ''
+    siteSlug.value = ''
+    siteBaseUrl.value = ''
   }
 }
 
@@ -48,6 +55,21 @@ function goNew() {
 
 function goEdit(row: PageMeta) {
   router.push(`/sites/${siteId.value}/pages/${row.id}`)
+}
+
+function openPublishedPreview(row: PageMeta) {
+  const url = buildPublishedPagePreviewUrl({
+    slug: siteSlug.value,
+    baseUrl: siteBaseUrl.value,
+    path: row.path,
+  })
+
+  if (!url) {
+    ElMessage.warning('当前站点未配置 slug 或 baseUrl，无法预览')
+    return
+  }
+
+  window.open(url, '_blank', 'noopener,noreferrer')
 }
 
 async function handleDelete(row: PageMeta) {
@@ -82,9 +104,17 @@ onMounted(() => {
         </template>
       </ElTableColumn>
       <ElTableColumn prop="updatedAt" label="更新时间" width="180" />
-      <ElTableColumn label="操作" width="120" fixed="right">
+      <ElTableColumn label="操作" width="200" fixed="right">
         <template #default="{ row }">
           <ElButton link type="primary" @click="goEdit(row)">编辑</ElButton>
+          <ElButton
+            v-if="row.status === 'published'"
+            link
+            type="success"
+            @click="openPublishedPreview(row)"
+          >
+            预览
+          </ElButton>
           <ElButton link type="danger" @click="handleDelete(row)">删除</ElButton>
         </template>
       </ElTableColumn>

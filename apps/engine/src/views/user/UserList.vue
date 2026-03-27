@@ -16,6 +16,8 @@ import {
   ElPagination,
 } from 'element-plus'
 import { getUsers, createUser, updateUser, setUserStatus, type User, type UserCreatePayload } from '@/api/user'
+import { formatDateTime } from '@/utils/datetime'
+import { AxiosError } from 'axios'
 
 const list = ref<User[]>([])
 const total = ref(0)
@@ -32,6 +34,7 @@ const form = ref<UserCreatePayload & { id?: string }>({
   role: 'user',
 })
 const formLoading = ref(false)
+const noPermission = ref(false)
 
 async function fetchList() {
   loading.value = true
@@ -43,7 +46,13 @@ async function fetchList() {
     })
     list.value = data?.list ?? []
     total.value = data?.total ?? 0
-  } catch {
+    noPermission.value = false
+  } catch (e) {
+    const status = (e as AxiosError).response?.status
+    if (status === 403) {
+      noPermission.value = true
+      ElMessage.error('当前账号没有用户管理权限，请使用管理员账号登录')
+    }
     list.value = []
     total.value = 0
   } finally {
@@ -144,7 +153,7 @@ onMounted(fetchList)
         @keyup.enter="fetchList"
       />
       <ElButton type="primary" @click="fetchList">查询</ElButton>
-      <ElButton type="primary" @click="openCreate">新建用户</ElButton>
+      <ElButton type="primary" :disabled="noPermission" @click="openCreate">新建用户</ElButton>
     </div>
     <ElTable :data="list" v-loading="loading" stripe>
       <ElTableColumn prop="username" label="账号" min-width="120" />
@@ -157,7 +166,11 @@ onMounted(fetchList)
           </ElTag>
         </template>
       </ElTableColumn>
-      <ElTableColumn prop="createdAt" label="创建时间" width="180" />
+      <ElTableColumn prop="createdAt" label="创建时间" width="180">
+        <template #default="{ row }">
+          {{ formatDateTime(row.createdAt) }}
+        </template>
+      </ElTableColumn>
       <ElTableColumn label="操作" width="180" fixed="right">
         <template #default="{ row }">
           <ElButton link type="primary" @click="openEdit(row)">编辑</ElButton>

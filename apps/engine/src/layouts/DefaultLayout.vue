@@ -72,12 +72,28 @@ function go(path: string) {
         <span class="default-layout__title">{{ $route.meta.title ?? '管理后台' }}</span>
         <ElDropdown trigger="click" @command="handleLogout">
           <span class="default-layout__user">
-            {{ userStore.name || userStore.username || '用户' }}
+            <span class="default-layout__avatar">
+              {{ (userStore.name || userStore.username || '用户').slice(0, 1).toUpperCase() }}
+            </span>
+            <span class="default-layout__user-info">
+              <span class="default-layout__user-name">
+                {{ userStore.name || userStore.username || '用户' }}
+              </span>
+              <span class="default-layout__user-role">
+                {{ userStore.isAdmin ? '管理员' : '普通用户' }}
+              </span>
+            </span>
             <ElIcon><ArrowRight /></ElIcon>
           </span>
           <template #dropdown>
             <ElDropdownMenu command="logout">
-              <ElDropdownItem command="logout">退出登录</ElDropdownItem>
+              <ElDropdownItem disabled>
+                当前账号：{{ userStore.username || '未知' }}
+              </ElDropdownItem>
+              <ElDropdownItem disabled>
+                角色：{{ userStore.isAdmin ? '管理员' : '普通用户' }}
+              </ElDropdownItem>
+              <ElDropdownItem divided command="logout">退出登录</ElDropdownItem>
             </ElDropdownMenu>
           </template>
         </ElDropdown>
@@ -128,10 +144,38 @@ function go(path: string) {
 .default-layout__user {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
   cursor: pointer;
   color: #606266;
   font-size: 14px;
+}
+
+.default-layout__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #409eff;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.default-layout__user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.default-layout__user-name {
+  line-height: 1.2;
+}
+
+.default-layout__user-role {
+  font-size: 12px;
+  color: #909399;
 }
 
 .default-layout__main {

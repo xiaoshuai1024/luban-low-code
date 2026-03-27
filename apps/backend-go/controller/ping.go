@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/xiaoshuai1024/luban-backend-go/dao" // 替换为你的模块名
+	"github.com/xiaoshuai1024/luban-backend-go/dao" // 你的模块名，无需修改
 )
 
 // PingHandler 测试接口
@@ -21,23 +21,22 @@ func PingHandler(c *gin.Context) {
 		return
 	}
 
-	// 测试Redis连接
-	// redisPong, err := dao.RDB.Ping(dao.ctx).Result()
-	// if err != nil {
-	// 	c.JSON(http.StatusInternalServerError, gin.H{
-	// 		"code": 500,
-	// 		"msg":  "Redis连接失败",
-	// 		"err":  err.Error(),
-	// 	})
-	// 	return
-	// }
+	redisPong, err := dao.RDB.Ping(c.Request.Context()).Result()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code": 500,
+			"msg":  "Redis连接失败",
+			"err":  err.Error(),
+		})
+		return
+	}
 
 	// 返回成功响应
 	c.JSON(http.StatusOK, gin.H{
 		"code":  200,
 		"msg":   "pong",
 		"mysql": version,
-		// "redis": redisPong,
-		"env": "dev",
+		"redis": redisPong, // 仍注释
+		"env":   "dev",
 	})
 }

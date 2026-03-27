@@ -17,7 +17,7 @@ func main() {
 
 	// 2. 初始化数据库连接
 	dao.InitMySQL()
-	//dao.InitRedis()
+	dao.InitRedis()
 
 	// 3. 初始化路由
 	r := router.InitRouter()

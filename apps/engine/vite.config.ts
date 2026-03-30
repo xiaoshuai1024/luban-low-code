@@ -9,6 +9,10 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  preview: {
+    port: 4200,
+    host: true,
+  },
   server: {
     allowedHosts: ['localhost', '127.0.0.1', 'test.local'],
     proxy: {

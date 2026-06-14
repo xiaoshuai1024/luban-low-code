@@ -1,5 +1,29 @@
+/**
+ * componentMeta — 设计期组件元数据（向后兼容旧 API）。
+ *
+ * @migration 13+1 物料 schema 重构（聚合收口，0.1.0）
+ *
+ * 重构后行为（保持导出签名零破坏）：
+ *  - getComponentMeta / getAllComponentMeta 改为从 materialRegistry 取
+ *    MaterialDefinition，经 compat.toLegacyComponentMeta 派生旧 ComponentMeta
+ *    （PropSchemaItem 形态）；
+ *  - registerComponentMeta 保留：允许下游覆盖/追加 meta（写入 override 表，
+ *    优先级高于 registry 派生）；
+ *  - ComponentMeta / PropSchemaItem / PropSchema 类型导出不变。
+ *
+ * @since 0.1.0
+ */
+
 import type { Component } from 'vue';
-import { getComponent } from './registry';
+import { materialRegistry } from './material/registry';
+import { toLegacyComponentMeta } from './material/compat';
+
+// 顶层 side-effect import：在同步派生 meta 前确保 materialRegistry 已注册
+// 全部 14 物料。materials 聚合层只求值一次（ESM 模块缓存）。
+//
+// 循环依赖分析：materials/* 物料经 compat.ts 仅以 `import type` 引用本文件
+// 的 ComponentMeta/PropSchemaItem（运行时擦除），故无运行时循环。
+import '../materials';
 
 /**
  * Schema for a single prop (for property panel and validation).
@@ -32,294 +56,89 @@ export interface ComponentMeta {
   acceptTypes?: string[];
 }
 
-const metaByType: Record<string, ComponentMeta> = {};
+/**
+ * 运行时 override 表：registerComponentMeta 写入的 meta 优先于 registry 派生。
+ *
+ * 用途：下游可在不改物料定义的情况下覆盖某 meta（如替换 component 实现）。
+ */
+const overrides: Record<string, ComponentMeta> = {};
 
-function registerMeta(meta: ComponentMeta): void {
-  metaByType[meta.type] = meta;
-}
+/**
+ * 缓存：registry 派生的 meta 按 type 索引。
+ *
+ * 由顶层 `import '../materials'` 触发的同步注册完成后，materialRegistry 已含
+ * 全部 14 物料；本缓存首次访问时惰性派生（toLegacyComponentMeta），后续命中。
+ * registerComponentMeta 写入 overrides 不污染本缓存（override 在 getter 内合并）。
+ */
+let derivedCache: Record<string, ComponentMeta> | undefined;
 
-function buildDefaultMeta(): void {
-  const comp = (t: string) => getComponent(t)!;
-  registerMeta({
-    type: 'LubanButton',
-    category: 'button',
-    label: '按钮',
-    component: comp('LubanButton'),
-    propSchema: {
-      content: { type: 'string', label: '文案', default: '按钮' },
-      variant: {
-        type: 'select',
-        label: '变体',
-        default: 'contained',
-        options: [
-          { label: '实心', value: 'contained' },
-          { label: '描边', value: 'outlined' },
-          { label: '文本', value: 'text' },
-        ],
-      },
-      color: {
-        type: 'select',
-        label: '颜色',
-        default: 'primary',
-        options: [
-          { label: '主色', value: 'primary' },
-          { label: '次色', value: 'secondary' },
-          { label: '表面', value: 'surface' },
-        ],
-      },
-      disabled: { type: 'boolean', label: '禁用', default: false },
-      block: { type: 'boolean', label: '块级', default: false },
-    },
-    defaultProps: { content: '按钮', variant: 'contained', color: 'primary' },
-    events: ['click'],
-  });
-
-  registerMeta({
-    type: 'LubanContainer',
-    category: 'layout',
-    label: '容器',
-    component: comp('LubanContainer'),
-    isContainer: true,
-    propSchema: {
-      maxWidth: {
-        type: 'select',
-        label: '最大宽度',
-        default: 'lg',
-        options: [
-          { label: 'sm', value: 'sm' },
-          { label: 'md', value: 'md' },
-          { label: 'lg', value: 'lg' },
-          { label: 'xl', value: 'xl' },
-          { label: 'full', value: 'full' },
-        ],
-      },
-      padded: { type: 'boolean', label: '内边距', default: true },
-    },
-    defaultProps: { maxWidth: 'md', padded: true },
-    events: [],
-  });
-
-  registerMeta({
-    type: 'LubanRow',
-    category: 'layout',
-    label: '行',
-    component: comp('LubanRow'),
-    isContainer: true,
-    propSchema: {
-      gap: { type: 'number', label: '间距', default: 16 },
-      align: {
-        type: 'select',
-        label: '垂直对齐',
-        default: 'stretch',
-        options: [
-          { label: 'start', value: 'start' },
-          { label: 'center', value: 'center' },
-          { label: 'end', value: 'end' },
-          { label: 'stretch', value: 'stretch' },
-        ],
-      },
-      justify: {
-        type: 'select',
-        label: '水平对齐',
-        default: 'start',
-        options: [
-          { label: 'start', value: 'start' },
-          { label: 'center', value: 'center' },
-          { label: 'end', value: 'end' },
-          { label: 'between', value: 'between' },
-          { label: 'around', value: 'around' },
-        ],
-      },
-    },
-    defaultProps: { gap: 16 },
-    events: [],
-  });
-
-  registerMeta({
-    type: 'LubanCol',
-    category: 'layout',
-    label: '列',
-    component: comp('LubanCol'),
-    isContainer: true,
-    propSchema: {
-      basis: { type: 'number', label: '基础宽度(%)', default: 50 },
-      grow: { type: 'number', label: 'flex-grow', default: 1 },
-    },
-    defaultProps: { basis: 50 },
-    events: [],
-  });
-
-  const FORM_CONTROL_TYPES = [
-    'LubanInput',
-    'LubanTextArea',
-    'LubanSelect',
-    'LubanCheckbox',
-    'LubanRadioGroup',
-    'LubanSwitch',
-  ];
-  registerMeta({
-    type: 'LubanForm',
-    category: 'form',
-    label: '表单',
-    component: comp('LubanForm'),
-    isContainer: true,
-    acceptTypes: FORM_CONTROL_TYPES,
-    propSchema: {},
-    defaultProps: {},
-    events: ['submit'],
-  });
-
-  registerMeta({
-    type: 'LubanInput',
-    category: 'form',
-    label: '输入框',
-    component: comp('LubanInput'),
-    propSchema: {
-      name: { type: 'string', label: '字段名' },
-      label: { type: 'string', label: '标签', default: '输入框' },
-      placeholder: { type: 'string', label: '占位' },
-      type: {
-        type: 'select',
-        label: '类型',
-        default: 'text',
-        options: [
-          { label: '文本', value: 'text' },
-          { label: '邮箱', value: 'email' },
-          { label: '电话', value: 'tel' },
-          { label: '数字', value: 'number' },
-          { label: '密码', value: 'password' },
-        ],
-      },
-      required: { type: 'boolean', label: '必填', default: false },
-      disabled: { type: 'boolean', label: '禁用', default: false },
-    },
-    defaultProps: { label: '输入框', placeholder: '请输入' },
-    events: ['update:modelValue', 'blur', 'focus'],
-  });
-
-  registerMeta({
-    type: 'LubanTextArea',
-    category: 'form',
-    label: '多行文本',
-    component: comp('LubanTextArea'),
-    propSchema: {
-      name: { type: 'string', label: '字段名' },
-      label: { type: 'string', label: '标签', default: '多行文本' },
-      placeholder: { type: 'string', label: '占位' },
-      rows: { type: 'number', label: '行数', default: 3 },
-      required: { type: 'boolean', label: '必填', default: false },
-      disabled: { type: 'boolean', label: '禁用', default: false },
-    },
-    defaultProps: { label: '多行文本', rows: 3 },
-    events: ['update:modelValue', 'blur', 'focus'],
-  });
-
-  registerMeta({
-    type: 'LubanSelect',
-    category: 'form',
-    label: '选择',
-    component: comp('LubanSelect'),
-    propSchema: {
-      name: { type: 'string', label: '字段名' },
-      label: { type: 'string', label: '标签', default: '选择' },
-      placeholder: { type: 'string', label: '占位', default: '请选择' },
-      options: { type: 'options', label: '选项', default: [] },
-      required: { type: 'boolean', label: '必填', default: false },
-      disabled: { type: 'boolean', label: '禁用', default: false },
-    },
-    defaultProps: { label: '选择', placeholder: '请选择', options: [] },
-    events: ['update:modelValue', 'blur', 'focus'],
-  });
-
-  registerMeta({
-    type: 'LubanCheckbox',
-    category: 'form',
-    label: '复选框',
-    component: comp('LubanCheckbox'),
-    propSchema: {
-      name: { type: 'string', label: '字段名' },
-      label: { type: 'string', label: '标签', default: '复选框' },
-      required: { type: 'boolean', label: '必填', default: false },
-      disabled: { type: 'boolean', label: '禁用', default: false },
-    },
-    defaultProps: { label: '复选框' },
-    events: ['update:modelValue'],
-  });
-
-  registerMeta({
-    type: 'LubanRadioGroup',
-    category: 'form',
-    label: '单选',
-    component: comp('LubanRadioGroup'),
-    propSchema: {
-      name: { type: 'string', label: '字段名' },
-      label: { type: 'string', label: '标签', default: '单选' },
-      options: { type: 'options', label: '选项', default: [] },
-      required: { type: 'boolean', label: '必填', default: false },
-      disabled: { type: 'boolean', label: '禁用', default: false },
-    },
-    defaultProps: { label: '单选', options: [] },
-    events: ['update:modelValue'],
-  });
-
-  registerMeta({
-    type: 'LubanSwitch',
-    category: 'form',
-    label: '开关',
-    component: comp('LubanSwitch'),
-    propSchema: {
-      name: { type: 'string', label: '字段名' },
-      label: { type: 'string', label: '标签', default: '开关' },
-      disabled: { type: 'boolean', label: '禁用', default: false },
-    },
-    defaultProps: { label: '开关' },
-    events: ['update:modelValue'],
-  });
-
-  registerMeta({
-    type: 'LubanBanner',
-    category: 'content',
-    label: '横幅',
-    component: comp('LubanBanner'),
-    propSchema: {
-      content: { type: 'string', label: '内容' },
-    },
-    defaultProps: {},
-    events: [],
-  });
-
-  registerMeta({
-    type: 'LubanText',
-    category: 'content',
-    label: '文本',
-    component: comp('LubanText'),
-    propSchema: {
-      content: { type: 'string', label: '内容' },
-    },
-    defaultProps: {},
-    events: [],
-  });
-}
-
-let built = false;
-function ensureMeta(): void {
-  if (!built) {
-    buildDefaultMeta();
-    built = true;
+/**
+ * 惰性填充 derivedCache（同步）。
+ *
+ * 顶层 import '../materials' 保证 materialRegistry 在本函数首次调用前已就绪；
+ * 若 registry 为空（极端隔离场景，如直接 import 本文件但 materials 未加载），
+ * 跳过填充，getComponentMeta 返回 undefined，由调用方处理。
+ *
+ * @internal
+ */
+function fillDerived(): void {
+  if (derivedCache) return;
+  if (materialRegistry.size === 0) return; // materials 尚未注册（防御）
+  const cache: Record<string, ComponentMeta> = {};
+  for (const def of materialRegistry.getAll()) {
+    cache[def.name] = toLegacyComponentMeta(def);
   }
+  derivedCache = cache;
+}
+
+/**
+ * @deprecated since 0.1.0
+ * 旧 buildDefaultMeta 的硬编码注册逻辑已移除（13+1 物料全部由 materialRegistry
+ * 派生）。本函数保留为 no-op 仅为兼容旧 import；新代码不应依赖本函数。
+ */
+function buildDefaultMeta(): void {
+  // no-op：meta 由 materialRegistry + compat 派生（见 fillDerived）。
 }
 
 export function getComponentMeta(type: string): ComponentMeta | undefined {
-  ensureMeta();
-  return metaByType[type];
+  fillDerived();
+  // override 优先于 registry 派生
+  if (Object.prototype.hasOwnProperty.call(overrides, type)) {
+    return overrides[type];
+  }
+  return derivedCache?.[type];
 }
 
 export function getAllComponentMeta(): ComponentMeta[] {
-  ensureMeta();
-  return Object.values(metaByType);
+  fillDerived();
+  // 合并：registry 派生 + override（override 覆盖同名）
+  const merged: Record<string, ComponentMeta> = {};
+  if (derivedCache) {
+    for (const [k, v] of Object.entries(derivedCache)) {
+      merged[k] = v;
+    }
+  }
+  for (const [k, v] of Object.entries(overrides)) {
+    merged[k] = v;
+  }
+  return Object.values(merged);
 }
 
 export function registerComponentMeta(meta: ComponentMeta): void {
-  built = true;
-  registerMeta(meta);
+  overrides[meta.type] = meta;
 }
+
+/**
+ * 测试/重置用：清空 override 与派生缓存（不 unregister materialRegistry）。
+ *
+ * @internal 仅测试场景使用，不对外稳定保证。
+ */
+export function __resetComponentMetaCacheForTest(): void {
+  for (const key of Object.keys(overrides)) {
+    delete overrides[key];
+  }
+  derivedCache = undefined;
+}
+
+// 保留 buildDefaultMeta 引用以兼容旧 import（防 tree-shake 后导出名变化）。
+export { buildDefaultMeta };

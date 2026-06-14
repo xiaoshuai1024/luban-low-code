@@ -16,7 +16,7 @@
     "@element-plus/icons-vue": "^2.3.2",
     "axios": "^1.7.7",
     "element-plus": "^2.8.4",
-    "luban-low-code": "^0.0.2",
+    "luban-low-code": "link:../../ui/luban-ui/packages/luban-low-code",
     "pinia": "^2.2.6",
     "vue": "^3.5.13",
     "vue-router": "^4.4.5"
@@ -31,11 +31,5 @@
     "vite": "^6.0.1",
     "vitest": "^2.1.4",
     "vue-tsc": "^2.1.10"
-  },
-  "pnpm": {
-    "overrides": {
-      "luban-base": "link:../luban-ui/packages/luban-base",
-      "luban-low-code": "link:../luban-ui/packages/luban-low-code"
-    }
   }
 }

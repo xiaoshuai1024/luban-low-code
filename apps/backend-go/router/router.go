@@ -33,16 +33,22 @@ func InitRouter() *gin.Engine {
 	pageSvc := service.NewPageService(pageRepo)
 	userSvc := service.NewUserService(userRepo)
 	settingsSvc := service.NewSettingsService(settingsRepo, dao.RDB)
+	publicSvc := service.NewPublicService(siteRepo, pageRepo)
 
 	authH := handler.NewAuthHandler(authSvc)
 	siteH := handler.NewSiteHandler(siteSvc)
 	pageH := handler.NewPageHandler(pageSvc)
 	userH := handler.NewUserHandler(userSvc)
 	settingsH := handler.NewSettingsHandler(settingsSvc)
+	publicH := handler.NewPublicHandler(publicSvc)
 
 	mw := middleware.NewMiddleware()
 
 	api := r.Group("/backend")
+
+	// Public（无需鉴权，对齐 Java AuthFilter 放行 /backend/public/*）
+	public := api.Group("/public")
+	public.GET("/sites/:slug/pages", publicH.GetByPath)
 
 	// Auth
 	api.POST("/auth/login", authH.Login)

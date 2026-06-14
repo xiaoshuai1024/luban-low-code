@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/google/uuid"
 	"github.com/xiaoshuai1024/luban-backend-go/internal/model"
@@ -24,7 +25,7 @@ func (s *PageService) Get(ctx context.Context, siteID, pageID string) (*model.Pa
 	return s.repo.Get(ctx, siteID, pageID)
 }
 
-func (s *PageService) Create(ctx context.Context, siteID, name, path, status string, schema []byte) (*model.Page, error) {
+func (s *PageService) Create(ctx context.Context, siteID, name, path, status string, schema json.RawMessage) (*model.Page, error) {
 	if status == "" {
 		status = "draft"
 	}

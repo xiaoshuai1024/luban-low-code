@@ -38,6 +38,24 @@ func (r *PageRepository) Get(ctx context.Context, siteID, pageID string) (*model
 	return &p, nil
 }
 
+// GetPublishedBySiteAndPath 按 site_id + path 获取已发布页面（status='published'）。
+//
+// 对齐 Java PageMapper.getBySiteIdAndPathPublished：
+//   SELECT ... FROM pages WHERE site_id=? AND path=? AND status='published'
+// 仅供公开接口 /backend/public/sites/:slug/pages 使用，保证未发布页面绝不外泄。
+// 未命中（草稿/不存在）一律返回 ErrPageNotFound，不区分原因（防止信息泄露）。
+func (r *PageRepository) GetPublishedBySiteAndPath(ctx context.Context, siteID, path string) (*model.Page, error) {
+	var p model.Page
+	err := r.db.GetContext(ctx, &p, `SELECT * FROM pages WHERE site_id = ? AND path = ? AND status = 'published'`, siteID, path)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrPageNotFound
+		}
+		return nil, err
+	}
+	return &p, nil
+}
+
 func (r *PageRepository) Create(ctx context.Context, p *model.Page) error {
 	now := time.Now()
 	p.CreatedAt = now

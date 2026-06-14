@@ -22,10 +22,14 @@ func writeError(c *gin.Context, err error) {
 		c.JSON(http.StatusNotFound, APIError{Code: "PAGE_NOT_FOUND", Message: "页面不存在"})
 	case repository.ErrUserNotFound:
 		c.JSON(http.StatusNotFound, APIError{Code: "USER_NOT_FOUND", Message: "用户不存在"})
+	case repository.ErrSettingsNotFound:
+		c.JSON(http.StatusNotFound, APIError{Code: "SETTINGS_NOT_FOUND", Message: "设置不存在"})
 	case repository.ErrPagePathConflict:
 		c.JSON(http.StatusConflict, APIError{Code: "PAGE_PATH_CONFLICT", Message: "页面 path 已存在"})
 	case repository.ErrUsernameConflict:
 		c.JSON(http.StatusConflict, APIError{Code: "USERNAME_CONFLICT", Message: "用户名已存在"})
+	case repository.ErrSlugConflict:
+		c.JSON(http.StatusConflict, APIError{Code: "SLUG_CONFLICT", Message: "slug 已存在"})
 	case service.ErrInvalidCredentials:
 		c.JSON(http.StatusUnauthorized, APIError{Code: "INVALID_CREDENTIALS", Message: "账号或密码错误"})
 	case service.ErrUserDisabled:

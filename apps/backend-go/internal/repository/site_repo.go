@@ -38,6 +38,23 @@ func (r *SiteRepository) Get(ctx context.Context, id string) (*model.Site, error
 	return &s, nil
 }
 
+// GetBySlug 按 slug 查询单个站点。
+//
+// 对齐 Java SiteMapper.getBySlug：公开接口 /backend/public/sites/:slug/pages
+// 通过 slug 定位站点后，再用 site_id 找已发布页面。
+// 未命中返回 ErrSiteNotFound（与 Get 一致）。
+func (r *SiteRepository) GetBySlug(ctx context.Context, slug string) (*model.Site, error) {
+	var s model.Site
+	err := r.db.GetContext(ctx, &s, `SELECT * FROM sites WHERE slug = ?`, slug)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrSiteNotFound
+		}
+		return nil, err
+	}
+	return &s, nil
+}
+
 func (r *SiteRepository) Create(ctx context.Context, s *model.Site) error {
 	now := time.Now()
 	s.CreatedAt = now

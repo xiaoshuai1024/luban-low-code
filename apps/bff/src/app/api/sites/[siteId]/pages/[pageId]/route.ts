@@ -14,14 +14,15 @@ interface PageMeta {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { siteId: string; pageId: string } }
+  { params }: { params: Promise<{ siteId: string; pageId: string }> }
 ) {
+  const { siteId, pageId } = await params;
   const headers: HeadersInit = {
     "X-User-ID": req.headers.get("x-user-id") || "",
     "X-User-Role": req.headers.get("x-user-role") || "",
   };
   const page = await callBackend<PageMeta>(
-    `/sites/${params.siteId}/pages/${params.pageId}`,
+    `/sites/${siteId}/pages/${pageId}`,
     {
       method: "GET",
       headers,
@@ -32,15 +33,16 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { siteId: string; pageId: string } }
+  { params }: { params: Promise<{ siteId: string; pageId: string }> }
 ) {
+  const { siteId, pageId } = await params;
   const headers: HeadersInit = {
     "X-User-ID": req.headers.get("x-user-id") || "",
     "X-User-Role": req.headers.get("x-user-role") || "",
   };
   const body = await req.json();
   const page = await callBackend<PageMeta>(
-    `/sites/${params.siteId}/pages/${params.pageId}`,
+    `/sites/${siteId}/pages/${pageId}`,
     {
       method: "PUT",
       headers,
@@ -52,14 +54,15 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { siteId: string; pageId: string } }
+  { params }: { params: Promise<{ siteId: string; pageId: string }> }
 ) {
+  const { siteId, pageId } = await params;
   const headers: HeadersInit = {
     "X-User-ID": req.headers.get("x-user-id") || "",
     "X-User-Role": req.headers.get("x-user-role") || "",
   };
   await callBackend<unknown>(
-    `/sites/${params.siteId}/pages/${params.pageId}`,
+    `/sites/${siteId}/pages/${pageId}`,
     {
       method: "DELETE",
       headers,

@@ -13,13 +13,14 @@ interface User {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const headers: HeadersInit = {
     "X-User-ID": req.headers.get("x-user-id") || "",
     "X-User-Role": req.headers.get("x-user-role") || "",
   };
-  const user = await callBackend<User>(`/users/${params.id}`, {
+  const user = await callBackend<User>(`/users/${id}`, {
     method: "GET",
     headers,
   });
@@ -28,14 +29,15 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const headers: HeadersInit = {
     "X-User-ID": req.headers.get("x-user-id") || "",
     "X-User-Role": req.headers.get("x-user-role") || "",
   };
   const body = await req.json();
-  const user = await callBackend<User>(`/users/${params.id}`, {
+  const user = await callBackend<User>(`/users/${id}`, {
     method: "PUT",
     headers,
     body: JSON.stringify(body),

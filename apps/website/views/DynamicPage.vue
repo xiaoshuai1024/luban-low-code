@@ -72,17 +72,18 @@ function collectContact(formState: Record<string, unknown>): Record<string, unkn
 
 const {
   submitting,
-  success: submitSuccess,
-  error: submitError,
-  result: submitResult,
+  success: _submitSuccess,
+  error: _submitError,
+  result: _submitResult,
   submit: doLeadSubmit,
   reset: resetSubmit,
 } = useLeadSubmit({
-  submitConfig: formSubmitConfig.value ?? undefined,
   onSuccess(result) {
-    // Handle popup/toast modes
+    // Handle redirect / popup / toast modes
     const cfg = formSubmitConfig.value;
-    if (cfg?.mode === "popup") {
+    if (cfg?.mode === "redirect" && cfg.redirectUrl) {
+      navigateTo(cfg.redirectUrl, { external: true });
+    } else if (cfg?.mode === "popup") {
       showPopup.value = true;
     } else if (cfg?.mode === "toast") {
       showToast.value = true;
@@ -154,7 +155,7 @@ function dismissError() {
       <!-- Loading overlay during submission -->
       <Teleport to="body">
         <div v-if="submitting" class="overlay">
-          <div class="overlay__spinner">Submitting...</div>
+          <div class="overlay__spinner">提交中...</div>
         </div>
       </Teleport>
 

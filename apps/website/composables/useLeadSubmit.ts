@@ -1,5 +1,3 @@
-import type { UseFetchOptions } from "nuxt/app";
-
 /**
  * Form submit configuration (from backend form schema).
  */
@@ -88,15 +86,8 @@ export function useLeadSubmit(options: UseLeadSubmitOptions = {}) {
       const data: LeadSubmitResult = await res.json();
       result.value = data;
       success.value = true;
+      submitting.value = false;
       options.onSuccess?.(data);
-
-      // Handle submitConfig success mode
-      const cfg = options.submitConfig;
-      if (cfg) {
-        if (cfg.mode === "redirect" && cfg.redirectUrl) {
-          navigateTo(cfg.redirectUrl, { external: true });
-        }
-      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Submission failed";
       error.value = msg;

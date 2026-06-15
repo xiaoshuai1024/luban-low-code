@@ -4,7 +4,7 @@ describe('Lead Center', () => {
   })
 
   it('loads lead list page with toolbar and table', () => {
-    cy.visit('/leads')
+    cy.visit('/sites/site-1/leads')
     cy.contains('线索中心').should('be.visible')
     cy.get('button').contains('查询').should('be.visible')
     cy.get('button').contains('导出 CSV').should('be.visible')
@@ -14,13 +14,13 @@ describe('Lead Center', () => {
   })
 
   it('displays lead status tags correctly', () => {
-    cy.visit('/leads')
+    cy.visit('/sites/site-1/leads')
     cy.contains('新线索').should('be.visible')
     cy.contains('已分配').should('be.visible')
   })
 
   it('filters leads by status', () => {
-    cy.visit('/leads')
+    cy.visit('/sites/site-1/leads')
     // Open status filter dropdown
     cy.get('.el-select').first().click()
     cy.get('.el-select-dropdown__item').contains('新线索').click()
@@ -30,7 +30,7 @@ describe('Lead Center', () => {
   })
 
   it('navigates to lead detail on row double-click or detail button', () => {
-    cy.visit('/leads')
+    cy.visit('/sites/site-1/leads')
     cy.get('button').contains('详情').first().click()
     cy.url().should('include', '/leads/lead-1')
     cy.contains('线索详情').should('be.visible')
@@ -38,7 +38,7 @@ describe('Lead Center', () => {
   })
 
   it('displays lead detail with contact info and status', () => {
-    cy.visit('/leads')
+    cy.visit('/sites/site-1/leads')
     cy.get('button').contains('详情').first().click()
     cy.contains('手机号').should('be.visible')
     cy.contains('138****8000').should('be.visible')
@@ -46,7 +46,7 @@ describe('Lead Center', () => {
   })
 
   it('shows status transition buttons based on current status', () => {
-    cy.visit('/leads')
+    cy.visit('/sites/site-1/leads')
     // First lead is 'new' status — should show '已分配' and '无效' transition buttons
     cy.get('table tbody tr').first().within(() => {
       cy.contains('新线索').should('be.visible')
@@ -56,7 +56,7 @@ describe('Lead Center', () => {
   })
 
   it('performs status transition via inline button', () => {
-    cy.visit('/leads')
+    cy.visit('/sites/site-1/leads')
     cy.get('button').contains('已分配').click()
     // Confirmation dialog
     cy.get('.el-message-box').should('be.visible')
@@ -66,7 +66,7 @@ describe('Lead Center', () => {
   })
 
   it('performs status transition from detail page', () => {
-    cy.visit('/leads')
+    cy.visit('/sites/site-1/leads')
     cy.get('button').contains('详情').first().click()
     // Should see status section with transition buttons
     cy.contains('状态变更').should('be.visible')
@@ -77,7 +77,7 @@ describe('Lead Center', () => {
   })
 
   it('shows UTM info when available', () => {
-    cy.visit('/leads')
+    cy.visit('/sites/site-1/leads')
     cy.get('button').contains('详情').first().click()
     // First lead has UTM data
     cy.contains('UTM 参数').should('be.visible')
@@ -86,9 +86,36 @@ describe('Lead Center', () => {
   })
 
   it('returns to list from detail page', () => {
-    cy.visit('/leads')
+    cy.visit('/sites/site-1/leads')
     cy.get('button').contains('详情').first().click()
     cy.contains('← 返回列表').click()
     cy.contains('线索中心').should('be.visible')
+  })
+
+  it('exports leads as CSV successfully', () => {
+    cy.visit('/sites/site-1/leads')
+    cy.get('button').contains('导出 CSV').click()
+    cy.contains('导出成功').should('be.visible')
+  })
+
+  it('shows 404 alert when navigating to non-existent lead', () => {
+    cy.visit('/sites/site-1/leads/non-existent-id')
+    cy.get('.el-alert--error').should('be.visible')
+  })
+
+  it('cancels status transition and keeps status unchanged', () => {
+    cy.visit('/sites/site-1/leads')
+    // First lead is 'new' status
+    cy.get('table tbody tr').first().should('contain', '新线索')
+    // Click transition button to open confirm dialog
+    cy.get('button').contains('已分配').first().click()
+    // Dialog should appear
+    cy.get('.el-message-box').should('be.visible')
+    // Click cancel button
+    cy.get('.el-message-box__btns .el-button--default').click()
+    // Dialog should close
+    cy.get('.el-message-box').should('not.exist')
+    // Status should remain unchanged
+    cy.get('table tbody tr').first().should('contain', '新线索')
   })
 })

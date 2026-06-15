@@ -53,7 +53,7 @@ const router = createRouter({
           meta: { title: '页面编辑' },
         },
         {
-          path: 'leads',
+          path: 'sites/:siteId/leads',
           name: 'LeadList',
           component: () => import('@/views/lead/LeadList.vue'),
           meta: { title: '线索中心' },

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import {
   ElButton,
   ElTable,
@@ -28,6 +28,7 @@ import { useUserStore } from '@/stores'
 import { AxiosError } from 'axios'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 
 const list = ref<LeadResponse[]>([])
@@ -72,6 +73,7 @@ async function fetchList() {
     }
     if (filterStatus.value) params.status = filterStatus.value
     if (filterFormId.value) params.formId = filterFormId.value
+    if (keyword.value) params.keyword = keyword.value
     const { data } = await getLeads(params as any)
     list.value = data?.list ?? []
     total.value = data?.total ?? 0
@@ -149,7 +151,13 @@ function onSizeChange(s: number) {
 }
 
 function initSiteId() {
-  // Try to get siteId from route query, store, or localStorage
+  // Try to get siteId from route params first, then localStorage
+  const routeSiteId = route.params.siteId as string
+  if (routeSiteId) {
+    siteId.value = routeSiteId
+    localStorage.setItem('luban_current_site_id', routeSiteId)
+    return
+  }
   const stored = localStorage.getItem('luban_current_site_id')
   if (stored) {
     siteId.value = stored

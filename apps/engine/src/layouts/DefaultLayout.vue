@@ -29,10 +29,15 @@ const userStore = useUserStore()
 const menuItems = [
   { path: '/dashboard', title: '工作台', icon: DataBoard },
   { path: '/sites', title: '站点管理', icon: Collection },
-  { path: '/leads', title: '线索中心', icon: ChatDotSquare },
+  { path: null, title: '线索中心', icon: ChatDotSquare },
   { path: '/users', title: '用户管理', icon: User },
   { path: '/settings', title: '系统设置', icon: Setting },
 ]
+
+function getLeadsPath(): string {
+  const siteId = localStorage.getItem('luban_current_site_id')
+  return siteId ? `/sites/${siteId}/leads` : '/sites'
+}
 
 function handleLogout() {
   logout()
@@ -52,11 +57,12 @@ function handleLogout() {
         background-color="#304156"
         text-color="#bfcbd9"
         active-text-color="#409eff"
+        @select="(index: string) => { if (index === 'leads') { router.push(getLeadsPath()); } }"
       >
         <ElMenuItem
           v-for="item in menuItems"
-          :key="item.path"
-          :index="item.path"
+          :key="item.path || 'leads'"
+          :index="item.path || 'leads'"
         >
           <ElIcon><component :is="item.icon" /></ElIcon>
           <span>{{ item.title }}</span>

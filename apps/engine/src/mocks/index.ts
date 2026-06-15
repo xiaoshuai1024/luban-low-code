@@ -487,7 +487,9 @@ function handleLeads(config: AxiosRequestConfig): AxiosResponse | null {
   const matchGet = url.match(/^\/leads\/([^/]+)$/)
   if (matchGet && method === 'get') {
     const id = matchGet[1]
-    const lead = mockContext.leads.find((l) => l.id === id)
+    const params = (config.params ?? {}) as Record<string, string>
+    const siteId = params.siteId
+    const lead = mockContext.leads.find((l) => l.id === id && (!siteId || l.siteId === siteId))
     if (!lead) return createResponse(config, { message: 'Lead not found' } as any, 404)
     return createResponse(config, { ...lead })
   }

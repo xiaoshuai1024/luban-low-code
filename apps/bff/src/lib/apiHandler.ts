@@ -18,7 +18,7 @@ export function authHeaders(
   payload: { sub: string; role: string } | null
 ): { "X-User-ID": string; "X-User-Role": string } | null {
   if (!payload) return null;
-  return { "X-User-ID": payload.sub, "X-User-Role": payload.role };
+  return { "X-User-ID": payload.sub, "X-User-Role": payload.role || "user" };
 }
 
 export function unauthenticated() {

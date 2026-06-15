@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { parseTokenFromRequest } from "@/lib/authToken";
 import { toBackendResponse, authHeaders, unauthenticated } from "@/lib/apiHandler";
-
-const BACKEND_BASE_URL =
-  process.env.BACKEND_BASE_URL || "http://127.0.0.1:8080/backend";
+import { BACKEND_BASE_URL } from "@/lib/backendClient";
 
 /** GET /api/leads/export?siteId= → CSV 流（不走 callBackend 的 JSON 解析） */
 export async function GET(req: NextRequest) {
@@ -16,11 +14,15 @@ export async function GET(req: NextRequest) {
       { method: "GET", headers: h }
     );
     if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      return NextResponse.json(
-        { code: "BACKEND_ERROR", message: text || `backend ${res.status}` },
-        { status: res.status }
-      );
+      try {
+        const err = await res.json();
+        return NextResponse.json(err, { status: res.status });
+      } catch {
+        return NextResponse.json(
+          { code: "BACKEND_ERROR", message: "Export failed" },
+          { status: res.status }
+        );
+      }
     }
     const csv = await res.text();
     return new NextResponse(csv, {

@@ -25,6 +25,12 @@ export async function POST(
     });
     return NextResponse.json(data);
   } catch (e) {
+    if (e instanceof SyntaxError) {
+      return NextResponse.json(
+        { code: "BAD_REQUEST", message: "Invalid JSON body" },
+        { status: 400 }
+      );
+    }
     return toBackendResponse(e);
   }
 }

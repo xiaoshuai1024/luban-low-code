@@ -12,6 +12,12 @@ export async function GET(req: NextRequest) {
     const data = await callBackend(`/forms?${qs}`, { method: "GET", headers: h });
     return NextResponse.json(data);
   } catch (e) {
+    if (e instanceof SyntaxError) {
+      return NextResponse.json(
+        { code: "BAD_REQUEST", message: "Invalid JSON body" },
+        { status: 400 }
+      );
+    }
     return toBackendResponse(e);
   }
 }
@@ -29,6 +35,12 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json(data, { status: 201 });
   } catch (e) {
+    if (e instanceof SyntaxError) {
+      return NextResponse.json(
+        { code: "BAD_REQUEST", message: "Invalid JSON body" },
+        { status: 400 }
+      );
+    }
     return toBackendResponse(e);
   }
 }

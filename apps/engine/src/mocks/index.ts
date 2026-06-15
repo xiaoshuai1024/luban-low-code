@@ -5,6 +5,8 @@ import type { PageMeta } from '@/api/page'
 import type { User, UserCreatePayload, UserUpdatePayload } from '@/api/user'
 import type { SystemSettings } from '@/api/settings'
 import type { PageSchema } from '@/types/schema'
+import type { FormResponse } from '@/api/form'
+import type { LeadResponse } from '@/api/lead'
 
 // 统一时间格式：YYYY-MM-DD HH:mm:ss
 function formatDateTime(date: Date = new Date()): string {
@@ -22,6 +24,8 @@ interface MockContext {
   pages: PageMeta[]
   users: User[]
   settings: SystemSettings
+  forms: FormResponse[]
+  leads: LeadResponse[]
 }
 
 // 简单的内存假数据，页面刷新后会重置
@@ -73,6 +77,49 @@ const mockContext: MockContext = {
     security: { sessionTimeout: 30 },
     notification: { enabled: true },
   },
+  forms: [
+    {
+      id: 'form-1',
+      siteId: 'site-1',
+      pageId: 'page-1',
+      name: '联系我们',
+      fieldSchema: { fields: [{ name: 'phone', label: '手机号', type: 'text' }, { name: 'name', label: '姓名', type: 'text' }] },
+      submitConfig: { mode: 'toast', toastMessage: '提交成功' },
+      dedupKeys: ['phone'],
+      dedupWindow: 86400,
+      dedupPolicy: 'reject',
+      status: 'active',
+      createdAt: '2026-06-15 10:00:00',
+      updatedAt: '2026-06-15 10:00:00',
+    },
+  ],
+  leads: [
+    {
+      id: 'lead-1',
+      siteId: 'site-1',
+      formId: 'form-1',
+      formName: '联系我们',
+      pageId: 'page-1',
+      channelId: 'google',
+      contactMasked: { phone: '138****8000', name: '张*' },
+      utm: { source: 'google', campaign: 'spring' },
+      status: 'new',
+      createdAt: '2026-06-15 11:00:00',
+      updatedAt: '2026-06-15 11:00:00',
+    },
+    {
+      id: 'lead-2',
+      siteId: 'site-1',
+      formId: 'form-1',
+      formName: '联系我们',
+      pageId: 'page-1',
+      contactMasked: { phone: '139****9000', name: '李*' },
+      status: 'assigned',
+      assigneeId: 'user-1',
+      createdAt: '2026-06-14 09:00:00',
+      updatedAt: '2026-06-14 10:00:00',
+    },
+  ],
 }
 
 const mockPasswords: Record<string, string> = {
@@ -393,6 +440,83 @@ function handleUsers(config: AxiosRequestConfig): AxiosResponse | null {
   return null
 }
 
+function handleForms(config: AxiosRequestConfig): AxiosResponse | null {
+  const url = config.url ?? ''
+  const method = (config.method ?? 'get').toLowerCase()
+  const authError = requireAuth(config)
+  if (authError) return authError
+
+  // GET /forms?siteId=
+  if (url === '/forms' && method === 'get') {
+    const siteId = (config.params as Record<string, string>)?.siteId
+    const list = mockContext.forms.filter((f) => f.siteId === siteId).map((f) => ({ ...f }))
+    return createResponse(config, list)
+  }
+
+  return null
+}
+
+function handleLeads(config: AxiosRequestConfig): AxiosResponse | null {
+  const url = config.url ?? ''
+  const method = (config.method ?? 'get').toLowerCase()
+  const authError = requireAuth(config)
+  if (authError) return authError
+
+  // GET /leads?siteId=...
+  if (url === '/leads' && method === 'get') {
+    const params = (config.params ?? {}) as Record<string, string>
+    const siteId = params.siteId
+    let filtered = mockContext.leads.filter((l) => l.siteId === siteId)
+    if (params.status) {
+      filtered = filtered.filter((l) => l.status === params.status)
+    }
+    if (params.formId) {
+      filtered = filtered.filter((l) => l.formId === params.formId)
+    }
+    const page = parseInt(params.page ?? '1', 10)
+    const size = parseInt(params.size ?? '20', 10)
+    const start = (page - 1) * size
+    const end = start + size
+    return createResponse(config, {
+      list: filtered.slice(start, end),
+      total: filtered.length,
+    })
+  }
+
+  // GET /leads/:id?siteId=
+  const matchGet = url.match(/^\/leads\/([^/]+)$/)
+  if (matchGet && method === 'get') {
+    const id = matchGet[1]
+    const lead = mockContext.leads.find((l) => l.id === id)
+    if (!lead) return createResponse(config, { message: 'Lead not found' } as any, 404)
+    return createResponse(config, { ...lead })
+  }
+
+  // PATCH /leads/:id/status?siteId=
+  const matchStatus = url.match(/^\/leads\/([^/]+)\/status$/)
+  if (matchStatus && method === 'patch') {
+    const id = matchStatus[1]
+    const idx = mockContext.leads.findIndex((l) => l.id === id)
+    if (idx === -1) return createResponse(config, { message: 'Lead not found' } as any, 404)
+    const body = (config.data ?? {}) as { status?: string; assigneeId?: string }
+    mockContext.leads[idx] = {
+      ...mockContext.leads[idx],
+      status: body.status ?? mockContext.leads[idx].status,
+      assigneeId: body.assigneeId ?? mockContext.leads[idx].assigneeId,
+      updatedAt: formatDateTime(),
+    }
+    return createResponse(config, { ...mockContext.leads[idx] })
+  }
+
+  // GET /leads/export?siteId=
+  if (url === '/leads/export' && method === 'get') {
+    const csv = 'id,status,phone\nlead-1,new,138****8000\nlead-2,assigned,139****9000'
+    return createResponse(config, csv)
+  }
+
+  return null
+}
+
 function handleSettings(config: AxiosRequestConfig): AxiosResponse | null {
   const url = config.url ?? ''
   const method = (config.method ?? 'get').toLowerCase()
@@ -429,11 +553,11 @@ export async function handleMockRequest(
   config: AxiosRequestConfig
 ): Promise<AxiosResponse | null> {
   const url = config.url ?? ''
-  if (!url.startsWith('/auth') && !url.startsWith('/sites') && !url.startsWith('/users') && !url.startsWith('/settings')) {
+  if (!url.startsWith('/auth') && !url.startsWith('/sites') && !url.startsWith('/users') && !url.startsWith('/settings') && !url.startsWith('/leads') && !url.startsWith('/forms')) {
     return null
   }
 
-  const handlers = [handleAuth, handleSites, handlePages, handleUsers, handleSettings]
+  const handlers = [handleAuth, handleSites, handlePages, handleUsers, handleSettings, handleForms, handleLeads]
   for (const handler of handlers) {
     const res = handler(config)
     if (res) {

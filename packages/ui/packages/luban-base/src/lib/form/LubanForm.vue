@@ -3,8 +3,6 @@ type FormSize = 'small' | 'medium' | 'large';
 
 const props = withDefaults(
   defineProps<{
-    /** Submit handler; when set, form will submit via button type="submit" */
-    onSubmit?: (e: Event) => void;
     /** Form width size; controls max-width, default medium (~800px) */
     size?: FormSize;
   }>(),

@@ -19,5 +19,11 @@
   },
   "devDependencies": {
     "typescript": "^5.6.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "luban-base": "link:../../ui/luban-ui/packages/luban-base",
+      "luban-low-code": "link:../../ui/luban-ui/packages/luban-low-code"
+    }
   }
 }

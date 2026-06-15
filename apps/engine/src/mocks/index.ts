@@ -88,7 +88,7 @@ function createResponse<T>(config: AxiosRequestConfig, data: T, status = 200): A
     status,
     statusText: String(status),
     headers: {},
-    config,
+    config: config as any,
   }
 }
 
@@ -101,8 +101,9 @@ function unauthorized(config: AxiosRequestConfig): AxiosResponse {
 }
 
 function requireAuth(config: AxiosRequestConfig): AxiosResponse | null {
-  const auth = (config.headers?.Authorization ||
-    (config.headers as Record<string, unknown>)?.authorization) as string | undefined
+  const headers = config.headers ?? {} as AxiosRequestConfig['headers']
+  const auth = (headers?.Authorization ||
+    (headers as Record<string, unknown>)?.authorization) as string | undefined
   if (!auth || !auth.startsWith('Bearer ')) {
     return unauthorized(config)
   }

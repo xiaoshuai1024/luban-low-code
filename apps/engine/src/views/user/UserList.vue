@@ -15,7 +15,7 @@ import {
   ElTag,
   ElPagination,
 } from 'element-plus'
-import { getUsers, createUser, updateUser, setUserStatus, type User, type UserCreatePayload } from '@/api/user'
+import { getUsers, createUser, updateUser, setUserStatus, type User } from '@/api/user'
 import { formatDateTime } from '@/utils/datetime'
 import { AxiosError } from 'axios'
 
@@ -27,7 +27,13 @@ const pageSize = ref(10)
 const keyword = ref('')
 const dialogVisible = ref(false)
 const editingId = ref<string | null>(null)
-const form = ref<UserCreatePayload & { id?: string }>({
+const form = ref<{
+  username: string
+  password?: string
+  name?: string
+  role?: string
+  id?: string
+}>({
   username: '',
   password: '',
   name: '',

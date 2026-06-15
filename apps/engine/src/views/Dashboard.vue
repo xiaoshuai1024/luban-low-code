@@ -40,7 +40,7 @@ onMounted(async () => {
       </ElCol>
       <ElCol :span="8">
         <ElCard shadow="hover" class="dashboard__card">
-          <ElStatistic title="页面数" value="-" />
+          <ElStatistic title="页面数" :value="0" />
         </ElCard>
       </ElCol>
     </ElRow>

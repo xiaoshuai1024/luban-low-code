@@ -9,7 +9,6 @@ import {
   ElMain,
   ElMenu,
   ElMenuItem,
-  ElSubMenu,
   ElDropdown,
   ElDropdownItem,
   ElDropdownMenu,
@@ -18,9 +17,9 @@ import {
 import {
   DataBoard,
   Collection,
-  Document,
   User,
   Setting,
+  ChatDotSquare,
   ArrowRight,
 } from '@element-plus/icons-vue'
 
@@ -30,6 +29,7 @@ const userStore = useUserStore()
 const menuItems = [
   { path: '/dashboard', title: '工作台', icon: DataBoard },
   { path: '/sites', title: '站点管理', icon: Collection },
+  { path: '/leads', title: '线索中心', icon: ChatDotSquare },
   { path: '/users', title: '用户管理', icon: User },
   { path: '/settings', title: '系统设置', icon: Setting },
 ]
@@ -38,10 +38,6 @@ function handleLogout() {
   logout()
   userStore.clearAuth()
   router.push('/login')
-}
-
-function go(path: string) {
-  router.push(path)
 }
 </script>
 

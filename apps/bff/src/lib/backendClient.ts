@@ -1,6 +1,6 @@
 import type { RequestInit } from "next/dist/server/web/spec-extension/request";
 
-const BACKEND_BASE_URL =
+export const BACKEND_BASE_URL =
   process.env.BACKEND_BASE_URL || "http://127.0.0.1:8080/backend";
 
 export interface BackendError {

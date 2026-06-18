@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callBackend } from "@/lib/backendClient";
+import { parseTokenFromRequest } from "@/lib/authToken";
 
 interface PageMeta {
   id: string;
@@ -14,14 +15,22 @@ interface PageMeta {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { siteId: string; pageId: string } }
+  { params }: { params: Promise<{ siteId: string; pageId: string }> }
 ) {
+  const payload = parseTokenFromRequest(req);
+  if (!payload) {
+    return NextResponse.json(
+      { code: "UNAUTHENTICATED", message: "invalid token" },
+      { status: 401 }
+    );
+  }
+  const { siteId, pageId } = await params;
   const headers: HeadersInit = {
-    "X-User-ID": req.headers.get("x-user-id") || "",
-    "X-User-Role": req.headers.get("x-user-role") || "",
+    "X-User-ID": payload.sub,
+    "X-User-Role": payload.role,
   };
   const page = await callBackend<PageMeta>(
-    `/sites/${params.siteId}/pages/${params.pageId}`,
+    `/sites/${siteId}/pages/${pageId}`,
     {
       method: "GET",
       headers,
@@ -32,15 +41,23 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { siteId: string; pageId: string } }
+  { params }: { params: Promise<{ siteId: string; pageId: string }> }
 ) {
+  const payload = parseTokenFromRequest(req);
+  if (!payload) {
+    return NextResponse.json(
+      { code: "UNAUTHENTICATED", message: "invalid token" },
+      { status: 401 }
+    );
+  }
+  const { siteId, pageId } = await params;
   const headers: HeadersInit = {
-    "X-User-ID": req.headers.get("x-user-id") || "",
-    "X-User-Role": req.headers.get("x-user-role") || "",
+    "X-User-ID": payload.sub,
+    "X-User-Role": payload.role,
   };
   const body = await req.json();
   const page = await callBackend<PageMeta>(
-    `/sites/${params.siteId}/pages/${params.pageId}`,
+    `/sites/${siteId}/pages/${pageId}`,
     {
       method: "PUT",
       headers,
@@ -52,19 +69,23 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { siteId: string; pageId: string } }
+  { params }: { params: Promise<{ siteId: string; pageId: string }> }
 ) {
+  const payload = parseTokenFromRequest(req);
+  if (!payload) {
+    return NextResponse.json(
+      { code: "UNAUTHENTICATED", message: "invalid token" },
+      { status: 401 }
+    );
+  }
+  const { siteId, pageId } = await params;
   const headers: HeadersInit = {
-    "X-User-ID": req.headers.get("x-user-id") || "",
-    "X-User-Role": req.headers.get("x-user-role") || "",
+    "X-User-ID": payload.sub,
+    "X-User-Role": payload.role,
   };
-  await callBackend<unknown>(
-    `/sites/${params.siteId}/pages/${params.pageId}`,
-    {
-      method: "DELETE",
-      headers,
-    }
-  );
+  await callBackend<unknown>(`/sites/${siteId}/pages/${pageId}`, {
+    method: "DELETE",
+    headers,
+  });
   return NextResponse.json(null, { status: 204 });
 }
-

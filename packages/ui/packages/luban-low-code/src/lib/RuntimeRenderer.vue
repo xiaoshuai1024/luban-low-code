@@ -2,6 +2,15 @@
 import { getComponent } from './registry';
 import type { NodeSchema } from './schema';
 import { validate, type ValidationRule } from './validation';
+import { inject } from 'vue';
+
+/** Optional form submit handler provided by the host app (e.g. website DynamicPage) */
+interface FormSubmitPayload {
+  formId: string;
+  formState: Record<string, unknown>;
+  event: Event;
+}
+const formSubmitHandler = inject<((payload: FormSubmitPayload) => void) | null>('lubanFormSubmit', null);
 
 const FORM_VALUE_TYPES = new Set([
   'LubanInput',
@@ -120,6 +129,15 @@ function slotContent(): string {
       v-else-if="getComponent(root.type)"
       :is="getComponent(root.type)"
       v-bind="componentProps(root.props as Record<string, unknown>)"
+      @submit="
+        formSubmitHandler && root.type === 'LubanForm'
+          ? formSubmitHandler({
+              formId: (root.props?.formId as string) || '',
+              formState: props.formState,
+              event: $event,
+            })
+          : undefined
+      "
     >
       <template v-if="(root.children ?? []).length">
         <RuntimeRenderer

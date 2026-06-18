@@ -7,6 +7,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      'luban-base': fileURLToPath(
+        new URL('../../../packages/ui/luban-ui/packages/luban-base/src/index.ts', import.meta.url)
+      ),
     },
   },
   preview: {

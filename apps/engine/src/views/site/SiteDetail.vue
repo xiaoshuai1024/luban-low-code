@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElCard, ElDescriptions, ElDescriptionItem, ElButton } from 'element-plus'
+import { ElCard, ElDescriptions, ElDescriptionsItem, ElButton } from 'element-plus'
 import { getSite, type Site } from '@/api/site'
 
 const route = useRoute()
@@ -34,10 +34,10 @@ onMounted(fetch)
   <div class="site-detail" v-loading="loading">
     <ElCard v-if="site" header="站点信息">
       <ElDescriptions :column="1" border>
-        <ElDescriptionItem label="名称">{{ site.name }}</ElDescriptionItem>
-        <ElDescriptionItem label="标识">{{ site.slug ?? '-' }}</ElDescriptionItem>
-        <ElDescriptionItem label="基础 URL">{{ site.baseUrl ?? '-' }}</ElDescriptionItem>
-        <ElDescriptionItem label="状态">{{ site.status ?? '-' }}</ElDescriptionItem>
+        <ElDescriptionsItem label="名称">{{ site.name }}</ElDescriptionsItem>
+        <ElDescriptionsItem label="标识">{{ site.slug ?? '-' }}</ElDescriptionsItem>
+        <ElDescriptionsItem label="基础 URL">{{ site.baseUrl ?? '-' }}</ElDescriptionsItem>
+        <ElDescriptionsItem label="状态">{{ site.status ?? '-' }}</ElDescriptionsItem>
       </ElDescriptions>
       <div style="margin-top: 16px">
         <ElButton type="primary" @click="goPages">进入页面列表</ElButton>

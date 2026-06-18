@@ -26,4 +26,4 @@ describe('Pages management', () => {
     cy.contains('button', '保存').should('be.visible')
     cy.contains('button', '返回列表').should('be.visible')
   })
-}
+})

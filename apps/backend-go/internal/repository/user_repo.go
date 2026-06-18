@@ -94,13 +94,33 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 func (r *UserRepository) Update(ctx context.Context, u *model.User) error {
 	u.UpdatedAt = time.Now()
 	res, err := r.db.ExecContext(ctx, `
-UPDATE users SET username=?, name=?, role=?, status=?, password=?, updated_at=? WHERE id=?`,
-		u.Username, u.Name, u.Role, u.Status, u.Password, u.UpdatedAt, u.ID,
+UPDATE users SET username=?, name=?, role=?, status=?, updated_at=? WHERE id=?`,
+		u.Username, u.Name, u.Role, u.Status, u.UpdatedAt, u.ID,
 	)
 	if err != nil {
 		if strings.Contains(err.Error(), "Duplicate entry") {
 			return ErrUsernameConflict
 		}
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return ErrUserNotFound
+	}
+	return nil
+}
+
+// UpdatePassword 单独更新密码哈希列。
+//
+// 设计原因：Update SQL 不再包含 password 列（对齐 Java UserMapper.update），
+// 避免调用方因未填充 model.User.Password 而意外清空密码。改密走专用 SQL，
+// 调用方需自行 bcrypt 后传入 hash。
+func (r *UserRepository) UpdatePassword(ctx context.Context, id, passwordHash string) error {
+	res, err := r.db.ExecContext(ctx, `
+UPDATE users SET password=?, updated_at=? WHERE id=?`,
+		passwordHash, time.Now(), id,
+	)
+	if err != nil {
 		return err
 	}
 	n, _ := res.RowsAffected()

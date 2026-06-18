@@ -51,3 +51,12 @@ func (s *AuthService) Login(ctx context.Context, username, password string) (*Lo
 	}, nil
 }
 
+// Me 按 userId 返回当前登录用户的完整信息（用于 /auth/me）。
+//
+// 对齐 Java AuthService.me：从 DB 按 id 取最新 user 并返回。User.Password 字段
+// 标了 json:"-"，序列化时自动脱敏，不会把密码哈希暴露给前端。
+// 用户不存在返回 ErrUserNotFound（对齐 Java BusinessException.userNotFound()）。
+func (s *AuthService) Me(ctx context.Context, userID string) (*model.User, error) {
+	return s.userRepo.Get(ctx, userID)
+}
+

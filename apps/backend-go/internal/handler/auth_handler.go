@@ -34,17 +34,24 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 
-// Me 依赖上游中间件注入的用户信息
+// Me 返回当前登录用户的完整信息（不含 password）。
+//
+// 对齐 Java AuthController.me → AuthService.me：从 DB 取完整 user 返回。
+// 上游 RequireUser 中间件已把 X-User-ID 注入到 "userId"，这里取出来调 service。
+// 返回的是 *model.User（Password 字段 json:"-" 自动脱敏），字段顺序与 Java
+// UserResponse 一致：id/username/name/role/status/createdAt/updatedAt。
 func (h *AuthHandler) Me(c *gin.Context) {
 	userID, _ := c.Get("userId")
-	role, _ := c.Get("role")
-	if userID == nil {
+	id, _ := userID.(string)
+	if id == "" {
 		c.JSON(http.StatusUnauthorized, APIError{Code: "UNAUTHENTICATED", Message: "missing user"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"id":   userID,
-		"role": role,
-	})
+	u, err := h.svc.Me(c.Request.Context(), id)
+	if err != nil {
+		writeError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, u)
 }
 

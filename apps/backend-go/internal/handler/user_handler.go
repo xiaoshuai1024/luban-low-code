@@ -85,8 +85,9 @@ func (h *UserHandler) Update(c *gin.Context) {
 		Role:     req.Role,
 		Status:   req.Status,
 	}
-	// 密码处理直接交给 service.Update 内部或后续扩展
-	if err := h.svc.Update(c.Request.Context(), u); err != nil {
+	// 把请求里的 password 透传给 service：为空则保持原密码不变（service 不调
+	// UpdatePassword）；非空则 service 内部 bcrypt 后走专用 UpdatePassword。
+	if err := h.svc.Update(c.Request.Context(), u, req.Password); err != nil {
 		writeError(c, err)
 		return
 	}
@@ -109,7 +110,8 @@ func (h *UserHandler) UpdateStatus(c *gin.Context) {
 		return
 	}
 	u.Status = body.Status
-	if err := h.svc.Update(c.Request.Context(), u); err != nil {
+	// 仅改 status，password 传空表示保持原密码不变。
+	if err := h.svc.Update(c.Request.Context(), u, ""); err != nil {
 		writeError(c, err)
 		return
 	}

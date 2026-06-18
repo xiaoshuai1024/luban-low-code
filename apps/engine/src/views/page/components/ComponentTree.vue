@@ -87,10 +87,6 @@ function currentKeys(): string[] {
   return props.selectedId ? [props.selectedId] : []
 }
 
-interface TreeNode {
-  data: NodeSchema
-}
-
 function canMoveUp(node: NodeSchema): boolean {
   const info = locate(node)
   if (!info) return false

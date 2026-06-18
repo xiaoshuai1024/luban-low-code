@@ -200,20 +200,20 @@ function handleDuplicate(): void {
           v-else-if="item.type === 'number'"
           :model-value="Number(getValue(key, item) ?? 0)"
           controls-position="right"
-          @update:model-value="(v: number) => handleInput(key, v)"
+          @update:model-value="(v?: number) => handleInput(key, v)"
         />
 
         <!-- boolean -->
         <ElSwitch
           v-else-if="item.type === 'boolean'"
           :model-value="Boolean(getValue(key, item))"
-          @update:model-value="(v: boolean) => handleInput(key, v)"
+          @update:model-value="(v: string | number | boolean) => handleInput(key, v)"
         />
 
         <!-- select -->
         <ElSelect
           v-else-if="item.type === 'select'"
-          :model-value="getValue(key, item)"
+          :model-value="getValue(key, item) as string | number | boolean | Record<string, unknown>"
           :placeholder="`请选择${item.label || key}`"
           style="width: 100%"
           @update:model-value="(v: unknown) => handleInput(key, v)"

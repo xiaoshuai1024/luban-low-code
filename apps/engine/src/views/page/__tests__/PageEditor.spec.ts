@@ -22,7 +22,6 @@ import {
   designerEmitHooks,
   designerPropsHolder,
   resetLubanStub,
-  metaFixture,
 } from '@/test/lubanLowCodeStub'
 
 // === stubs for vue-router（PageEditor 用 useRoute/useRouter） ===
@@ -121,7 +120,7 @@ describe('PageEditor.vue', () => {
   })
 
   it('onAddNode 把 meta.defaultProps 写入 root.children 并选中', async () => {
-    const wrapper = mountEditor()
+    mountEditor()
     await flushPromises()
     // 初始 root.children 为空
     const designerProps1 = designerPropsHolder.current as { schema: { root: { children: unknown[] } } }
@@ -146,7 +145,7 @@ describe('PageEditor.vue', () => {
   })
 
   it('onReorder 调用 reorderRootChildren 重排 root.children', async () => {
-    const wrapper = mountEditor()
+    mountEditor()
     await flushPromises()
     // 先加两个节点
     designerEmitHooks.addNode!('LubanButton')

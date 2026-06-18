@@ -37,7 +37,6 @@ import {
   ElContainer,
   ElAside,
   ElMain,
-  ElHeader,
   ElTag,
   ElMessageBox,
 } from 'element-plus'
@@ -59,7 +58,7 @@ const route = useRoute()
 const router = useRouter()
 const siteId = computed(() => route.params.siteId as string)
 const pageId = computed(() => route.params.pageId as string)
-const isNew = computed(() => route.name === 'PageNew' || route.meta.isNew)
+const isNew = computed(() => route.name === 'PageNew' || Boolean(route.meta.isNew))
 
 const pageName = ref('')
 const pagePath = ref('')

@@ -1,4 +1,4 @@
-import { request, setToken, clearToken } from './request'
+import { request, clearToken } from './request'
 
 export interface LoginPayload {
   username: string

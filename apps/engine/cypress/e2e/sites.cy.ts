@@ -31,4 +31,4 @@ describe('Sites management', () => {
     cy.contains('站点：').should('be.visible')
     cy.contains('button', '新建页面').should('be.visible')
   })
-}
+})

@@ -10,7 +10,7 @@ import {
   ElTag,
 } from 'element-plus'
 import { getPages, deletePage, type PageMeta } from '@/api/page'
-import { getSite, type Site } from '@/api/site'
+import { getSite } from '@/api/site'
 import { buildPublishedPagePreviewUrl } from '@/utils/publicPage'
 
 const route = useRoute()

@@ -6,9 +6,9 @@
  * 选中、删除、上移/下移/拖拽排序使用。
  *
  * 类型说明：
- * - NodeSchema 来自 engine 本地 `@/types/schema`，与 PageEditor.vue / api/page.ts
- *   保持一致（含 eventBindings 字段）。
- * - 与 luban-low-code 导出的 NodeSchema 结构兼容（luban-low-code 为子集）。
+ * - NodeSchema 来自 `@/types/schema`（re-export luban-low-code，single source），
+ *   含第1波新增 visible/loop/events/datasource/locked/hidden 字段。
+ * - eventBindings（旧）已统一为 events。
  *
  * 不变量：
  * - root 节点本身不可被删除/移动（findParent(root.id) === null）。

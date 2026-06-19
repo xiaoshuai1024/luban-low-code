@@ -50,4 +50,4 @@ cypress/screenshots
 
 # Prod secrets on server (copy from app.env.example)
 deploy/environments/prod/app.env
-deploy/environments/prod/secrets/
+deploy/environments/prod/secrets/"cov.log"  

@@ -25,7 +25,7 @@
  *
  * 错误态：loadPage 失败不再静默回退空 schema；显示错误卡片 + 重试按钮。
  */
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   ElButton,
@@ -47,12 +47,14 @@ import {
   LubanPage,
   getComponentMeta,
   getPaletteGroups,
-  reorderRootChildren,
-  isContainerType,
 } from 'luban-low-code'
 import PropertyPanel from './components/PropertyPanel.vue'
 import ComponentTree from './components/ComponentTree.vue'
-import { findNode, findParent, removeNode, moveChild } from './components/schemaTree'
+import AiAssistantPanel from './components/AiAssistantPanel.vue'
+import { findNode } from './components/schemaTree'
+import { useHistory } from '@/composables/useHistory'
+import { usePageEditorApi } from '@/composables/usePageEditorApi'
+import { FeatureGate } from '@/featuregates'
 
 const route = useRoute()
 const router = useRouter()
@@ -74,6 +76,16 @@ const selectedId = ref<string | null>(null)
 /** 设计/预览模式切换：true=设计画布，false=只读渲染预览。 */
 const isDesign = ref(true)
 
+/** 撤销/重做栈（人工 + AI 改动统一入栈）。 */
+const history = useHistory()
+/** 画布操作 API 收口（替代原私有 onAddNode/onUpdateProp/…）。 */
+const editorApi = usePageEditorApi(schema, history, selectedId)
+
+/** AI 助手开关（FeatureGate ai_assistant_enabled，默认 true）。 */
+const aiEnabled = FeatureGate.aiAssistant()
+/** AI 侧边面板展开状态。 */
+const aiPanelOpen = ref(true)
+
 /** 物料面板分组（一次性派生；物料注册在 luban-low-code side-effect import 完成）。 */
 const paletteGroups = computed(() => getPaletteGroups())
 
@@ -92,18 +104,6 @@ function statusTagType(status: string): 'success' | 'info' | 'warning' | 'danger
   if (status === 'published') return 'success'
   if (status === 'draft') return 'info'
   return 'warning'
-}
-
-/** crypto.randomUUID 在浏览器与 jsdom 新版本可用；加兜底以防旧环境。 */
-function genId(prefix = 'n'): string {
-  try {
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-      return crypto.randomUUID()
-    }
-  } catch {
-    /* noop */
-  }
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
 /** 给 ComponentTree 注入的 label 解析：优先用 meta.label，回退 type。 */
@@ -211,97 +211,54 @@ function goBack() {
   router.push(`/sites/${siteId.value}/pages`)
 }
 
-// === LubanDesigner / 组件树事件 ===
+// === LubanDesigner / 组件树事件（统一委托 usePageEditorApi，变更入撤销栈） ===
 
 function onSelect(id: string | null): void {
-  selectedId.value = id
+  editorApi.select(id)
 }
 
-/**
- * 新增节点。parentId 未传或不存在时追加到 root.children；
- * 否则追加到对应容器的 children（仅当该 type 接受子节点）。
- * 新节点 props 由 meta.defaultProps 派生（无 meta 则空对象）。
- */
+/** 新增节点（LubanDesigner add-node / 拖拽 drop）。 */
 function onAddNode(type: string, parentId?: string): void {
-  if (!schema.value?.root) return
-  const meta = getComponentMeta(type)
-  const defaultProps: Record<string, unknown> = meta?.defaultProps
-    ? { ...meta.defaultProps }
-    : {}
-  const node: NodeSchema = {
-    id: genId(type),
-    type,
-    props: defaultProps,
-  }
-  // 容器类型默认给空 children 数组，便于后续 drop
-  if (isContainerType(type)) {
-    node.children = []
-  }
-
-  let host: NodeSchema | null = schema.value.root
-  if (parentId) {
-    const found = findNode(schema.value.root, parentId)
-    if (found && isContainerType(found.type)) {
-      host = found
-    }
-  }
-  if (!host.children) host.children = []
-  host.children.push(node)
-  selectedId.value = node.id
+  editorApi.addNode(type, parentId)
 }
 
-/**
- * LubanDesigner Sortable onEnd 触发的 root 级重排。
- * fromIdx/toIdx 均为 root.children 索引。
- */
+/** root 级重排（Sortable onEnd）。 */
 function onReorder(fromIdx: number, toIdx: number): void {
-  if (!schema.value) return
-  reorderRootChildren(schema.value, fromIdx, toIdx)
+  editorApi.reorder(fromIdx, toIdx)
 }
 
 /** 属性面板回写 props。 */
 function onUpdateProp(nodeId: string, key: string, value: unknown): void {
-  if (!schema.value?.root) return
-  const node = findNode(schema.value.root, nodeId)
-  if (!node) return
-  if (!node.props) node.props = {}
-  node.props[key] = value
+  editorApi.updateProp(nodeId, key, value)
 }
 
-/** 删除节点：root 不可删；删后清空选中。 */
+/** 删除节点。 */
 function onDeleteNode(nodeId: string): void {
-  if (!schema.value?.root) return
-  if (schema.value.root.id === nodeId) return
-  const ok = removeNode(schema.value.root, nodeId)
-  if (ok && selectedId.value === nodeId) {
-    selectedId.value = null
-  }
+  editorApi.deleteNode(nodeId)
 }
 
-/** 复制节点（属性面板 emit duplicate）。 */
+/** 复制节点。 */
 function onDuplicateNode(nodeId: string): void {
-  if (!schema.value?.root) return
-  const node = findNode(schema.value.root, nodeId)
-  const parent = findParent(schema.value.root, nodeId)
-  if (!node || !parent || !parent.children) return
-  // 浅克隆（深克隆 children 以免共享引用）
-  const clone: NodeSchema = JSON.parse(JSON.stringify(node))
-  clone.id = genId(node.type)
-  const idx = parent.children.findIndex((c) => c.id === nodeId)
-  parent.children.splice(idx + 1, 0, clone)
-  selectedId.value = clone.id
+  editorApi.duplicateNode(nodeId)
 }
 
-/**
- * 组件树上移/下移：parentId 为 null 表示 root 级。
- * schemaTree.moveChild 的约定（parent:null ⟺ root 级）。
- */
+/** 组件树上移/下移。 */
 function onMove(parentId: string | null, fromIdx: number, toIdx: number): void {
-  if (!schema.value?.root) return
-  const parent = parentId ? findNode(schema.value.root, parentId) : null
-  // parent===null 且 parentId===null → root 级；其它情况 parent 必须命中
-  if (parentId && !parent) return
-  moveChild(parent, schema.value.root, fromIdx, toIdx)
+  editorApi.move(parentId, fromIdx, toIdx)
+}
+
+// === 撤销/重做（Ctrl+Z / Ctrl+Shift+Z），含 AI 改动 ===
+
+function onKeydown(e: KeyboardEvent) {
+  if (!(e.ctrlKey || e.metaKey)) return
+  const key = e.key.toLowerCase()
+  if (key === 'z' && !e.shiftKey) {
+    e.preventDefault()
+    editorApi.undo()
+  } else if ((key === 'z' && e.shiftKey) || key === 'y') {
+    e.preventDefault()
+    editorApi.redo()
+  }
 }
 
 // === 物料拖拽（左侧 → 画布） ===
@@ -312,8 +269,17 @@ function onPaletteDragStart(e: DragEvent, type: string): void {
   e.dataTransfer.setData('application/json', JSON.stringify({ type }))
 }
 
-onMounted(loadPage)
-watch([siteId, pageId], loadPage)
+onMounted(() => {
+  loadPage()
+  window.addEventListener('keydown', onKeydown)
+})
+onUnmounted(() => {
+  window.removeEventListener('keydown', onKeydown)
+})
+watch([siteId, pageId], () => {
+  history.clear()
+  loadPage()
+})
 </script>
 
 <template>
@@ -415,7 +381,31 @@ watch([siteId, pageId], loadPage)
           @duplicate="onDuplicateNode"
         />
       </ElAside>
+
+      <!-- AI 助手面板（FeatureGate ai_assistant_enabled，默认 true；关闭则不渲染） -->
+      <ElAside
+        v-if="aiEnabled && aiPanelOpen"
+        width="340px"
+        class="page-editor__aside page-editor__ai"
+      >
+        <AiAssistantPanel
+          :editor-api="editorApi"
+          :schema="schema"
+          :site-id="siteId"
+          :page-id="pageId"
+        />
+      </ElAside>
     </ElContainer>
+
+    <!-- AI 面板折叠按钮（FeatureGate 关闭时不渲染） -->
+    <button
+      v-if="aiEnabled"
+      class="page-editor__ai-toggle"
+      :title="aiPanelOpen ? '收起 AI 助手' : '展开 AI 助手'"
+      @click="aiPanelOpen = !aiPanelOpen"
+    >
+      AI
+    </button>
   </div>
 </template>
 
@@ -515,5 +505,42 @@ watch([siteId, pageId], loadPage)
     color: #f56c6c;
     margin: 0 0 8px;
   }
+
+  &__ai {
+    border-left: 1px solid #ebeef5;
+    background: #fafafa;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__ai-toggle {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 56px;
+    border: 1px solid #dcdfe6;
+    border-right: none;
+    border-radius: 6px 0 0 6px;
+    background: #fff;
+    color: #409eff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    z-index: 10;
+    writing-mode: vertical-rl;
+    letter-spacing: 2px;
+    box-shadow: -2px 0 4px rgba(0, 0, 0, 0.04);
+
+    &:hover {
+      background: #ecf5ff;
+    }
+  }
+}
+
+.page-editor {
+  position: relative;
 }
 </style>

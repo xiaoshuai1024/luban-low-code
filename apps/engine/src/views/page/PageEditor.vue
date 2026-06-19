@@ -53,7 +53,7 @@ import {
 } from 'luban-low-code'
 import PropertyPanel from './components/PropertyPanel.vue'
 import ComponentTree from './components/ComponentTree.vue'
-import { findNode, findParent, removeNode, moveChild } from './components/schemaTree'
+import { findNode, findParent, removeNode, moveChild, moveNodeAcross } from './components/schemaTree'
 import { useHistory } from '@/composables/useHistory'
 import { useKeyboard } from '@/composables/useKeyboard'
 
@@ -277,6 +277,13 @@ function onReorder(fromIdx: number, toIdx: number): void {
   reorderRootChildren(schema.value, fromIdx, toIdx)
 }
 
+/** 跨容器拖拽：moveNodeAcross 把节点移到目标容器（null=root 级），入撤销栈。 */
+function onMoveNode(nodeId: string, _fromParentId: string | null, toParentId: string | null, toIdx: number): void {
+  if (!schema.value?.root) return
+  history.push()
+  moveNodeAcross(schema.value.root, nodeId, toParentId, toIdx)
+}
+
 /** 属性面板回写 props。 */
 function onUpdateProp(nodeId: string, key: string, value: unknown): void {
   if (!schema.value?.root) return
@@ -462,6 +469,7 @@ watch(siteId, loadDatasources)
           @select="onSelect"
           @add-node="onAddNode"
           @reorder="onReorder"
+          @move-node="onMoveNode"
         />
         <LubanPage v-else :schema="schema" />
       </ElMain>

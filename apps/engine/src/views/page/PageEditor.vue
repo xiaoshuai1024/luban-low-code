@@ -41,6 +41,7 @@ import {
   ElMessageBox,
 } from 'element-plus'
 import { getPage, savePage, createPage, publishPage } from '@/api/page'
+import { getDatasources } from '@/api/datasource'
 import type { PageSchema, NodeSchema } from '@/types/schema'
 import {
   LubanDesigner,
@@ -66,6 +67,8 @@ const pageName = ref('')
 const pagePath = ref('')
 const pageStatus = ref<string>('draft')
 const schema = ref<PageSchema | null>(null)
+/** 当前 site 的数据源列表（PropertyPanel 数据源区消费）。 */
+const datasources = ref<Array<{ id: string; name: string }>>([])
 const loading = ref(false)
 const saving = ref(false)
 const publishing = ref(false)
@@ -294,6 +297,15 @@ function onUpdateEvent(nodeId: string, eventName: string, actionExpr: string): v
   node.events[eventName] = actionExpr
 }
 
+/** 属性面板数据源分区回写：写 node.datasource，入撤销栈。 */
+function onUpdateDatasource(nodeId: string, ds: { id: string; varName: string } | null): void {
+  if (!schema.value?.root) return
+  const node = findNode(schema.value.root, nodeId)
+  if (!node) return
+  history.push()
+  node.datasource = ds ?? undefined
+}
+
 /** 删除节点：root 不可删；删后清空选中。 */
 function onDeleteNode(nodeId: string): void {
   if (!schema.value?.root) return
@@ -341,8 +353,22 @@ function onPaletteDragStart(e: DragEvent, type: string): void {
   e.dataTransfer.setData('application/json', JSON.stringify({ type }))
 }
 
-onMounted(loadPage)
+async function loadDatasources() {
+  if (!siteId.value) return
+  try {
+    const { data } = await getDatasources(siteId.value)
+    datasources.value = (data ?? []).map((d) => ({ id: d.id, name: d.name }))
+  } catch {
+    datasources.value = []
+  }
+}
+
+onMounted(() => {
+  loadPage()
+  loadDatasources()
+})
 watch([siteId, pageId], loadPage)
+watch(siteId, loadDatasources)
 </script>
 
 <template>
@@ -453,8 +479,10 @@ watch([siteId, pageId], loadPage)
         <PropertyPanel
           :node="selectedNode"
           :meta="selectedMeta"
+          :datasources="datasources"
           @update:prop="onUpdateProp"
           @update:event="onUpdateEvent"
+          @update:datasource="onUpdateDatasource"
           @delete="onDeleteNode"
           @duplicate="onDuplicateNode"
         />

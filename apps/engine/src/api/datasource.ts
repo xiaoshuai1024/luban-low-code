@@ -80,3 +80,8 @@ export function deleteDatasource(id: string) {
 export function testDatasource(id: string) {
   return request.post<DatasourceTestResult>(`/datasources/${id}/test`)
 }
+
+/** POST /api/datasources/:id/query → 拉取数据源数据（运行时注入表达式上下文） */
+export function queryDatasource(id: string) {
+  return request.post<unknown>(`/datasources/${id}/query`)
+}

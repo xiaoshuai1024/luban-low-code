@@ -41,7 +41,7 @@ import {
   ElMessageBox,
 } from 'element-plus'
 import { getPage, savePage, createPage, publishPage } from '@/api/page'
-import { getDatasources } from '@/api/datasource'
+import { getDatasources, queryDatasource } from '@/api/datasource'
 import type { PageSchema, NodeSchema } from '@/types/schema'
 import {
   LubanDesigner,
@@ -69,6 +69,8 @@ const pageStatus = ref<string>('draft')
 const schema = ref<PageSchema | null>(null)
 /** 当前 site 的数据源列表（PropertyPanel 数据源区消费）。 */
 const datasources = ref<Array<{ id: string; name: string }>>([])
+/** 预览时数据源拉取器（传给 LubanPage 注入表达式上下文） */
+const datasourceFetcher = (id: string) => queryDatasource(id).then((r) => r.data)
 const loading = ref(false)
 const saving = ref(false)
 const publishing = ref(false)
@@ -471,7 +473,7 @@ watch(siteId, loadDatasources)
           @reorder="onReorder"
           @move-node="onMoveNode"
         />
-        <LubanPage v-else :schema="schema" />
+        <LubanPage v-else :schema="schema" :datasource-fetcher="datasourceFetcher" />
       </ElMain>
 
       <ElAside width="300px" class="page-editor__aside page-editor__right">

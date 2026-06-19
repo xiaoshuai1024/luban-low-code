@@ -42,6 +42,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   (e: 'update:prop', nodeId: string, key: string, value: unknown): void
+  (e: 'update:event', nodeId: string, eventName: string, actionExpr: string): void
   (e: 'delete', nodeId: string): void
   (e: 'duplicate', nodeId: string): void
 }>()
@@ -166,6 +167,29 @@ function handleDuplicate(): void {
   if (!props.node) return
   emit('duplicate', props.node.id)
 }
+
+// === 事件分区（W1-T5）：按 meta.events 配动作表达式 ===
+/** 物料声明的事件名列表（componentMeta.events，compat 后可能为 string[] 或 {name}[]）。 */
+const eventNames = computed<string[]>(() => {
+  if (!props.meta) return []
+  const ev = (props.meta as { events?: unknown }).events
+  if (!Array.isArray(ev)) return []
+  return ev
+    .map((e) => (typeof e === 'string' ? e : (e as { name?: string })?.name ?? ''))
+    .filter(Boolean)
+})
+
+function getEventAction(eventName: string): string {
+  if (!props.node?.events) return ''
+  return props.node.events[eventName] ?? ''
+}
+
+function handleEventInput(eventName: string, actionExpr: string): void {
+  if (!props.node) return
+  if (!props.node.events) props.node.events = {}
+  props.node.events[eventName] = actionExpr
+  emit('update:event', props.node.id, eventName, actionExpr)
+}
 </script>
 
 <template>
@@ -285,6 +309,21 @@ function handleDuplicate(): void {
           @update:model-value="(v: string) => handleInput(key, v)"
         />
       </ElFormItem>
+
+      <!-- 事件分区：按 meta.events 配动作表达式（W1-T5） -->
+      <ElFormItem v-if="eventNames.length" label="事件动作">
+        <div class="property-panel__events">
+          <div v-for="ev in eventNames" :key="ev" class="property-panel__event-row">
+            <span class="property-panel__event-name">{{ ev }}</span>
+            <ElInput
+              :model-value="getEventAction(ev)"
+              placeholder="动作表达式，如 navigate('/x')"
+              size="small"
+              @update:model-value="(v: string) => handleEventInput(ev, v)"
+            />
+          </div>
+        </div>
+      </ElFormItem>
     </ElForm>
 
     <div v-if="node && !readonly" class="property-panel__footer">
@@ -333,6 +372,24 @@ function handleDuplicate(): void {
     display: flex;
     gap: 4px;
     align-items: center;
+  }
+
+  &__events {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+  }
+
+  &__event-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__event-name {
+    font-size: 12px;
+    color: #606266;
   }
 
   &__footer {

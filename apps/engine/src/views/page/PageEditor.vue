@@ -284,6 +284,16 @@ function onUpdateProp(nodeId: string, key: string, value: unknown): void {
   node.props[key] = value
 }
 
+/** 属性面板事件分区回写：写 node.events[eventName]，入撤销栈。 */
+function onUpdateEvent(nodeId: string, eventName: string, actionExpr: string): void {
+  if (!schema.value?.root) return
+  const node = findNode(schema.value.root, nodeId)
+  if (!node) return
+  history.push()
+  if (!node.events) node.events = {}
+  node.events[eventName] = actionExpr
+}
+
 /** 删除节点：root 不可删；删后清空选中。 */
 function onDeleteNode(nodeId: string): void {
   if (!schema.value?.root) return
@@ -444,6 +454,7 @@ watch([siteId, pageId], loadPage)
           :node="selectedNode"
           :meta="selectedMeta"
           @update:prop="onUpdateProp"
+          @update:event="onUpdateEvent"
           @delete="onDeleteNode"
           @duplicate="onDuplicateNode"
         />

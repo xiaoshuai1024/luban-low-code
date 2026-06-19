@@ -53,6 +53,8 @@ import {
 import PropertyPanel from './components/PropertyPanel.vue'
 import ComponentTree from './components/ComponentTree.vue'
 import { findNode, findParent, removeNode, moveChild } from './components/schemaTree'
+import { useHistory } from '@/composables/useHistory'
+import { useKeyboard } from '@/composables/useKeyboard'
 
 const route = useRoute()
 const router = useRouter()
@@ -73,6 +75,17 @@ const loadError = ref<string | null>(null)
 const selectedId = ref<string | null>(null)
 /** 设计/预览模式切换：true=设计画布，false=只读渲染预览。 */
 const isDesign = ref(true)
+
+/** 撤销/重做历史栈（结构变更与属性变更均入栈；属性输入噪声由 limit 截断兜底）。 */
+const history = useHistory(schema)
+const { canUndo, canRedo } = history
+useKeyboard({
+  undo: () => history.undo(),
+  redo: () => history.redo(),
+  save: () => handleSave(),
+  delete: () => { if (selectedId.value) onDeleteNode(selectedId.value) },
+  duplicate: () => { if (selectedId.value) onDuplicateNode(selectedId.value) },
+})
 
 /** 物料面板分组（一次性派生；物料注册在 luban-low-code side-effect import 完成）。 */
 const paletteGroups = computed(() => getPaletteGroups())
@@ -224,6 +237,7 @@ function onSelect(id: string | null): void {
  */
 function onAddNode(type: string, parentId?: string): void {
   if (!schema.value?.root) return
+  history.push()
   const meta = getComponentMeta(type)
   const defaultProps: Record<string, unknown> = meta?.defaultProps
     ? { ...meta.defaultProps }
@@ -256,6 +270,7 @@ function onAddNode(type: string, parentId?: string): void {
  */
 function onReorder(fromIdx: number, toIdx: number): void {
   if (!schema.value) return
+  history.push()
   reorderRootChildren(schema.value, fromIdx, toIdx)
 }
 
@@ -264,6 +279,7 @@ function onUpdateProp(nodeId: string, key: string, value: unknown): void {
   if (!schema.value?.root) return
   const node = findNode(schema.value.root, nodeId)
   if (!node) return
+  history.push()
   if (!node.props) node.props = {}
   node.props[key] = value
 }
@@ -272,6 +288,7 @@ function onUpdateProp(nodeId: string, key: string, value: unknown): void {
 function onDeleteNode(nodeId: string): void {
   if (!schema.value?.root) return
   if (schema.value.root.id === nodeId) return
+  history.push()
   const ok = removeNode(schema.value.root, nodeId)
   if (ok && selectedId.value === nodeId) {
     selectedId.value = null
@@ -281,6 +298,7 @@ function onDeleteNode(nodeId: string): void {
 /** 复制节点（属性面板 emit duplicate）。 */
 function onDuplicateNode(nodeId: string): void {
   if (!schema.value?.root) return
+  history.push()
   const node = findNode(schema.value.root, nodeId)
   const parent = findParent(schema.value.root, nodeId)
   if (!node || !parent || !parent.children) return
@@ -298,6 +316,7 @@ function onDuplicateNode(nodeId: string): void {
  */
 function onMove(parentId: string | null, fromIdx: number, toIdx: number): void {
   if (!schema.value?.root) return
+  history.push()
   const parent = parentId ? findNode(schema.value.root, parentId) : null
   // parent===null 且 parentId===null → root 级；其它情况 parent 必须命中
   if (parentId && !parent) return
@@ -333,6 +352,20 @@ watch([siteId, pageId], loadPage)
           </ElTag>
         </ElFormItem>
         <ElFormItem>
+          <ElButton
+            :disabled="!canUndo"
+            title="撤销 (Ctrl+Z)"
+            @click="history.undo()"
+          >
+            ↶ 撤销
+          </ElButton>
+          <ElButton
+            :disabled="!canRedo"
+            title="重做 (Ctrl+Shift+Z / Ctrl+Y)"
+            @click="history.redo()"
+          >
+            ↷ 重做
+          </ElButton>
           <ElButton
             :type="isDesign ? 'default' : 'primary'"
             @click="isDesign = !isDesign"

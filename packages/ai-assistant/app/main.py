@@ -19,6 +19,7 @@ from app.api import config as config_api
 from app.api import health as health_api
 from app.api.chat import router as chat_router
 from app.api.errors import ApiError
+from app.api.guidance import router as guidance_router
 from app.api.ws import router as ws_router
 from app.core.config import Settings, get_settings
 
@@ -58,6 +59,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(config_api.router, prefix="/ai")
     app.include_router(chat_router)  # 已带 /ai 前缀
     app.include_router(ws_router)    # WS /ai/agent
+    app.include_router(guidance_router)  # GET /ai/guidance
 
     return app
 

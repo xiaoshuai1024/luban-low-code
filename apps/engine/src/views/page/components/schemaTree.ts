@@ -103,6 +103,37 @@ export function moveChild(
 }
 
 /**
+ * 跨父节点移动：把 nodeId 从原父级移到 toParentId（null=root 级）的 toIdx 位置。
+ * 用于跨容器拖拽（Sortable group onEnd）。root 自身不可移动；目标容器自动初始化
+ * children；同父级移动时自动校正 toIdx（移除点偏移）。
+ * @returns true 成功；false 未找到/目标不存在/异常。
+ */
+export function moveNodeAcross(
+  root: NodeSchema,
+  nodeId: string,
+  toParentId: string | null,
+  toIdx: number,
+): boolean {
+  if (!root || root.id === nodeId) return false
+  const node = findNode(root, nodeId)
+  const fromParent = findParent(root, nodeId)
+  if (!node || !fromParent || !fromParent.children) return false
+  const toParent = toParentId ? findNode(root, toParentId) : root
+  if (!toParent) return false
+  if (!toParent.children) toParent.children = []
+  const fromIdx = fromParent.children.findIndex((c) => c.id === nodeId)
+  if (fromIdx < 0) return false
+  const [moved] = fromParent.children.splice(fromIdx, 1)
+  // 同父级且原索引在目标之前：移除后 toIdx 须校正
+  let adjustedTo = toIdx
+  if (fromParent === toParent && fromIdx < toIdx) adjustedTo = toIdx - 1
+  if (adjustedTo < 0) adjustedTo = 0
+  if (adjustedTo > toParent.children.length) adjustedTo = toParent.children.length
+  toParent.children.splice(adjustedTo, 0, moved)
+  return true
+}
+
+/**
  * 计算节点在父级 children 中的索引；用于上移/下移按钮的 from/to 计算。
  * @returns [parent, index]；parent 为 null 表示 root 级；未找到返回 null。
  */

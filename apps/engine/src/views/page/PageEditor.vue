@@ -41,7 +41,7 @@ import {
   ElMessageBox,
 } from 'element-plus'
 import { getPage, savePage, createPage, publishPage } from '@/api/page'
-import { getDatasources, queryDatasource } from '@/api/datasource'
+import { getDatasources, queryDatasource, testDatasource } from '@/api/datasource'
 import type { PageSchema, NodeSchema } from '@/types/schema'
 import {
   LubanDesigner,
@@ -53,6 +53,7 @@ import {
 } from 'luban-low-code'
 import PropertyPanel from './components/PropertyPanel.vue'
 import ComponentTree from './components/ComponentTree.vue'
+import DatasourceManageDialog from './components/DatasourceManageDialog.vue'
 import { findNode, findParent, removeNode, moveChild, moveNodeAcross } from './components/schemaTree'
 import { useHistory } from '@/composables/useHistory'
 import { useKeyboard } from '@/composables/useKeyboard'
@@ -62,6 +63,8 @@ const router = useRouter()
 const siteId = computed(() => route.params.siteId as string)
 const pageId = computed(() => route.params.pageId as string)
 const isNew = computed(() => route.name === 'PageNew' || Boolean(route.meta.isNew))
+/** 是否在全屏设计器模式（独立路由 /designer/...，无侧边栏/顶栏） */
+const isDesignerMode = computed(() => Boolean(route.meta.designer))
 
 const pageName = ref('')
 const pagePath = ref('')
@@ -90,6 +93,8 @@ useKeyboard({
   save: () => handleSave(),
   delete: () => { if (selectedId.value) onDeleteNode(selectedId.value) },
   duplicate: () => { if (selectedId.value) onDuplicateNode(selectedId.value) },
+  lock: () => { if (selectedId.value) onToggleLock(selectedId.value) },
+  hide: () => { if (selectedId.value) onToggleHide(selectedId.value) },
 })
 
 /** 物料面板分组（一次性派生；物料注册在 luban-low-code side-effect import 完成）。 */
@@ -319,11 +324,32 @@ function onUpdateDatasource(nodeId: string, ds: { id: string; varName: string } 
 function onDeleteNode(nodeId: string): void {
   if (!schema.value?.root) return
   if (schema.value.root.id === nodeId) return
+  const node = findNode(schema.value.root, nodeId)
+  // Y3：锁定节点不可删除
+  if (node?.locked) return
   history.push()
   const ok = removeNode(schema.value.root, nodeId)
   if (ok && selectedId.value === nodeId) {
     selectedId.value = null
   }
+}
+
+/** Y3：切换节点锁定态（L 键 / ComponentTree 锁定按钮）。入撤销栈。 */
+function onToggleLock(nodeId: string): void {
+  if (!schema.value?.root) return
+  const node = findNode(schema.value.root, nodeId)
+  if (!node) return
+  history.push()
+  node.locked = !node.locked
+}
+
+/** Y3：切换节点隐藏态（H 键 / ComponentTree 隐藏按钮）。入撤销栈。 */
+function onToggleHide(nodeId: string): void {
+  if (!schema.value?.root) return
+  const node = findNode(schema.value.root, nodeId)
+  if (!node) return
+  history.push()
+  node.hidden = !node.hidden
 }
 
 /** 复制节点（属性面板 emit duplicate）。 */
@@ -372,6 +398,29 @@ async function loadDatasources() {
   }
 }
 
+// === D15-B1 数据源管理弹窗 ===
+const datasourceDialogVisible = ref(false)
+function openDatasourceDialog() {
+  datasourceDialogVisible.value = true
+}
+/** 弹窗 CRUD 后刷新数据源下拉 */
+function onDatasourceRefresh() {
+  loadDatasources()
+}
+/** PropertyPanel 测试连通按钮（直连，复用 datasource API） */
+async function onTestConnect(dsId: string) {
+  try {
+    const { data } = await testDatasource(dsId)
+    if (data.ok) {
+      ElMessage.success(`连通成功（${data.latencyMs ?? 0}ms）`)
+    } else {
+      ElMessage.warning(`连通失败：${data.message ?? '未知原因'}`)
+    }
+  } catch (e) {
+    ElMessage.error((e as Error)?.message || '测试连通失败')
+  }
+}
+
 onMounted(() => {
   loadPage()
   loadDatasources()
@@ -381,9 +430,9 @@ watch(siteId, loadDatasources)
 </script>
 
 <template>
-  <div class="page-editor" v-loading="loading">
-    <!-- 顶部 meta + 操作 -->
-    <ElCard class="page-editor__meta" shadow="never">
+  <div class="page-editor" :class="{ 'page-editor--designer': isDesignerMode }" v-loading="loading">
+    <!-- 顶部 meta + 操作（标准模式） -->
+    <ElCard v-if="!isDesignerMode" class="page-editor__meta" shadow="never">
       <ElForm inline>
         <ElFormItem label="页面名称">
           <ElInput v-model="pageName" placeholder="名称" style="width: 200px" />
@@ -432,6 +481,33 @@ watch(siteId, loadDatasources)
         </ElFormItem>
       </ElForm>
     </ElCard>
+
+    <!-- 全屏设计器顶栏（浮动） -->
+    <div v-if="isDesignerMode" class="page-editor__designer-bar">
+      <div class="page-editor__designer-bar-left">
+        <ElButton text @click="goBack">← 返回页面列表</ElButton>
+        <span class="page-editor__designer-title">{{ pageName || '未命名页面' }}</span>
+        <ElTag :type="statusTagType(pageStatus)" size="small">
+          {{ pageStatus === 'published' ? '已发布' : '草稿' }}
+        </ElTag>
+      </div>
+      <div class="page-editor__designer-bar-center">
+        <span class="page-editor__designer-path">{{ pagePath || '/' }}</span>
+      </div>
+      <div class="page-editor__designer-bar-right">
+        <ElButton size="small" :disabled="!canUndo" title="撤销 (Ctrl+Z)" @click="history.undo()">↶</ElButton>
+        <ElButton size="small" :disabled="!canRedo" title="重做 (Ctrl+Shift+Z)" @click="history.redo()">↷</ElButton>
+        <ElButton size="small" :type="isDesign ? 'default' : 'primary'" @click="isDesign = !isDesign">
+          {{ isDesign ? '预览' : '设计' }}
+        </ElButton>
+        <ElButton size="small" type="primary" :loading="saving" @click="handleSave">
+          {{ isNew ? '创建' : '保存' }}
+        </ElButton>
+        <ElButton size="small" type="success" :loading="publishing" :disabled="isNew" @click="handlePublish">
+          发布
+        </ElButton>
+      </div>
+    </div>
 
     <!-- 错误态：加载失败不再静默 -->
     <ElCard v-if="loadError" class="page-editor__error-card" shadow="never">
@@ -484,6 +560,8 @@ watch(siteId, loadDatasources)
           @select="onSelect"
           @delete="onDeleteNode"
           @move="onMove"
+          @lock="onToggleLock"
+          @hide="onToggleHide"
         />
         <div class="page-editor__right-divider" />
         <PropertyPanel
@@ -495,6 +573,14 @@ watch(siteId, loadDatasources)
           @update:datasource="onUpdateDatasource"
           @delete="onDeleteNode"
           @duplicate="onDuplicateNode"
+          @open-datasource="openDatasourceDialog"
+          @test-connect="onTestConnect"
+        />
+        <!-- D15-B1 数据源管理弹窗 -->
+        <DatasourceManageDialog
+          v-model="datasourceDialogVisible"
+          :site-id="siteId"
+          @refresh="onDatasourceRefresh"
         />
       </ElAside>
     </ElContainer>
@@ -596,6 +682,65 @@ watch(siteId, loadDatasources)
   &__error {
     color: #f56c6c;
     margin: 0 0 8px;
+  }
+
+  // === 全屏设计器模式 ===
+  &--designer {
+    height: 100vh;
+    overflow: hidden;
+
+    .page-editor__workspace {
+      border: none;
+      border-radius: 0;
+      height: calc(100vh - 48px);
+    }
+
+    .page-editor__aside {
+      border-right: 1px solid #ebeef5;
+    }
+  }
+
+  &__designer-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 48px;
+    padding: 0 16px;
+    background: #fff;
+    border-bottom: 1px solid #ebeef5;
+    flex-shrink: 0;
+  }
+
+  &__designer-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 200px;
+  }
+
+  &__designer-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #303133;
+  }
+
+  &__designer-bar-center {
+    flex: 1;
+    text-align: center;
+  }
+
+  &__designer-path {
+    font-size: 12px;
+    color: #909399;
+    font-family: monospace;
+  }
+
+  &__designer-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 200px;
+    justify-content: flex-end;
   }
 }
 </style>

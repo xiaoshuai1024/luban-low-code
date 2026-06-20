@@ -27,6 +27,11 @@ import {
 } from 'element-plus'
 import type { NodeSchema } from '@/types/schema'
 import type { ComponentMeta, PropSchemaItem } from 'luban-low-code'
+import { isFeatureEnabled } from '@/config/features'
+
+/** D15-B1 数据源管理/测试连通开关（FeatureGate） */
+const datasourceManageEnabled = isFeatureEnabled('datasourceManage')
+const testConnectEnabled = isFeatureEnabled('testConnect')
 
 interface DatasourceOption {
   id: string
@@ -54,6 +59,10 @@ const emit = defineEmits<{
   (e: 'update:datasource', nodeId: string, datasource: { id: string; varName: string } | null): void
   (e: 'delete', nodeId: string): void
   (e: 'duplicate', nodeId: string): void
+  /** D15-B1：打开数据源管理弹窗 */
+  (e: 'open-datasource'): void
+  /** D15-B1：测试指定数据源连通 */
+  (e: 'test-connect', datasourceId: string): void
 }>()
 
 /** 有序的 propSchema 条目，便于稳定渲染。 */
@@ -362,8 +371,8 @@ function handleVarNameChange(varName: string): void {
         </div>
       </ElFormItem>
 
-      <!-- 数据源分区：绑 datasource + varName（W1-T5） -->
-      <ElFormItem v-if="datasources.length" label="数据源">
+      <!-- 数据源分区：绑 datasource + varName（W1-T5 / D15-B1） -->
+      <ElFormItem v-if="datasources.length || datasourceManageEnabled" label="数据源">
         <div class="property-panel__datasource">
           <ElSelect
             :model-value="getCurrentDatasourceId()"
@@ -381,6 +390,25 @@ function handleVarNameChange(varName: string): void {
             size="small"
             @update:model-value="(v: string) => handleVarNameChange(v)"
           />
+          <!-- D15-B1：管理数据源 + 测试连通按钮（FeatureGate 控制） -->
+          <div v-if="datasourceManageEnabled || testConnectEnabled" class="property-panel__ds-actions">
+            <ElButton
+              v-if="datasourceManageEnabled"
+              size="small"
+              link
+              @click="emit('open-datasource')"
+            >
+              管理数据源
+            </ElButton>
+            <ElButton
+              v-if="testConnectEnabled && getCurrentDatasourceId()"
+              size="small"
+              link
+              @click="emit('test-connect', getCurrentDatasourceId())"
+            >
+              测试连通
+            </ElButton>
+          </div>
         </div>
       </ElFormItem>
     </ElForm>
@@ -456,6 +484,13 @@ function handleVarNameChange(varName: string): void {
     flex-direction: column;
     gap: 6px;
     width: 100%;
+  }
+
+  &__ds-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-start;
+    margin-top: 2px;
   }
 
   &__footer {

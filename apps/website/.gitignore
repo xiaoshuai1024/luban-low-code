@@ -8,3 +8,9 @@ dist
 !.env.example
 .claude/
 .luban-review/
+
+# Playwright E2E 产物
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

@@ -7,23 +7,23 @@
     "build": "nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
-    "preview": "nuxt preview"
+    "preview": "nuxt preview",
+    "install:e2e": "playwright install chrome",
+    "install:e2e:ci": "playwright install chromium",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ci": "LUBAN_E2E_USE_PLAYWRIGHT_CHROMIUM=1 playwright test"
   },
   "dependencies": {
     "@pinia/nuxt": "^0.5.4",
-    "luban-base": "^0.0.2",
-    "luban-low-code": "^0.0.15",
+    "luban-base": "link:../../ui/luban-ui/packages/luban-base",
+    "luban-low-code": "link:../../ui/luban-ui/packages/luban-low-code",
     "nuxt": "^3.14.0",
     "pinia": "^2.2.6",
     "vue": "^3.5.13"
   },
   "devDependencies": {
+    "@playwright/test": "^1.49.0",
     "typescript": "^5.6.3"
-  },
-  "pnpm": {
-    "overrides": {
-      "luban-base": "link:../../ui/luban-ui/packages/luban-base",
-      "luban-low-code": "link:../../ui/luban-ui/packages/luban-low-code"
-    }
   }
 }

@@ -50,9 +50,7 @@ def _sse(event: dict[str, Any]) -> str:
     return json.dumps(event, ensure_ascii=False, default=str)
 
 
-async def _stream_agent(
-    runner: AgentRunner, state: AgentState
-) -> EventSourceResponse:
+async def _stream_agent(runner: AgentRunner, state: AgentState) -> EventSourceResponse:
     """跑 agent 并流式回传 progress → 终态事件。"""
 
     async def event_gen() -> AsyncGenerator[dict[str, str], None]:

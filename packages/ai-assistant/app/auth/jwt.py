@@ -38,9 +38,7 @@ def decode_token(token: str, settings: Settings) -> AuthUser:
     # luban payload：sub(=userId) / username / role
     sub = payload.get("sub") or payload.get("userId") or payload.get("uid")
     if not sub:
-        raise UnauthenticatedError(
-            "payload 缺 sub", details={"reason": "missing_sub"}
-        )
+        raise UnauthenticatedError("payload 缺 sub", details={"reason": "missing_sub"})
     return AuthUser(
         user_id=str(sub),
         username=payload.get("username"),

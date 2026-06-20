@@ -96,9 +96,7 @@ def test_get_provider_switch_only_needs_config_change() -> None:
     reset_provider_for_tests()
     assert isinstance(get_provider(_make_settings(ModelProvider.GLM)), ZhipuProvider)
     reset_provider_for_tests()
-    assert isinstance(
-        get_provider(_make_settings(ModelProvider.DEEPSEEK)), DeepSeekProvider
-    )
+    assert isinstance(get_provider(_make_settings(ModelProvider.DEEPSEEK)), DeepSeekProvider)
     reset_provider_for_tests()
     assert isinstance(get_provider(_make_settings(ModelProvider.QWEN)), QwenProvider)
 
@@ -121,9 +119,7 @@ class _FakeChatModel:
 async def test_stream_yields_token_chunks(monkeypatch: pytest.MonkeyPatch) -> None:
     s = _make_settings(ModelProvider.GLM)
     p = ZhipuProvider(s)
-    monkeypatch.setattr(
-        p, "raw_model", lambda: _FakeChatModel(["你", "好", "世界"])
-    )
+    monkeypatch.setattr(p, "raw_model", lambda: _FakeChatModel(["你", "好", "世界"]))
     out = [c async for c in p.stream([HumanMessage(content="hi")])]
     assert out == ["你", "好", "世界"]
 
@@ -132,14 +128,22 @@ async def test_stream_yields_token_chunks(monkeypatch: pytest.MonkeyPatch) -> No
 
 
 class _FakeInstructor:
+    """假 instructor 客户端：匹配 client.chat.completions.create(...) 接口（instructor 1.x from_openai）。"""
+
     def __init__(self, payload: object) -> None:
         self._payload = payload
         self.captured: dict[str, object] = {}
+        self.chat = self  # client.chat.completions → self.completions → self.create
 
-    def create_partial(
-        self, *, response_model: type, messages: list, max_retries: int
+    @property
+    def completions(self) -> _FakeInstructor:
+        return self
+
+    def create(
+        self, *, model: str, response_model: type, messages: list, max_retries: int
     ) -> object:
         self.captured = {
+            "model": model,
             "response_model": response_model,
             "messages": messages,
             "max_retries": max_retries,
@@ -160,8 +164,11 @@ def test_chat_returns_structured_pydantic(monkeypatch: pytest.MonkeyPatch) -> No
     assert result.title == "用户列表页"
     # instructor 收到正确的结构化参数
     assert fake.captured["response_model"] is _Out
-    assert fake.captured["messages"] is msgs
     assert fake.captured["max_retries"] == 2
+    # messages 被转成 OpenAI 格式（role/content dict）
+    converted = fake.captured["messages"]
+    assert isinstance(converted, list)
+    assert converted[0]["role"] == "user"
 
 
 def test_reset_provider_for_tests_clears_singleton() -> None:

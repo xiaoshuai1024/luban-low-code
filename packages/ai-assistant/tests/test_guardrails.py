@@ -22,8 +22,8 @@ from app.schemas.validators import MaterialRegistry
 @pytest.mark.parametrize(
     "text",
     [
-        "做一个用户列表页",               # 合法需求
-        "把标题改成红色",                 # 合法编辑
+        "做一个用户列表页",  # 合法需求
+        "把标题改成红色",  # 合法编辑
         "生成一个包含表单和表格的页面",
         "添加一个提交按钮",
     ],
@@ -135,7 +135,8 @@ def _registry() -> MaterialRegistry:
 def test_check_output_valid() -> None:
     page = PageSchema(
         root=NodeSchema(
-            id="r", type="LubanPage",
+            id="r",
+            type="LubanPage",
             children=[NodeSchema(id="b", type="LubanButton", props={"label": "ok"})],
         )
     )
@@ -148,7 +149,8 @@ def test_check_output_valid() -> None:
 def test_check_output_invalid() -> None:
     page = PageSchema(
         root=NodeSchema(
-            id="r", type="LubanPage",
+            id="r",
+            type="LubanPage",
             children=[NodeSchema(id="b", type="LubanButton", props={})],
         )
     )

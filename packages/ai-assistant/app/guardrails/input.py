@@ -76,9 +76,7 @@ def sanitize_pii(text: str) -> PIIScanResult:
         out = _BANKCARD.sub("[银行卡]", out)
         redactions.append("bankcard")
 
-    return PIIScanResult(
-        has_pii=bool(redactions), sanitized_text=out, redactions=redactions
-    )
+    return PIIScanResult(has_pii=bool(redactions), sanitized_text=out, redactions=redactions)
 
 
 def guard_input(text: str) -> tuple[str, InjectionResult, PIIScanResult]:

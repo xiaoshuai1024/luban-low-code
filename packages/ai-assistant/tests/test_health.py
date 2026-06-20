@@ -14,6 +14,7 @@ from app.main import create_app
 def settings() -> Settings:
     return Settings(
         environment="test",
+        model_provider=ModelProvider.GLM,
         auth_jwt_secret=SecretStr("test-jwt-secret"),
         glm_api_key=SecretStr("k"),
         deepseek_api_key=SecretStr("k"),
@@ -49,7 +50,7 @@ def test_config_endpoint_exposes_provider(settings: Settings, app_client) -> Non
     body = resp.json()
     assert body["model"]["provider"] == settings.model_provider.value
     assert body["model"]["name"] == "glm-4"  # 默认 glm
-    assert body["features"] == {"generate": True, "guidance": True}
+    assert body["features"] == {"generate": True, "guidance": True, "design_to_page": True}
 
 
 def test_config_endpoint_reflects_provider_switch(settings: Settings) -> None:

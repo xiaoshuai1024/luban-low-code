@@ -50,8 +50,9 @@ class FakeMilvusClient:
             self.store[row["pk"]] = row
 
     def query(self, *, collection_name: str, output_fields: list, limit: int):
-        return [{"pk": pk, **{f: row.get(f) for f in output_fields}}
-                for pk, row in self.store.items()][:limit]
+        return [
+            {"pk": pk, **{f: row.get(f) for f in output_fields}} for pk, row in self.store.items()
+        ][:limit]
 
     def delete(self, *, collection_name: str, filter: str) -> None:
         self.delete_calls += 1

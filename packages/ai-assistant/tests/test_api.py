@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 from app.agent.state import AgentState, SessionStatus
-from app.core.config import Settings
+from app.core.config import ModelProvider, Settings
 from app.main import create_app
 from app.schemas.page_schema import NodeSchema, PageSchema
 
@@ -22,6 +22,7 @@ from app.schemas.page_schema import NodeSchema, PageSchema
 def _settings(**over: Any) -> Settings:
     base = dict(
         environment="test",
+        model_provider=ModelProvider.GLM,
         auth_jwt_secret=SecretStr("test-jwt-secret"),
         glm_api_key=SecretStr("k"),
         deepseek_api_key=SecretStr("k"),
@@ -212,7 +213,9 @@ def test_decode_token_missing_sub_rejected() -> None:
     from app.auth.jwt import decode_token
 
     settings = _settings()
-    bad = jwt.encode({"username": "x"}, settings.auth_jwt_secret.get_secret_value(), algorithm="HS256")
+    bad = jwt.encode(
+        {"username": "x"}, settings.auth_jwt_secret.get_secret_value(), algorithm="HS256"
+    )
     with pytest.raises(Exception):
         decode_token(bad, settings)
 

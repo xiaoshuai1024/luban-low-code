@@ -16,7 +16,7 @@ from collections.abc import AsyncIterator
 from threading import Lock
 
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import BaseMessage, HumanMessage
 from pydantic import BaseModel
 
 
@@ -38,9 +38,7 @@ class Provider(abc.ABC):
         """provider 标识（glm/deepseek/tongyi）。"""
 
     @abc.abstractmethod
-    def chat(
-        self, messages: list[BaseMessage], response_model: type[BaseModel]
-    ) -> BaseModel:
+    def chat(self, messages: list[BaseMessage], response_model: type[BaseModel]) -> BaseModel:
         """结构化输出：强制 LLM 返回符合 response_model 的对象。
 
         经 instructor 包装 ChatModel，应用层逼近合法（放弃 token 级约束解码）。
@@ -53,6 +51,39 @@ class Provider(abc.ABC):
     @abc.abstractmethod
     def raw_model(self) -> BaseChatModel:
         """底层 ChatModel（供 LangGraph/agent 直接编排）。"""
+
+    def chat_with_image(
+        self,
+        messages: list[BaseMessage],
+        image_bytes: bytes,
+        image_mime: str,
+        response_model: type[BaseModel],
+    ) -> BaseModel:
+        """多模态结构化输出（plan P2-T1）：带图片的 chat。
+
+        默认实现走 langchain HumanMessage 的多模态 content（image_url base64），
+        三家视觉模型（GLM-V/DeepSeek-VL/Qwen-VL）均支持 OpenAI 兼容的多模态消息格式。
+        子类可覆盖以适配厂商差异。
+
+        经 instructor 包装，应用层逼近合法（同 chat 语义）。
+        """
+        import base64
+
+        b64 = base64.b64encode(image_bytes).decode("ascii")
+        data_url = f"data:{image_mime};base64,{b64}"
+        # 把图片附到最后一条 HumanMessage（多模态 content 格式）
+        multimodal_messages = list(messages)
+        if multimodal_messages and isinstance(multimodal_messages[-1], HumanMessage):
+            last = multimodal_messages[-1]
+            last.content = [
+                {"type": "text", "text": str(last.content)},
+                {"type": "image_url", "image_url": {"url": data_url}},
+            ]
+        else:
+            multimodal_messages.append(
+                HumanMessage(content=[{"type": "image_url", "image_url": {"url": data_url}}])
+            )
+        return self.chat(multimodal_messages, response_model)
 
 
 def _build_openai_chat(
@@ -111,25 +142,33 @@ class _OpenAICompatProvider(Provider):
         return self._chat
 
     def _instructor_client(self) -> object:
-        """instructor.wrap(ChatModel) —— 结构化输出（懒构造，带缓存）。"""
+        """instructor.from_openai(openai client) —— 结构化输出（懒构造，带缓存）。
+
+        instructor 1.x 移除了 from_langchain；三家 provider 均走 OpenAI 兼容协议，
+        故用 openai.OpenAI 客户端 + instructor.from_openai 包装。
+        """
         if self._instructor is None:
             import instructor
+            from openai import OpenAI
 
             with self._lock:
                 if self._instructor is None:
-                    # instructor.from_openai / from_langchain —— 这里走 langchain adapter
-                    self._instructor = instructor.from_langchain(self.raw_model())
+                    client = OpenAI(
+                        api_key=self._api_key,
+                        base_url=self._base_url,
+                    )
+                    self._instructor = instructor.from_openai(client)
         return self._instructor
 
-    def chat(
-        self, messages: list[BaseMessage], response_model: type[BaseModel]
-    ) -> BaseModel:
+    def chat(self, messages: list[BaseMessage], response_model: type[BaseModel]) -> BaseModel:
         client = self._instructor_client()
-        # instructor.from_langchain(...).create_partial(response_model, messages=...)
-        # 返回 Pydantic 对象（instructor 重试逼近合法）。
-        result = client.create_partial(  # type: ignore[attr-defined]
+        # langchain BaseMessage → OpenAI chat 格式（role/content）。
+        openai_messages = [_to_openai_message(m) for m in messages]
+        # instructor.from_openai(...).chat.completions.create_partial → Pydantic（重试逼近合法）
+        result = client.chat.completions.create(  # type: ignore[attr-defined]
+            model=self._model_name,
             response_model=response_model,
-            messages=messages,
+            messages=openai_messages,
             max_retries=2,
         )
         return result  # type: ignore[no-any-return]
@@ -141,3 +180,17 @@ class _OpenAICompatProvider(Provider):
             content = chunk.content
             if isinstance(content, str) and content:
                 yield content
+
+
+def _to_openai_message(msg: BaseMessage) -> dict[str, object]:
+    """langchain BaseMessage → OpenAI chat message dict（role/content）。"""
+    role_map = {
+        "system": "system",
+        "human": "user",
+        "ai": "assistant",
+        "tool": "tool",
+    }
+    role = role_map.get(msg.type, "user")
+    content = msg.content
+    # 多模态 content（chat_with_image 注入的 list 形式）原样透传
+    return {"role": role, "content": content}

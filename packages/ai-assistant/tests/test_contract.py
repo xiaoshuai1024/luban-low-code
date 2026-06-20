@@ -55,8 +55,12 @@ class _MockRunner:
 
 def _token(settings: Settings) -> str:
     import jwt
-    return jwt.encode({"sub": "u1", "username": "t", "role": "admin"},
-                      settings.auth_jwt_secret.get_secret_value(), algorithm="HS256")
+
+    return jwt.encode(
+        {"sub": "u1", "username": "t", "role": "admin"},
+        settings.auth_jwt_secret.get_secret_value(),
+        algorithm="HS256",
+    )
 
 
 def _client(runner: _MockRunner | None = None):
@@ -65,6 +69,7 @@ def _client(runner: _MockRunner | None = None):
     app = create_app(settings=_settings())
     if runner is not None:
         from app.api.ai_deps import get_agent_runner
+
         app.dependency_overrides[get_agent_runner] = lambda: runner
     return TestClient(app)
 
@@ -104,8 +109,11 @@ def test_sse_progress_event_contract() -> None:
     """progress 事件含 type/message（engine progressLabel 消费）。"""
     schema = PageSchema(root=NodeSchema(id="r", type="LubanPage"))
     c = _client(_MockRunner(schema))
-    resp = c.post("/ai/chat", json={"message": "x"},
-                  headers={"Authorization": f"Bearer {_token(_settings())}"})
+    resp = c.post(
+        "/ai/chat",
+        json={"message": "x"},
+        headers={"Authorization": f"Bearer {_token(_settings())}"},
+    )
     events = _parse_sse(resp.text)
     progress = [e for e in events if e["event"] == "progress"]
     assert len(progress) >= 1
@@ -116,12 +124,18 @@ def test_sse_progress_event_contract() -> None:
 def test_sse_confirm_event_contract() -> None:
     """confirm 事件含 type/session_id/schema（engine onConfirm 消费）。"""
     schema = PageSchema(
-        root=NodeSchema(id="r", type="LubanPage",
-                        children=[NodeSchema(id="b", type="LubanButton", props={"label": "ok"})])
+        root=NodeSchema(
+            id="r",
+            type="LubanPage",
+            children=[NodeSchema(id="b", type="LubanButton", props={"label": "ok"})],
+        )
     )
     c = _client(_MockRunner(schema))
-    resp = c.post("/ai/chat", json={"message": "x"},
-                  headers={"Authorization": f"Bearer {_token(_settings())}"})
+    resp = c.post(
+        "/ai/chat",
+        json={"message": "x"},
+        headers={"Authorization": f"Bearer {_token(_settings())}"},
+    )
     events = _parse_sse(resp.text)
     confirms = [e for e in events if e["event"] == "confirm"]
     assert len(confirms) == 1
@@ -135,17 +149,22 @@ def test_sse_confirm_event_contract() -> None:
 
 def test_sse_error_event_contract() -> None:
     """failed 终态产 error 事件含 type/message（engine onError 消费）。"""
+
     class FailRunner:
         async def run(self, state: AgentState) -> AgentState:
             state.status = SessionStatus.FAILED
             state.error = "校验失败超限"
             return state
+
         async def resume_after_confirm(self, state: AgentState, confirmed: bool) -> AgentState:
             return state
 
     c = _client(FailRunner())  # type: ignore[arg-type]
-    resp = c.post("/ai/chat", json={"message": "x"},
-                  headers={"Authorization": f"Bearer {_token(_settings())}"})
+    resp = c.post(
+        "/ai/chat",
+        json={"message": "x"},
+        headers={"Authorization": f"Bearer {_token(_settings())}"},
+    )
     events = _parse_sse(resp.text)
     errors = [e for e in events if e["event"] == "error"]
     assert len(errors) == 1
@@ -162,8 +181,9 @@ def test_contract_requires_valid_jwt() -> None:
     # 无 token
     assert c.post("/ai/chat", json={"message": "x"}).status_code == 401
     # 无效 token
-    resp = c.post("/ai/chat", json={"message": "x"},
-                  headers={"Authorization": "Bearer bad.token.here"})
+    resp = c.post(
+        "/ai/chat", json={"message": "x"}, headers={"Authorization": "Bearer bad.token.here"}
+    )
     assert resp.status_code == 401
 
 
@@ -177,12 +197,19 @@ def test_schema_field_names_align_engine() -> None:
     本测试锁定：confirm.schema.root 的字段名 = engine 消费的字段名。
     """
     schema = PageSchema(
-        root=NodeSchema(id="r", type="LubanPage", props={"bg": "#fff"},
-                        children=[NodeSchema(id="b", type="LubanButton", props={"label": "x"})])
+        root=NodeSchema(
+            id="r",
+            type="LubanPage",
+            props={"bg": "#fff"},
+            children=[NodeSchema(id="b", type="LubanButton", props={"label": "x"})],
+        )
     )
     c = _client(_MockRunner(schema))
-    resp = c.post("/ai/chat", json={"message": "x"},
-                  headers={"Authorization": f"Bearer {_token(_settings())}"})
+    resp = c.post(
+        "/ai/chat",
+        json={"message": "x"},
+        headers={"Authorization": f"Bearer {_token(_settings())}"},
+    )
     events = _parse_sse(resp.text)
     confirm = next(e for e in events if e["event"] == "confirm")
     root = confirm["data"]["schema"]["root"]

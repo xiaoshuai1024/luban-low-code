@@ -21,9 +21,7 @@ class NodeLoop(BaseModel):
 
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
-    data: str | list[Any] = Field(
-        ..., description="表达式(求值为数组)或字面量数组"
-    )
+    data: str | list[Any] = Field(..., description="表达式(求值为数组)或字面量数组")
     item_var: str | None = Field(default="item", alias="itemVar")
     key_var: str | None = Field(default="index", alias="keyVar")
 

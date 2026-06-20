@@ -112,7 +112,12 @@ markers = [
 
 [tool.coverage.run]
 source = ["app"]
-omit = ["app/__init__.py"]
+omit = [
+    "app/__init__.py",
+    # eval/runner.py 是 CLI 入口（python -m app.eval.runner），核心评测逻辑在
+    # metrics.py/dataset.py（已覆盖）；runner 仅做 argparse 调度 + 真实 VLM 调用（需 key，不跑单测）。
+    "app/eval/runner.py",
+]
 
 [tool.coverage.report]
 fail_under = 85

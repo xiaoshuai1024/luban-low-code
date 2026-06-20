@@ -57,10 +57,12 @@ def test_form_without_button_suggests_button() -> None:
 
 
 def test_form_with_button_does_not_repeat_suggestion() -> None:
-    page = _page([
-        NodeSchema(id="f", type="LubanForm"),
-        NodeSchema(id="b", type="LubanButton"),
-    ])
+    page = _page(
+        [
+            NodeSchema(id="f", type="LubanForm"),
+            NodeSchema(id="b", type="LubanButton"),
+        ]
+    )
     tips = generate_guidance(page, KNOWN)
     assert not any("提交按钮" in t.title for t in tips)
 
@@ -92,7 +94,9 @@ def test_data_component_without_datasource_warns() -> None:
 
 
 def test_data_component_with_datasource_no_warn() -> None:
-    table = NodeSchema(id="t", type="LubanTable", datasource=NodeDatasource(id="ds1", varName="rows"))
+    table = NodeSchema(
+        id="t", type="LubanTable", datasource=NodeDatasource(id="ds1", varName="rows")
+    )
     page = _page([table])
     tips = generate_guidance(page, KNOWN)
     assert not any("数据源" in t.title for t in tips)
@@ -142,8 +146,12 @@ def _settings(**over) -> Settings:
 
 def _token(settings: Settings) -> str:
     import jwt
-    return jwt.encode({"sub": "u1", "username": "t", "role": "admin"},
-                      settings.auth_jwt_secret.get_secret_value(), algorithm="HS256")
+
+    return jwt.encode(
+        {"sub": "u1", "username": "t", "role": "admin"},
+        settings.auth_jwt_secret.get_secret_value(),
+        algorithm="HS256",
+    )
 
 
 def test_guidance_endpoint_returns_tips() -> None:
@@ -154,8 +162,9 @@ def test_guidance_endpoint_returns_tips() -> None:
     settings = _settings()
     app = create_app(settings=settings)
     with TestClient(app) as c:
-        resp = c.get("/ai/guidance?empty=true",
-                     headers={"Authorization": f"Bearer {_token(settings)}"})
+        resp = c.get(
+            "/ai/guidance?empty=true", headers={"Authorization": f"Bearer {_token(settings)}"}
+        )
     assert resp.status_code == 200
     body = resp.json()
     assert body["schema_empty"] is True
@@ -170,8 +179,7 @@ def test_guidance_endpoint_503_when_disabled() -> None:
     settings = _settings(ai_guidance_enabled=False)
     app = create_app(settings=settings)
     with TestClient(app) as c:
-        resp = c.get("/ai/guidance",
-                     headers={"Authorization": f"Bearer {_token(settings)}"})
+        resp = c.get("/ai/guidance", headers={"Authorization": f"Bearer {_token(settings)}"})
     assert resp.status_code == 503
     assert resp.json()["code"] == "AI_FEATURE_DISABLED"
 

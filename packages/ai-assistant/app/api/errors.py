@@ -6,6 +6,7 @@
   AI_FEATURE_DISABLED   503
   AI_GENERATION_FAILED  500
   AI_VALIDATION_FAILED  422
+  INVALID_IMAGE         400  (plan P2: 图片白名单：非图/超大)
 """
 
 from __future__ import annotations
@@ -44,3 +45,10 @@ class GenerationFailedError(ApiError):
 class ValidationFailedError(ApiError):
     code = "AI_VALIDATION_FAILED"
     status_code = 422
+
+
+class InvalidImageError(ApiError):
+    """图片白名单校验失败（非图/超大，plan P2）。"""
+
+    code = "INVALID_IMAGE"
+    status_code = 400

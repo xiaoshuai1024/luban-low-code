@@ -69,7 +69,9 @@ async def understand(state: AgentState, deps: AgentDeps) -> AgentState:
     try:
         raw_intent = deps.provider.chat(
             [
-                SystemMessage(content="判断用户意图，分类为 generate_page/edit_property/guidance/unknown。"),
+                SystemMessage(
+                    content="判断用户意图，分类为 generate_page/edit_property/guidance/unknown。"
+                ),
                 HumanMessage(content=state.user_message),
             ],
             response_model=GenerationIntent,
@@ -107,10 +109,7 @@ async def generate(state: AgentState, deps: AgentDeps) -> AgentState:
 
     # 拼上下文：可用物料清单 + 当前 schema（编辑链路）
     materials_ctx = json.dumps(
-        [
-            {"name": n, "propsSchema": p}
-            for n, p in deps.registry.materials.items()
-        ],
+        [{"name": n, "propsSchema": p} for n, p in deps.registry.materials.items()],
         ensure_ascii=False,
     )
     current_ctx = (
@@ -131,9 +130,7 @@ async def generate(state: AgentState, deps: AgentDeps) -> AgentState:
             response_model=GeneratedSchema,
         )
         gen: GeneratedSchema = raw_gen  # type: ignore[assignment]
-        page = PageSchema.model_validate(
-            {"root": gen.root, "formState": gen.form_state or {}}
-        )
+        page = PageSchema.model_validate({"root": gen.root, "formState": gen.form_state or {}})
         state.generated_schema = page
         state.add_progress("tool", tool="generate", ok=True)
     except Exception as e:

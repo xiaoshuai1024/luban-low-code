@@ -47,6 +47,7 @@ def _tokenize(expr: str) -> list[tuple[str, str]]:
     toks: list[tuple[str, str]] = []
     i = 0
     n = len(expr)
+
     def is_digit(c: str) -> bool:
         return "0" <= c <= "9"
 
@@ -55,6 +56,7 @@ def _tokenize(expr: str) -> list[tuple[str, str]]:
 
     def is_id_part(c: str) -> bool:
         return c.isalnum() or c in "_$"
+
     while i < n:
         c = expr[i]
         if c in " \t\n\r":
@@ -134,11 +136,7 @@ def validate_expression(expr: str) -> None:
         if kind == "id" and val in IDENTIFIER_BLACKLIST:
             raise ExpressionValidationError(f"禁止访问标识符: {val}")
         # 成员访问：前一个 token 是 '.' 且当前命中成员黑名单
-        if (
-            kind == "id"
-            and prev == ("op", ".")
-            and val in MEMBER_BLACKLIST
-        ):
+        if kind == "id" and prev == ("op", ".") and val in MEMBER_BLACKLIST:
             raise ExpressionValidationError(f"禁止成员访问: {val}")
         # 索引访问：str 字面量（'__proto__'）紧跟在 '[' 后命中成员黑名单
         if kind == "str" and prev == ("op", "["):
@@ -147,11 +145,16 @@ def validate_expression(expr: str) -> None:
                 raise ExpressionValidationError(f"禁止索引访问: {inner}")
         # 函数调用检测：'(' 前若是 id / ')' / ']' → 视为调用
         if (kind, val) == ("op", "("):
-            if prev is not None and prev[0] == "id" and prev[1] not in (
-                "true",
-                "false",
-                "null",
-                "undefined",
+            if (
+                prev is not None
+                and prev[0] == "id"
+                and prev[1]
+                not in (
+                    "true",
+                    "false",
+                    "null",
+                    "undefined",
+                )
             ):
                 # id( → 函数调用，拒绝。例外：字面量 id（已由 tokenizer 归类，但稳妥起见排除）
                 raise ExpressionValidationError("沙箱禁止函数调用")

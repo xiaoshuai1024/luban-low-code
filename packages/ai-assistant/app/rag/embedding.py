@@ -30,9 +30,7 @@ class Embedder(Protocol):
 class _OpenAICompatEmbedder:
     """OpenAI 兼容协议 embedding（GLM/OpenAI/通义 embedding 均兼容）。"""
 
-    def __init__(
-        self, *, api_key: str, base_url: str, model: str, dim: int
-    ) -> None:
+    def __init__(self, *, api_key: str, base_url: str, model: str, dim: int) -> None:
         self._api_key = api_key
         self._base_url = base_url
         self._model = model

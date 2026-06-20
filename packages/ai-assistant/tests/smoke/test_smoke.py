@@ -10,6 +10,15 @@ from pydantic import BaseModel
 from app.core.config import ModelProvider, Settings
 from app.llm.adapters import get_provider, reset_provider_for_tests
 
+# 加载本地 .env（已 .gitignore，不入仓）：smoke 经 os.environ 读 key，
+# dotenv 注入使 .env 中配置的真实 key 生效，无需手工 export。
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:  # pragma: no cover - dotenv 为 dev 依赖
+    pass
+
 
 class _Out(BaseModel):
     title: str
@@ -47,8 +56,10 @@ def test_glm_chat_structured() -> None:
     reset_provider_for_tests()
     p = get_provider(s)
     result = p.chat(
-        [SystemMessage(content="输出一个含 title 字段的 JSON。"),
-         HumanMessage(content="生成一个用户列表页的标题")],
+        [
+            SystemMessage(content="输出一个含 title 字段的 JSON。"),
+            HumanMessage(content="生成一个用户列表页的标题"),
+        ],
         response_model=_Out,
     )
     assert isinstance(result, _Out)
@@ -63,8 +74,10 @@ def test_deepseek_chat_structured() -> None:
     reset_provider_for_tests()
     p = get_provider(s)
     result = p.chat(
-        [SystemMessage(content="输出一个含 title 字段的 JSON。"),
-         HumanMessage(content="生成一个用户列表页的标题")],
+        [
+            SystemMessage(content="输出一个含 title 字段的 JSON。"),
+            HumanMessage(content="生成一个用户列表页的标题"),
+        ],
         response_model=_Out,
     )
     assert isinstance(result, _Out)
@@ -79,8 +92,10 @@ def test_tongyi_chat_structured() -> None:
     reset_provider_for_tests()
     p = get_provider(s)
     result = p.chat(
-        [SystemMessage(content="输出一个含 title 字段的 JSON。"),
-         HumanMessage(content="生成一个用户列表页的标题")],
+        [
+            SystemMessage(content="输出一个含 title 字段的 JSON。"),
+            HumanMessage(content="生成一个用户列表页的标题"),
+        ],
         response_model=_Out,
     )
     assert isinstance(result, _Out)

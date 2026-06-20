@@ -17,9 +17,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class ModelProvider(StrEnum):
     """运行期单一 provider，仅改 MODEL_PROVIDER 配置切换，不协同。"""
 
-    GLM = "glm"            # 智谱 GLM-4
+    GLM = "glm"  # 智谱 GLM-4
     DEEPSEEK = "deepseek"
-    QWEN = "tongyi"        # 通义千问
+    QWEN = "tongyi"  # 通义千问
 
 
 class Settings(BaseSettings):
@@ -36,8 +36,26 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
 
     # ===== FeatureGate（与 engine FeatureGate 对齐语义）=====
-    ai_generate_enabled: bool = True     # key: ai.generate — 关闭则 /ai/generate 返回 503
-    ai_guidance_enabled: bool = True     # key: ai.guidance — 关闭则隐藏引导
+    ai_generate_enabled: bool = True  # key: ai.generate — 关闭则 /ai/generate 返回 503
+    ai_guidance_enabled: bool = True  # key: ai.guidance — 关闭则隐藏引导
+    ai_design_to_page_enabled: bool = (
+        True  # key: ai.design_to_page — 关闭则 /ai/design-to-page 503（plan P2）
+    )
+
+    # ===== 设计稿转页面（plan P2）=====
+    # 图片上传白名单（类型/大小）；超出 → 400 INVALID_IMAGE
+    design_image_max_bytes: int = 10 * 1024 * 1024  # 10MB
+    design_image_allowed_types: list[str] = Field(
+        default_factory=lambda: ["image/jpeg", "image/png", "image/webp"]
+    )
+    # presigned URL 有效期（秒）
+    design_presigned_expiry: int = 3600
+
+    # ===== 视觉模型（三家 VLM，随 MODEL_PROVIDER 切换；plan P2-T1）=====
+    # 多模态模型名（独立于文本 model，用各家 VL 变体）
+    glm_vision_model: str = "glm-4v"
+    deepseek_vision_model: str = "deepseek-vl2"
+    qwen_vision_model: str = "qwen-vl-plus"
 
     # ===== CORS / 前端 =====
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])

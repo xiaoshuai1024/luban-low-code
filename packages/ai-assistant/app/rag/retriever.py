@@ -66,9 +66,7 @@ class Retriever:
         )
         return self._client
 
-    def search(
-        self, query: str, *, top_k: int = 5
-    ) -> list[RetrievedMaterial]:
+    def search(self, query: str, *, top_k: int = 5) -> list[RetrievedMaterial]:
         """hybrid 检索：dense + sparse 融合 → top-k 物料。"""
         client = self._get_client()
         collection = self._settings.milvus_collection

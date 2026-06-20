@@ -144,9 +144,7 @@ def test_events_with_window_rejected() -> None:
 
 def test_valid_visible_expression_passes() -> None:
     page = PageSchema(
-        root=NodeSchema(
-            id="b", type="LubanButton", visible="count > 0", props={"label": "ok"}
-        )
+        root=NodeSchema(id="b", type="LubanButton", visible="count > 0", props={"label": "ok"})
     )
     validate_page_schema(page, _registry_with_button())
 

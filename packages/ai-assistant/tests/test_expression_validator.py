@@ -14,14 +14,14 @@ from app.schemas.expression_validator import (
 @pytest.mark.parametrize(
     "expr",
     [
-        "",                      # 空表达式合法
+        "",  # 空表达式合法
         "true",
         "a > 1 && b < 2",
-        "user.name",             # 成员访问（合法标识符）
-        "items[0]",              # 索引
-        "a ? b : c",             # 三元
-        "count % 2 === 0",       # 算术 + 严格等
-        "'hello ' + name",       # 字符串拼接
+        "user.name",  # 成员访问（合法标识符）
+        "items[0]",  # 索引
+        "a ? b : c",  # 三元
+        "count % 2 === 0",  # 算术 + 严格等
+        "'hello ' + name",  # 字符串拼接
     ],
 )
 def test_valid_expressions(expr: str) -> None:
@@ -32,17 +32,17 @@ def test_valid_expressions(expr: str) -> None:
 @pytest.mark.parametrize(
     "expr",
     [
-        "eval('1+1')",           # eval 黑名单
+        "eval('1+1')",  # eval 黑名单
         "Function('return 1')",  # Function 黑名单
-        "new Date()",            # new 作为 id（沙箱 tokenizer 当 id，黑名单拦截）
-        "this.foo",              # this 黑名单
-        "window.location",       # window 黑名单
-        "globalThis.x",          # globalThis 黑名单
-        "obj.constructor",       # 成员黑名单
-        "obj['__proto__']",      # 索引黑名单
-        "fetch('/api')",         # 函数调用（fetch 不是字面量 id）
-        "process.env",           # process 黑名单
-        "__proto__.x",           # 标识符黑名单
+        "new Date()",  # new 作为 id（沙箱 tokenizer 当 id，黑名单拦截）
+        "this.foo",  # this 黑名单
+        "window.location",  # window 黑名单
+        "globalThis.x",  # globalThis 黑名单
+        "obj.constructor",  # 成员黑名单
+        "obj['__proto__']",  # 索引黑名单
+        "fetch('/api')",  # 函数调用（fetch 不是字面量 id）
+        "process.env",  # process 黑名单
+        "__proto__.x",  # 标识符黑名单
     ],
 )
 def test_invalid_expressions(expr: str) -> None:

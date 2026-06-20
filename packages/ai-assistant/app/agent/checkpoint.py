@@ -34,9 +34,7 @@ class CheckpointStore(abc.ABC):
         """加载会话（按 user_id 隔离：非本人返回 None）。"""
 
     @abc.abstractmethod
-    async def update_status(
-        self, session_id: str, user_id: str, status: SessionStatus
-    ) -> None:
+    async def update_status(self, session_id: str, user_id: str, status: SessionStatus) -> None:
         """仅更新会话状态（轻量，用于状态机迁移）。"""
 
     @abc.abstractmethod
@@ -63,9 +61,7 @@ class InMemoryCheckpointStore(CheckpointStore):
             return None  # 隔离：非本人会话不可见
         return state
 
-    async def update_status(
-        self, session_id: str, user_id: str, status: SessionStatus
-    ) -> None:
+    async def update_status(self, session_id: str, user_id: str, status: SessionStatus) -> None:
         state = self._store.get(session_id)
         if state is None or state.user_id != user_id:
             raise CheckpointError("会话不存在或无权访问")
@@ -129,8 +125,7 @@ class PostgresCheckpointStore(CheckpointStore):
             """
         )
         await conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_ai_session_states_user "
-            "ON ai_session_states(user_id)"
+            "CREATE INDEX IF NOT EXISTS idx_ai_session_states_user ON ai_session_states(user_id)"
         )
         self._initialized = True
 
@@ -172,8 +167,7 @@ class PostgresCheckpointStore(CheckpointStore):
         async with pool.acquire() as conn:
             await self._ensure_schema(conn)
             row = await conn.fetchrow(
-                "SELECT state_json FROM ai_session_states "
-                "WHERE session_id = $1 AND user_id = $2",
+                "SELECT state_json FROM ai_session_states WHERE session_id = $1 AND user_id = $2",
                 session_id,
                 user_id,
             )
@@ -181,9 +175,7 @@ class PostgresCheckpointStore(CheckpointStore):
                 return None
             return AgentState.model_validate(json.loads(row["state_json"]))
 
-    async def update_status(
-        self, session_id: str, user_id: str, status: SessionStatus
-    ) -> None:
+    async def update_status(self, session_id: str, user_id: str, status: SessionStatus) -> None:
         pool = await self._pool_obj()
         async with pool.acquire() as conn:
             res = await conn.execute(

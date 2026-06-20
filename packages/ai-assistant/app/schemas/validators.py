@@ -44,9 +44,7 @@ def _ensure_ids(node: NodeSchema, seen: set[str]) -> None:
     if not node.id:
         node.id = str(uuid.uuid4())
     if node.id in seen:
-        raise ValidationFailedError(
-            f"重复节点 id: {node.id}", details={"node_type": node.type}
-        )
+        raise ValidationFailedError(f"重复节点 id: {node.id}", details={"node_type": node.type})
     seen.add(node.id)
     for child in node.children or []:
         _ensure_ids(child, seen)
@@ -112,9 +110,7 @@ def _validate_props(node: NodeSchema, registry: MaterialRegistry) -> None:
         _validate_props(child, registry)
 
 
-def validate_page_schema(
-    page: PageSchema, registry: MaterialRegistry
-) -> PageSchema:
+def validate_page_schema(page: PageSchema, registry: MaterialRegistry) -> PageSchema:
     """主校验闸：结构 → ID → 环 → 表达式 → 物料/props。
 
     返回校验通过（可能补齐了 id）的 PageSchema；失败抛 ValidationFailedError。
@@ -130,9 +126,7 @@ def validate_page_schema(
     return page
 
 
-def collect_missing_materials(
-    page: PageSchema, registry: MaterialRegistry
-) -> list[str]:
+def collect_missing_materials(page: PageSchema, registry: MaterialRegistry) -> list[str]:
     """收集未注册的物料名（供 agent 降级/提示）。"""
     missing: list[str] = []
 

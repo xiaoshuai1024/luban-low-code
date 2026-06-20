@@ -79,7 +79,9 @@ def build_sparse_vector(text: str) -> dict[int, float]:
 class MaterialSyncer:
     """物料知识同步器（Milvus client 可注入，便于 mock）。"""
 
-    def __init__(self, settings: Settings, embedder: Embedder, client: object | None = None) -> None:
+    def __init__(
+        self, settings: Settings, embedder: Embedder, client: object | None = None
+    ) -> None:
         self._settings = settings
         self._embedder = embedder
         self._client = client
@@ -94,9 +96,7 @@ class MaterialSyncer:
         )
         return self._client
 
-    def sync(
-        self, materials: list[MaterialDoc], *, purge_missing: bool = False
-    ) -> dict[str, int]:
+    def sync(self, materials: list[MaterialDoc], *, purge_missing: bool = False) -> dict[str, int]:
         """同步物料到 collection（幂等）。返回统计。"""
         client = self._get_client()
         collection = self._settings.milvus_collection
@@ -131,18 +131,14 @@ class MaterialSyncer:
 
         return {"upserted": len(rows), "purged": purged}
 
-    def _delete_missing(
-        self, collection: str, client: object, keep: set[str]
-    ) -> int:
+    def _delete_missing(self, collection: str, client: object, keep: set[str]) -> int:
         """删除 collection 中不在 keep 集合的物料（purge_missing=True 时）。"""
         # 简化实现：查全量 pk 比对。生产可按需增量。
         try:
             res = client.query(  # type: ignore[attr-defined]
                 collection_name=collection, output_fields=["pk"], limit=16384
             )
-            to_delete = [
-                r["pk"] for r in (res or []) if r.get("pk") not in keep
-            ]
+            to_delete = [r["pk"] for r in (res or []) if r.get("pk") not in keep]
             if to_delete:
                 client.delete(  # type: ignore[attr-defined]
                     collection_name=collection, filter=f"pk in {to_delete}"

@@ -51,19 +51,23 @@ def generate_guidance(
 
     # 空画布引导
     if schema is None or not _has_real_content(schema):
-        tips.append(GuidanceTip(
-            level="info",
-            title="开始构建页面",
-            detail="描述你想要的页面，例如『做一个用户列表页』或『添加一个登录表单』，AI 会帮你生成。",
-            action=None,
-        ))
+        tips.append(
+            GuidanceTip(
+                level="info",
+                title="开始构建页面",
+                detail="描述你想要的页面，例如『做一个用户列表页』或『添加一个登录表单』，AI 会帮你生成。",
+                action=None,
+            )
+        )
         if "LubanButton" in known_materials:
-            tips.append(GuidanceTip(
-                level="suggestion",
-                title="从核心组件开始",
-                detail="可以先用一个按钮（LubanButton）熟悉画布操作，再逐步扩展。",
-                action="add:LubanButton",
-            ))
+            tips.append(
+                GuidanceTip(
+                    level="suggestion",
+                    title="从核心组件开始",
+                    detail="可以先用一个按钮（LubanButton）熟悉画布操作，再逐步扩展。",
+                    action="add:LubanButton",
+                )
+            )
         return tips
 
     nodes = _all_nodes(schema)
@@ -71,48 +75,62 @@ def generate_guidance(
 
     # 结构化建议：按存在的物料类型给针对性提示
     if "LubanForm" in types and "LubanButton" not in types and "LubanButton" in known_materials:
-        tips.append(GuidanceTip(
-            level="suggestion",
-            title="为表单添加提交按钮",
-            detail="检测到表单但没有提交按钮。建议添加一个 LubanButton 作为提交入口。",
-            action="add:LubanButton",
-        ))
+        tips.append(
+            GuidanceTip(
+                level="suggestion",
+                title="为表单添加提交按钮",
+                detail="检测到表单但没有提交按钮。建议添加一个 LubanButton 作为提交入口。",
+                action="add:LubanButton",
+            )
+        )
 
-    if "LubanTable" in types and "LubanPagination" not in types and "LubanPagination" in known_materials:
-        tips.append(GuidanceTip(
-            level="suggestion",
-            title="为表格添加分页",
-            detail="数据量较大时，建议给表格加分页（LubanPagination）提升体验。",
-            action="add:LubanPagination",
-        ))
+    if (
+        "LubanTable" in types
+        and "LubanPagination" not in types
+        and "LubanPagination" in known_materials
+    ):
+        tips.append(
+            GuidanceTip(
+                level="suggestion",
+                title="为表格添加分页",
+                detail="数据量较大时，建议给表格加分页（LubanPagination）提升体验。",
+                action="add:LubanPagination",
+            )
+        )
 
     # 数据源提示：有表格/表单但无 datasource 绑定
     has_data_component = "LubanTable" in types or "LubanForm" in types
     has_datasource = any(n.datasource is not None for n in nodes)
     if has_data_component and not has_datasource:
-        tips.append(GuidanceTip(
-            level="warning",
-            title="考虑绑定数据源",
-            detail="当前表格/表单未绑定数据源（datasource）。绑定后可动态拉取数据。",
-            action=None,
-        ))
+        tips.append(
+            GuidanceTip(
+                level="warning",
+                title="考虑绑定数据源",
+                detail="当前表格/表单未绑定数据源（datasource）。绑定后可动态拉取数据。",
+                action=None,
+            )
+        )
 
     # 持久化提示：未保存
-    tips.append(GuidanceTip(
-        level="info",
-        title="记得保存",
-        detail="改动不会自动保存，记得 Ctrl+S 或点击保存按钮持久化到服务端。",
-        action="save",
-    ))
+    tips.append(
+        GuidanceTip(
+            level="info",
+            title="记得保存",
+            detail="改动不会自动保存，记得 Ctrl+S 或点击保存按钮持久化到服务端。",
+            action="save",
+        )
+    )
 
     # 兜底：若上面无具体建议，给通用下一步
     if not any(t.level == "suggestion" for t in tips):
-        tips.append(GuidanceTip(
-            level="suggestion",
-            title="继续完善页面",
-            detail="可以继续描述想要的修改，例如『把标题改成红色』或『在右侧加一个侧边栏』。",
-            action=None,
-        ))
+        tips.append(
+            GuidanceTip(
+                level="suggestion",
+                title="继续完善页面",
+                detail="可以继续描述想要的修改，例如『把标题改成红色』或『在右侧加一个侧边栏』。",
+                action=None,
+            )
+        )
 
     return tips
 

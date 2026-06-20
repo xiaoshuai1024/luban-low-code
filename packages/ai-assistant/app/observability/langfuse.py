@@ -25,9 +25,7 @@ class Tracer:
     """trace 抽象。"""
 
     @contextlib.contextmanager
-    def trace(
-        self, name: str, *, input: Any = None, **metadata: Any
-    ) -> Iterator[dict[str, Any]]:
+    def trace(self, name: str, *, input: Any = None, **metadata: Any) -> Iterator[dict[str, Any]]:
         """包住一段执行。yield 一个 dict，调用方可填 output/error 后随 span 上报。"""
         span: dict[str, Any] = {
             "name": name,
@@ -67,9 +65,7 @@ class LangfuseTracer(Tracer):
         return self._client
 
     @contextlib.contextmanager
-    def trace(
-        self, name: str, *, input: Any = None, **metadata: Any
-    ) -> Iterator[dict[str, Any]]:
+    def trace(self, name: str, *, input: Any = None, **metadata: Any) -> Iterator[dict[str, Any]]:
         span = {
             "name": name,
             "input": input,

@@ -60,6 +60,7 @@ def _placeholder_schema() -> Any:
     from app.schemas.page_schema import NodeSchema, PageSchema
 
     return PageSchema(
-        root=NodeSchema(id="root", type="LubanPage",
-                        children=[NodeSchema(id="f", type="LubanForm")])
+        root=NodeSchema(
+            id="root", type="LubanPage", children=[NodeSchema(id="f", type="LubanForm")]
+        )
     )

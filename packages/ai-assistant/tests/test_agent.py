@@ -36,9 +36,7 @@ class MockProvider:
         self.generated_root = generated_root or {
             "id": "root",
             "type": "LubanPage",
-            "children": [
-                {"id": "btn", "type": "LubanButton", "props": {"label": "提交"}}
-            ],
+            "children": [{"id": "btn", "type": "LubanButton", "props": {"label": "提交"}}],
         }
         self.generate_error = generate_error
         self.generate_calls = 0
@@ -157,9 +155,11 @@ async def test_resume_reject_rejected() -> None:
 @pytest.mark.asyncio
 async def test_validate_failure_retries_within_limit() -> None:
     # generate 产非法 schema（props 缺必填 label）→ validate 失败 → 回环重试
-    bad_root = {"id": "root", "type": "LubanPage", "children": [
-        {"id": "btn", "type": "LubanButton", "props": {}}
-    ]}
+    bad_root = {
+        "id": "root",
+        "type": "LubanPage",
+        "children": [{"id": "btn", "type": "LubanButton", "props": {}}],
+    }
     runner = AgentRunner(_deps(provider=MockProvider(generated_root=bad_root)))
     state = AgentState(
         session_id=new_session_id(),
@@ -182,11 +182,13 @@ async def test_validate_retry_then_success() -> None:
         def __init__(self) -> None:
             super().__init__()
             self._bad = {
-                "id": "root", "type": "LubanPage",
+                "id": "root",
+                "type": "LubanPage",
                 "children": [{"id": "b", "type": "LubanButton", "props": {}}],
             }
             self._good = {
-                "id": "root", "type": "LubanPage",
+                "id": "root",
+                "type": "LubanPage",
                 "children": [{"id": "b", "type": "LubanButton", "props": {"label": "ok"}}],
             }
 

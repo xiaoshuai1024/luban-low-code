@@ -3,6 +3,10 @@ import type { RequestInit } from "next/dist/server/web/spec-extension/request";
 export const BACKEND_BASE_URL =
   process.env.BACKEND_BASE_URL || "http://127.0.0.1:8080/backend";
 
+/** Per-request timeout for backend calls. A hung backend should not tie up the
+ * BFF (DoS surface). Tunable via env for unusual environments. */
+const BACKEND_TIMEOUT_MS = Number(process.env.BACKEND_TIMEOUT_MS) || 15_000;
+
 export interface BackendError {
   code: string;
   message: string;
@@ -34,6 +38,10 @@ export async function callBackend<T>(
       "Content-Type": "application/json",
       ...(init.headers || {}),
     },
+    // MID-3: cap backend latency so a hung backend can't lock up the BFF. Callers
+    // can pass their own signal to override per-route; absent that we apply a
+    // default deadline.
+    signal: init.signal ?? AbortSignal.timeout(BACKEND_TIMEOUT_MS),
   });
 
   if (!res.ok) {

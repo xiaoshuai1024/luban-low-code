@@ -1,0 +1,25 @@
+$ next dev
+⚠ You are using a non-standard "NODE_ENV" value in your environment. This creates inconsistencies in the project and is strongly advised against. Read more: https://nextjs.org/docs/messages/non-standard-node-env
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3100
+- Network:       http://192.168.100.43:3100
+
+✓ Starting...
+
+  We detected TypeScript in your project and reconfigured your tsconfig.json file for you.
+  The following suggested values were added to your tsconfig.json. These values can be changed to fit your project's needs:
+
+  	- include was updated to add '.next/dev/dev/types/**/*.ts'
+
+✓ Ready in 1037ms
+ POST /api/auth/login 200 in 350ms (compile: 265ms, render: 86ms)
+ POST /api/auth/login 200 in 60ms (compile: 1959µs, render: 58ms)
+ GET /api/sites 401 in 89ms (compile: 86ms, render: 3ms)
+ POST /api/auth/login 200 in 59ms (compile: 1330µs, render: 57ms)
+ GET /api/sites 200 in 17ms (compile: 1662µs, render: 15ms)
+ GET /api/users 200 in 111ms (compile: 79ms, render: 31ms)
+ POST /api/auth/login 200 in 66ms (compile: 1312µs, render: 65ms)
+ GET /api/sites 200 in 12ms (compile: 1895µs, render: 10ms)
+ GET /api/users 200 in 21ms (compile: 5ms, render: 16ms)
+ GET /api/auth/me 200 in 111ms (compile: 99ms, render: 12ms)
+ GET /api/sites 200 in 8ms (compile: 1246µs, render: 7ms)

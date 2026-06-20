@@ -24,14 +24,19 @@ import {
   ElOption,
   ElButton,
   ElEmpty,
+  ElColorPicker,
+  ElCollapse,
+  ElCollapseItem,
 } from 'element-plus'
 import type { NodeSchema } from '@/types/schema'
-import type { ComponentMeta, PropSchemaItem } from 'luban-low-code'
+import type { ComponentMeta, PropSchemaItem, PropSchema } from 'luban-low-code'
 import { isFeatureEnabled } from '@/config/features'
 
 /** D15-B1 数据源管理/测试连通开关（FeatureGate） */
 const datasourceManageEnabled = isFeatureEnabled('datasourceManage')
 const testConnectEnabled = isFeatureEnabled('testConnect')
+/** D15-A3 样式面板开关（FeatureGate） */
+const styleEnabled = isFeatureEnabled('style')
 
 interface DatasourceOption {
   id: string
@@ -63,6 +68,8 @@ const emit = defineEmits<{
   (e: 'open-datasource'): void
   /** D15-B1：测试指定数据源连通 */
   (e: 'test-connect', datasourceId: string): void
+  /** D15-A3：节点级样式更新（key 为 CSS 属性名，value 为值） */
+  (e: 'update:style', nodeId: string, key: string, value: string): void
 }>()
 
 /** 有序的 propSchema 条目，便于稳定渲染。 */
@@ -151,6 +158,54 @@ function commitOptions(key: string, list: OptionItem[]): void {
   handleInput(key, list.map((o) => ({ label: o.label, value: o.value })))
 }
 
+// === array 类型：可视化数组编辑器（D15-E0 engine 消费侧）===
+// itemFields 由 compat.ts 从 JSONSchema items.properties 派生；按 itemFields
+// 渲染每行 N 字段输入，复用 options 编辑器的增删行模式。
+interface ArrayRow {
+  [field: string]: unknown
+}
+
+/** 读取数组当前行列表（归一化为对象数组；非数组/空 → []）。 */
+function getArrayItems(key: string): ArrayRow[] {
+  const raw = nodeProps.value[key]
+  if (!Array.isArray(raw)) return []
+  return raw.map((r) => {
+    if (r && typeof r === 'object') return r as ArrayRow
+    return { value: r }
+  })
+}
+
+/** 按 itemFields 默认值构造一行。 */
+function defaultArrayRow(itemFields?: PropSchema): ArrayRow {
+  const row: ArrayRow = {}
+  if (itemFields) {
+    for (const [k, f] of Object.entries(itemFields) as [string, PropSchemaItem][]) {
+      row[k] = f.default ?? (f.type === 'number' ? 0 : f.type === 'boolean' ? false : '')
+    }
+  }
+  return row
+}
+
+function addArrayItem(key: string, itemFields?: PropSchema): void {
+  const list = getArrayItems(key)
+  list.push(defaultArrayRow(itemFields))
+  handleInput(key, list)
+}
+
+function removeArrayItem(key: string, index: number): void {
+  const list = getArrayItems(key)
+  if (index < 0 || index >= list.length) return
+  list.splice(index, 1)
+  handleInput(key, list)
+}
+
+function updateArrayItem(key: string, index: number, field: string, val: unknown): void {
+  const list = getArrayItems(key)
+  if (index < 0 || index >= list.length) return
+  list[index] = { ...list[index], [field]: val }
+  handleInput(key, list)
+}
+
 // === json 类型：textarea + 解析容错 ===
 function getJsonText(key: string): string {
   const v = nodeProps.value[key]
@@ -175,6 +230,55 @@ function handleJsonInput(key: string, text: string): void {
   }
   handleInput(key, parsed)
 }
+
+// === 样式分区（D15-A3，W1-T7）：节点级 style 配置 ===
+/**
+ * 危险 CSS 值过滤（§8.2 安全 A03）：拒绝 expression()/javascript:/url(javascript:)
+ * 等可能在旧浏览器执行的注入向量。值在写入 node.style 前先过此函数。
+ */
+const DANGEROUS_CSS_PATTERNS = [
+  /expression\s*\(/i,
+  /javascript:/i,
+  /url\s*\(\s*['"]?\s*javascript:/i,
+  /-moz-binding/i,
+  /behavior\s*:/i,
+]
+function isSafeCssValue(value: string): boolean {
+  if (typeof value !== 'string') return false
+  for (const re of DANGEROUS_CSS_PATTERNS) {
+    if (re.test(value)) return false
+  }
+  return true
+}
+
+/** 读取节点某 CSS 属性值（node.style[key]）。 */
+function getStyleValue(key: string): string {
+  return (props.node?.style?.[key] as string) ?? ''
+}
+
+/**
+ * 写入节点 CSS 属性：安全过滤后写 node.style[key]，emit update:style。
+ * 危险值静默丢弃（不写不 emit），由调用方 UI 不显示即可。
+ */
+function handleStyleInput(key: string, value: string): void {
+  if (!props.node) return
+  if (value && !isSafeCssValue(value)) return // 危险值拒绝
+  if (!props.node.style) props.node.style = {}
+  if (value === '') {
+    delete props.node.style[key]
+  } else {
+    props.node.style[key] = value
+  }
+  emit('update:style', props.node.id, key, value)
+}
+
+/** 预设阴影选项（boxShadow） */
+const SHADOW_PRESETS = [
+  { label: '无', value: '' },
+  { label: '小', value: '0 1px 3px rgba(0,0,0,0.12)' },
+  { label: '中', value: '0 4px 12px rgba(0,0,0,0.15)' },
+  { label: '大', value: '0 10px 30px rgba(0,0,0,0.2)' },
+]
 
 function handleDelete(): void {
   if (!props.node) return
@@ -338,6 +442,53 @@ function handleVarNameChange(varName: string): void {
           </ElButton>
         </div>
 
+        <!-- array（D15-E0 可视化数组编辑器：按 itemFields 渲染每行 N 字段） -->
+        <div v-else-if="item.type === 'array'" class="property-panel__array">
+          <div
+            v-for="(row, idx) in getArrayItems(key)"
+            :key="idx"
+            class="property-panel__array-row"
+          >
+            <div class="property-panel__array-fields">
+              <template v-if="item.itemFields">
+                <template v-for="(field, fName) in item.itemFields" :key="fName">
+                  <ElInput
+                    v-if="field.type === 'string' || !field.type"
+                    :model-value="String(row[fName] ?? '')"
+                    :placeholder="field.label || String(fName)"
+                    size="small"
+                    @update:model-value="(v: string) => updateArrayItem(key, idx, String(fName), v)"
+                  />
+                  <ElInputNumber
+                    v-else-if="field.type === 'number'"
+                    :model-value="Number(row[fName] ?? 0)"
+                    size="small"
+                    controls-position="right"
+                    @update:model-value="(v?: number) => updateArrayItem(key, idx, String(fName), v ?? 0)"
+                  />
+                  <ElSwitch
+                    v-else-if="field.type === 'boolean'"
+                    :model-value="Boolean(row[fName])"
+                    @update:model-value="(v: string | number | boolean) => updateArrayItem(key, idx, String(fName), v)"
+                  />
+                  <ElSelect
+                    v-else-if="field.type === 'select'"
+                    :model-value="(row[fName] as string | number | boolean)"
+                    :placeholder="field.label || String(fName)"
+                    size="small"
+                    style="flex: 1"
+                    @update:model-value="(v: string | number | boolean) => updateArrayItem(key, idx, String(fName), v)"
+                  >
+                    <ElOption v-for="opt in field.options || []" :key="String(opt.value)" :label="opt.label" :value="opt.value" />
+                  </ElSelect>
+                </template>
+              </template>
+            </div>
+            <ElButton size="small" type="danger" link :disabled="readonly" @click="removeArrayItem(key, idx)">删除</ElButton>
+          </div>
+          <ElButton size="small" type="primary" link :disabled="readonly" @click="addArrayItem(key, item.itemFields)">+ 添加</ElButton>
+        </div>
+
         <!-- json -->
         <ElInput
           v-else-if="item.type === 'json'"
@@ -354,6 +505,152 @@ function handleVarNameChange(varName: string): void {
           :model-value="String(getValue(key, item) ?? '')"
           @update:model-value="(v: string) => handleInput(key, v)"
         />
+      </ElFormItem>
+
+      <!-- D15-A3 样式分区（5 折叠组：尺寸/背景/边框/排版/布局/阴影） -->
+      <ElFormItem v-if="styleEnabled" label="样式">
+        <ElCollapse class="property-panel__style-collapse">
+          <!-- 尺寸 -->
+          <ElCollapseItem title="尺寸" name="size">
+            <div class="property-panel__style-grid">
+              <ElInput :model-value="getStyleValue('width')" placeholder="width" size="small" @update:model-value="(v: string) => handleStyleInput('width', v)" />
+              <ElInput :model-value="getStyleValue('height')" placeholder="height" size="small" @update:model-value="(v: string) => handleStyleInput('height', v)" />
+              <ElInput :model-value="getStyleValue('marginTop')" placeholder="margin-top" size="small" @update:model-value="(v: string) => handleStyleInput('marginTop', v)" />
+              <ElInput :model-value="getStyleValue('marginBottom')" placeholder="margin-bottom" size="small" @update:model-value="(v: string) => handleStyleInput('marginBottom', v)" />
+              <ElInput :model-value="getStyleValue('paddingTop')" placeholder="padding-top" size="small" @update:model-value="(v: string) => handleStyleInput('paddingTop', v)" />
+              <ElInput :model-value="getStyleValue('paddingBottom')" placeholder="padding-bottom" size="small" @update:model-value="(v: string) => handleStyleInput('paddingBottom', v)" />
+            </div>
+          </ElCollapseItem>
+
+          <!-- 背景 -->
+          <ElCollapseItem title="背景" name="bg">
+            <div class="property-panel__style-row">
+              <span class="property-panel__style-label">背景色</span>
+              <ElColorPicker :model-value="getStyleValue('backgroundColor')" size="small" @update:model-value="(v: string | null) => handleStyleInput('backgroundColor', v || '')" />
+              <ElInput :model-value="getStyleValue('backgroundColor')" placeholder="#fff 或 rgb()" size="small" @update:model-value="(v: string) => handleStyleInput('backgroundColor', v)" />
+            </div>
+            <div class="property-panel__style-row">
+              <span class="property-panel__style-label">背景图</span>
+              <ElInput :model-value="getStyleValue('backgroundImage')" placeholder="url(...)" size="small" @update:model-value="(v: string) => handleStyleInput('backgroundImage', v)" />
+            </div>
+          </ElCollapseItem>
+
+          <!-- 边框 -->
+          <ElCollapseItem title="边框" name="border">
+            <div class="property-panel__style-row">
+              <span class="property-panel__style-label">颜色</span>
+              <ElColorPicker :model-value="getStyleValue('borderColor')" size="small" @update:model-value="(v: string | null) => handleStyleInput('borderColor', v || '')" />
+            </div>
+            <div class="property-panel__style-row">
+              <span class="property-panel__style-label">宽度</span>
+              <ElInput :model-value="getStyleValue('borderWidth')" placeholder="1px" size="small" @update:model-value="(v: string) => handleStyleInput('borderWidth', v)" />
+              <span class="property-panel__style-label">圆角</span>
+              <ElInput :model-value="getStyleValue('borderRadius')" placeholder="4px" size="small" @update:model-value="(v: string) => handleStyleInput('borderRadius', v)" />
+            </div>
+            <div class="property-panel__style-row">
+              <span class="property-panel__style-label">样式</span>
+              <ElSelect :model-value="getStyleValue('borderStyle')" placeholder="solid" size="small" style="width: 100%" @update:model-value="(v: string) => handleStyleInput('borderStyle', v)">
+                <ElOption label="无" value="" />
+                <ElOption label="实线" value="solid" />
+                <ElOption label="虚线" value="dashed" />
+                <ElOption label="点线" value="dotted" />
+              </ElSelect>
+            </div>
+          </ElCollapseItem>
+
+          <!-- 排版 -->
+          <ElCollapseItem title="排版" name="typo">
+            <div class="property-panel__style-row">
+              <span class="property-panel__style-label">字号</span>
+              <ElInput :model-value="getStyleValue('fontSize')" placeholder="14px" size="small" @update:model-value="(v: string) => handleStyleInput('fontSize', v)" />
+              <span class="property-panel__style-label">行高</span>
+              <ElInput :model-value="getStyleValue('lineHeight')" placeholder="1.5" size="small" @update:model-value="(v: string) => handleStyleInput('lineHeight', v)" />
+            </div>
+            <div class="property-panel__style-row">
+              <span class="property-panel__style-label">字重</span>
+              <ElSelect :model-value="getStyleValue('fontWeight')" placeholder="normal" size="small" style="flex: 1" @update:model-value="(v: string) => handleStyleInput('fontWeight', v)">
+                <ElOption label="默认" value="" />
+                <ElOption label="300 细" value="300" />
+                <ElOption label="400 常规" value="400" />
+                <ElOption label="500 中" value="500" />
+                <ElOption label="600 粗" value="600" />
+                <ElOption label="700 加粗" value="700" />
+              </ElSelect>
+              <span class="property-panel__style-label">对齐</span>
+              <ElSelect :model-value="getStyleValue('textAlign')" placeholder="left" size="small" style="flex: 1" @update:model-value="(v: string) => handleStyleInput('textAlign', v)">
+                <ElOption label="左" value="left" />
+                <ElOption label="中" value="center" />
+                <ElOption label="右" value="right" />
+              </ElSelect>
+            </div>
+            <div class="property-panel__style-row">
+              <span class="property-panel__style-label">颜色</span>
+              <ElColorPicker :model-value="getStyleValue('color')" size="small" @update:model-value="(v: string | null) => handleStyleInput('color', v || '')" />
+              <ElInput :model-value="getStyleValue('color')" placeholder="#333" size="small" @update:model-value="(v: string) => handleStyleInput('color', v)" />
+            </div>
+          </ElCollapseItem>
+
+          <!-- 布局（flex） -->
+          <ElCollapseItem title="布局" name="layout">
+            <div class="property-panel__style-row">
+              <span class="property-panel__style-label">display</span>
+              <ElSelect :model-value="getStyleValue('display')" placeholder="block" size="small" style="flex: 1" @update:model-value="(v: string) => handleStyleInput('display', v)">
+                <ElOption label="默认" value="" />
+                <ElOption label="block" value="block" />
+                <ElOption label="flex" value="flex" />
+                <ElOption label="inline-block" value="inline-block" />
+                <ElOption label="none" value="none" />
+              </ElSelect>
+              <span class="property-panel__style-label">gap</span>
+              <ElInput :model-value="getStyleValue('gap')" placeholder="8px" size="small" style="flex: 1" @update:model-value="(v: string) => handleStyleInput('gap', v)" />
+            </div>
+            <template v-if="getStyleValue('display') === 'flex'">
+              <div class="property-panel__style-row">
+                <span class="property-panel__style-label">方向</span>
+                <ElSelect :model-value="getStyleValue('flexDirection')" placeholder="row" size="small" style="flex: 1" @update:model-value="(v: string) => handleStyleInput('flexDirection', v)">
+                  <ElOption label="row" value="row" />
+                  <ElOption label="column" value="column" />
+                </ElSelect>
+                <span class="property-panel__style-label">换行</span>
+                <ElSelect :model-value="getStyleValue('flexWrap')" placeholder="nowrap" size="small" style="flex: 1" @update:model-value="(v: string) => handleStyleInput('flexWrap', v)">
+                  <ElOption label="不换行" value="nowrap" />
+                  <ElOption label="换行" value="wrap" />
+                </ElSelect>
+              </div>
+              <div class="property-panel__style-row">
+                <span class="property-panel__style-label">主轴</span>
+                <ElSelect :model-value="getStyleValue('justifyContent')" placeholder="flex-start" size="small" style="flex: 1" @update:model-value="(v: string) => handleStyleInput('justifyContent', v)">
+                  <ElOption label="起始" value="flex-start" />
+                  <ElOption label="居中" value="center" />
+                  <ElOption label="末尾" value="flex-end" />
+                  <ElOption label="两端" value="space-between" />
+                  <ElOption label="均分" value="space-around" />
+                </ElSelect>
+                <span class="property-panel__style-label">交叉</span>
+                <ElSelect :model-value="getStyleValue('alignItems')" placeholder="stretch" size="small" style="flex: 1" @update:model-value="(v: string) => handleStyleInput('alignItems', v)">
+                  <ElOption label="拉伸" value="stretch" />
+                  <ElOption label="起始" value="flex-start" />
+                  <ElOption label="居中" value="center" />
+                  <ElOption label="末尾" value="flex-end" />
+                </ElSelect>
+              </div>
+            </template>
+          </ElCollapseItem>
+
+          <!-- 阴影 -->
+          <ElCollapseItem title="阴影" name="shadow">
+            <div class="property-panel__style-row">
+              <span class="property-panel__style-label">预设</span>
+              <ElSelect :model-value="getStyleValue('boxShadow')" placeholder="无" size="small" style="flex: 1" @update:model-value="(v: string) => handleStyleInput('boxShadow', v)">
+                <ElOption v-for="s in SHADOW_PRESETS" :key="s.value" :label="s.label" :value="s.value" />
+              </ElSelect>
+            </div>
+            <div class="property-panel__style-row">
+              <span class="property-panel__style-label">自定义</span>
+              <ElInput :model-value="getStyleValue('boxShadow')" placeholder="0 2px 8px rgba(0,0,0,0.1)" size="small" @update:model-value="(v: string) => handleStyleInput('boxShadow', v)" />
+            </div>
+          </ElCollapseItem>
+        </ElCollapse>
       </ElFormItem>
 
       <!-- 事件分区：按 meta.events 配动作表达式（W1-T5） -->
@@ -461,6 +758,31 @@ function handleVarNameChange(varName: string): void {
     align-items: center;
   }
 
+  // === D15-E0 数组编辑器 ===
+  &__array {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+  }
+
+  &__array-row {
+    display: flex;
+    gap: 6px;
+    align-items: flex-start;
+    padding: 6px;
+    border: 1px solid #ebeef5;
+    border-radius: 4px;
+    background: #fafafa;
+  }
+
+  &__array-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+  }
+
   &__events {
     display: flex;
     flex-direction: column;
@@ -491,6 +813,42 @@ function handleVarNameChange(varName: string): void {
     gap: 12px;
     justify-content: flex-start;
     margin-top: 2px;
+  }
+
+  // === D15-A3 样式分区 ===
+  &__style-collapse {
+    width: 100%;
+
+    :deep(.el-collapse-item__header) {
+      font-size: 13px;
+      height: 32px;
+      line-height: 32px;
+    }
+    :deep(.el-collapse-item__content) {
+      padding-bottom: 8px;
+    }
+  }
+
+  &__style-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    width: 100%;
+  }
+
+  &__style-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+    width: 100%;
+  }
+
+  &__style-label {
+    font-size: 12px;
+    color: #606266;
+    flex-shrink: 0;
+    min-width: 36px;
   }
 
   &__footer {

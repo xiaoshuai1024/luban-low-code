@@ -320,6 +320,23 @@ function onUpdateDatasource(nodeId: string, ds: { id: string; varName: string } 
   node.datasource = ds ?? undefined
 }
 
+/**
+ * D15-A3 属性面板样式分区回写：写 node.style[key]，入撤销栈。
+ * 安全过滤已在 PropertyPanel.handleStyleInput 完成（拒绝 expression()/javascript: 等）。
+ */
+function onUpdateStyle(nodeId: string, key: string, value: string): void {
+  if (!schema.value?.root) return
+  const node = findNode(schema.value.root, nodeId)
+  if (!node) return
+  history.push()
+  if (!node.style) node.style = {}
+  if (value === '') {
+    delete node.style[key]
+  } else {
+    node.style[key] = value
+  }
+}
+
 /** 删除节点：root 不可删；删后清空选中。 */
 function onDeleteNode(nodeId: string): void {
   if (!schema.value?.root) return
@@ -571,6 +588,7 @@ watch(siteId, loadDatasources)
           @update:prop="onUpdateProp"
           @update:event="onUpdateEvent"
           @update:datasource="onUpdateDatasource"
+          @update:style="onUpdateStyle"
           @delete="onDeleteNode"
           @duplicate="onDuplicateNode"
           @open-datasource="openDatasourceDialog"

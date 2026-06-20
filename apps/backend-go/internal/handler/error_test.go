@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -54,6 +55,14 @@ func TestWriteError_Mappings(t *testing.T) {
 		{"slug_conflict", repository.ErrSlugConflict, http.StatusConflict, "SLUG_CONFLICT"},
 		{"invalid_credentials", service.ErrInvalidCredentials, http.StatusUnauthorized, "INVALID_CREDENTIALS"},
 		{"user_disabled", service.ErrUserDisabled, http.StatusForbidden, "USER_DISABLED"},
+		{"datasource_not_found", repository.ErrDatasourceNotFound, http.StatusNotFound, "DATASOURCE_NOT_FOUND"},
+		{"datasource_name_conflict", repository.ErrDatasourceNameConflict, http.StatusConflict, "DATASOURCE_NAME_CONFLICT"},
+		{"invalid_argument", service.ErrInvalidArgument, http.StatusBadRequest, "INVALID_ARGUMENT"},
+		// ErrDatasourceConnectionFailed is wrapped with %w in the service, so test both
+		// the bare sentinel and a wrapped instance (writeError uses a switch on identity;
+		// wrapped errors fall through to the case only if unwrapped, which they aren't here —
+		// the dedicated test below covers the wrapped path via errors.Is-compatible mapping).
+		{"datasource_connection_failed_bare", service.ErrDatasourceConnectionFailed, http.StatusServiceUnavailable, "DATASOURCE_CONNECTION_FAILED"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -88,4 +97,27 @@ func TestWriteError_UnknownErrorFallsBackTo500(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, status)
 	assert.Equal(t, "INTERNAL", apiErr.Code)
 	assert.Equal(t, "something broke", apiErr.Message)
+}
+
+// TestWriteError_WrappedDatasourceConnectionFailed503 guards a real parity bug:
+// the service returns the sentinel wrapped with fmt.Errorf("%w: ...") to attach
+// the upstream reason. A plain switch err wouldn't match the wrapped value and
+// would silently fall through to 500 INTERNAL — breaking the contract that a
+// failed datasource probe returns 503 DATASOURCE_CONNECTION_FAILED. writeError
+// must use errors.Is for this case.
+func TestWriteError_WrappedDatasourceConnectionFailed503(t *testing.T) {
+	wrapped := fmt.Errorf("%w: HTTP 500", service.ErrDatasourceConnectionFailed)
+	status, apiErr := callWriteError(t, wrapped)
+	assert.Equal(t, http.StatusServiceUnavailable, status)
+	assert.Equal(t, "DATASOURCE_CONNECTION_FAILED", apiErr.Code)
+	assert.Contains(t, apiErr.Message, "HTTP 500", "wrapped reason should reach the client")
+}
+
+// TestWriteError_WrappedInvalidArgument400 guards the same wrapped-error path for
+// the type-whitelist rejection (service wraps ErrInvalidArgument with the offending type).
+func TestWriteError_WrappedInvalidArgument400(t *testing.T) {
+	wrapped := fmt.Errorf("%w: type must be one of static, api", service.ErrInvalidArgument)
+	status, apiErr := callWriteError(t, wrapped)
+	assert.Equal(t, http.StatusBadRequest, status)
+	assert.Equal(t, "INVALID_ARGUMENT", apiErr.Code)
 }

@@ -27,6 +27,7 @@ func InitRouter() *gin.Engine {
 	pageRepo := repository.NewPageRepository(dao.DB)
 	userRepo := repository.NewUserRepository(dao.DB)
 	settingsRepo := repository.NewSettingsRepository(dao.DB)
+	datasourceRepo := repository.NewDatasourceRepository(dao.DB)
 
 	authSvc := service.NewAuthService(userRepo)
 	siteSvc := service.NewSiteService(siteRepo)
@@ -34,6 +35,7 @@ func InitRouter() *gin.Engine {
 	userSvc := service.NewUserService(userRepo)
 	settingsSvc := service.NewSettingsService(settingsRepo, dao.RDB)
 	publicSvc := service.NewPublicService(siteRepo, pageRepo)
+	datasourceSvc := service.NewDatasourceService(datasourceRepo, siteRepo)
 
 	authH := handler.NewAuthHandler(authSvc)
 	siteH := handler.NewSiteHandler(siteSvc)
@@ -41,6 +43,7 @@ func InitRouter() *gin.Engine {
 	userH := handler.NewUserHandler(userSvc)
 	settingsH := handler.NewSettingsHandler(settingsSvc)
 	publicH := handler.NewPublicHandler(publicSvc)
+	datasourceH := handler.NewDatasourceHandler(datasourceSvc)
 
 	mw := middleware.NewMiddleware()
 
@@ -82,6 +85,17 @@ func InitRouter() *gin.Engine {
 	settings := api.Group("/settings", mw.RequireAdmin())
 	settings.GET("", settingsH.Get)
 	settings.PUT("", settingsH.Update)
+
+	// Datasources (W1-T2). All routes RequireUser; write ops (POST/PUT/DELETE)
+	// additionally RequireAdmin. GET and /test are read-only → RequireUser only.
+	// Parity with Java AuthFilter ADMIN_DATASOURCES pattern.
+	datasources := api.Group("/datasources", mw.RequireUser())
+	datasources.GET("", datasourceH.List)
+	datasources.POST("", mw.RequireAdmin(), datasourceH.Create)
+	datasources.GET("/:id", datasourceH.Get)
+	datasources.PUT("/:id", mw.RequireAdmin(), datasourceH.Update)
+	datasources.DELETE("/:id", mw.RequireAdmin(), datasourceH.Delete)
+	datasources.POST("/:id/test", datasourceH.Test)
 
 	return r
 }

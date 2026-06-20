@@ -106,6 +106,20 @@ func initSchema(db *sqlx.DB) error {
 			data_json  JSON          NOT NULL,
 			updated_at DATETIME(3)   NOT NULL
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+		// datasources: per-site data source definitions (W1-T2). Aligned with Java
+		// Flyway V20260619000001__add_datasources.sql (same columns, uk + fk names).
+		// type whitelist static|api is enforced in the service layer on both backends.
+		`CREATE TABLE IF NOT EXISTS datasources (
+			id          VARCHAR(36)  PRIMARY KEY,
+			site_id     VARCHAR(36)  NOT NULL,
+			name        VARCHAR(255) NOT NULL,
+			type        VARCHAR(32)  NOT NULL,
+			config_json JSON         NOT NULL,
+			created_at  DATETIME(3)  NOT NULL,
+			updated_at  DATETIME(3)  NOT NULL,
+			UNIQUE KEY uk_datasources_site_name (site_id, name),
+			CONSTRAINT fk_datasources_site FOREIGN KEY (site_id) REFERENCES sites(id)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
 	}
 
 	for _, sql := range stmts {

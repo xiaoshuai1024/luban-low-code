@@ -26,7 +26,18 @@ export default defineConfig({
     allowedHosts: ['localhost', '127.0.0.1', 'test.local'],
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:3100',
+        changeOrigin: true,
+      },
+      // AI 助手服务（FastAPI :8000）。SSE 流式：vite proxy 基于 http-proxy，
+      // 流式响应无需额外缓冲配置；前端走相对路径 /ai/... 与 /api 一致。
+      '/ai': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        ws: true, // WS /ai/agent 多步 agent
+      },
+      '/healthz': {
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },
       // AI 助手服务（FastAPI，默认 :8000）。前端直连，不动 BFF。

@@ -27,24 +27,40 @@ import {
 } from 'element-plus'
 import type { NodeSchema } from '@/types/schema'
 import type { ComponentMeta, PropSchemaItem } from 'luban-low-code'
+import { useFeatureGate } from '@/composables/useFeatureGate'
+
+interface DatasourceOption {
+  id: string
+  name: string
+}
 
 interface Props {
   node: NodeSchema | null
   meta: ComponentMeta | null
+  /** 当前 site 可用的数据源列表（PageEditor 加载传入） */
+  datasources?: DatasourceOption[]
   readonly?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   node: null,
   meta: null,
+  datasources: () => [],
   readonly: false,
 })
 
 const emit = defineEmits<{
   (e: 'update:prop', nodeId: string, key: string, value: unknown): void
+  (e: 'update:event', nodeId: string, eventName: string, actionExpr: string): void
+  (e: 'update:datasource', nodeId: string, datasource: { id: string; varName: string } | null): void
   (e: 'delete', nodeId: string): void
   (e: 'duplicate', nodeId: string): void
 }>()
+
+// FeatureGate §6.5: 数据源/事件分区可按开关隐藏（回滚链依赖）。
+const { isEnabled: isFeatureEnabled } = useFeatureGate()
+const featureDatasource = isFeatureEnabled('editor.datasource')
+const featureEvents = isFeatureEnabled('editor.events')
 
 /** 有序的 propSchema 条目，便于稳定渲染。 */
 const schemaEntries = computed<Array<[string, PropSchemaItem]>>(() => {
@@ -166,6 +182,57 @@ function handleDuplicate(): void {
   if (!props.node) return
   emit('duplicate', props.node.id)
 }
+
+// === 事件分区（W1-T5）：按 meta.events 配动作表达式 ===
+/** 物料声明的事件名列表（componentMeta.events，compat 后可能为 string[] 或 {name}[]）。 */
+const eventNames = computed<string[]>(() => {
+  if (!props.meta) return []
+  const ev = (props.meta as { events?: unknown }).events
+  if (!Array.isArray(ev)) return []
+  return ev
+    .map((e) => (typeof e === 'string' ? e : (e as { name?: string })?.name ?? ''))
+    .filter(Boolean)
+})
+
+function getEventAction(eventName: string): string {
+  if (!props.node?.events) return ''
+  return props.node.events[eventName] ?? ''
+}
+
+function handleEventInput(eventName: string, actionExpr: string): void {
+  if (!props.node) return
+  if (!props.node.events) props.node.events = {}
+  props.node.events[eventName] = actionExpr
+  emit('update:event', props.node.id, eventName, actionExpr)
+}
+
+// === 数据源分区（W1-T5）：绑 datasource + varName，运行时注入表达式上下文 ===
+function getCurrentDatasourceId(): string {
+  return props.node?.datasource?.id ?? ''
+}
+function getCurrentVarName(): string {
+  return props.node?.datasource?.varName ?? ''
+}
+function handleDatasourceIdChange(id: string): void {
+  if (!props.node) return
+  const varName = props.node.datasource?.varName ?? 'data'
+  if (id) {
+    if (!props.node.datasource) {
+      props.node.datasource = { id, varName }
+    } else {
+      props.node.datasource.id = id
+    }
+    emit('update:datasource', props.node.id, { id, varName: props.node.datasource.varName })
+  } else {
+    props.node.datasource = undefined
+    emit('update:datasource', props.node.id, null)
+  }
+}
+function handleVarNameChange(varName: string): void {
+  if (!props.node || !props.node.datasource) return
+  props.node.datasource.varName = varName
+  emit('update:datasource', props.node.id, { ...props.node.datasource })
+}
 </script>
 
 <template>
@@ -285,6 +352,43 @@ function handleDuplicate(): void {
           @update:model-value="(v: string) => handleInput(key, v)"
         />
       </ElFormItem>
+
+      <!-- 事件分区：按 meta.events 配动作表达式（W1-T5） -->
+      <ElFormItem v-if="featureEvents && eventNames.length" label="事件动作">
+        <div class="property-panel__events">
+          <div v-for="ev in eventNames" :key="ev" class="property-panel__event-row">
+            <span class="property-panel__event-name">{{ ev }}</span>
+            <ElInput
+              :model-value="getEventAction(ev)"
+              placeholder="动作表达式，如 navigate('/x')"
+              size="small"
+              @update:model-value="(v: string) => handleEventInput(ev, v)"
+            />
+          </div>
+        </div>
+      </ElFormItem>
+
+      <!-- 数据源分区：绑 datasource + varName（W1-T5） -->
+      <ElFormItem v-if="featureDatasource && datasources.length" label="数据源">
+        <div class="property-panel__datasource">
+          <ElSelect
+            :model-value="getCurrentDatasourceId()"
+            placeholder="选择数据源"
+            size="small"
+            style="width: 100%"
+            @update:model-value="(v: string) => handleDatasourceIdChange(v)"
+          >
+            <ElOption v-for="ds in datasources" :key="ds.id" :label="ds.name" :value="ds.id" />
+          </ElSelect>
+          <ElInput
+            v-if="getCurrentDatasourceId()"
+            :model-value="getCurrentVarName()"
+            placeholder="变量名（默认 data）"
+            size="small"
+            @update:model-value="(v: string) => handleVarNameChange(v)"
+          />
+        </div>
+      </ElFormItem>
     </ElForm>
 
     <div v-if="node && !readonly" class="property-panel__footer">
@@ -333,6 +437,31 @@ function handleDuplicate(): void {
     display: flex;
     gap: 4px;
     align-items: center;
+  }
+
+  &__events {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+  }
+
+  &__event-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__event-name {
+    font-size: 12px;
+    color: #606266;
+  }
+
+  &__datasource {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
   }
 
   &__footer {

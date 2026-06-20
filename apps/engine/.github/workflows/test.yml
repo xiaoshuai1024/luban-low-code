@@ -1,0 +1,65 @@
+name: Test
+
+on:
+  pull_request:
+    branches: [master, main]
+  push:
+    branches: [master, main]
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: Unit tests (vitest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Build (vue-tsc typecheck)
+        run: pnpm run build
+
+      - name: Unit tests
+        run: pnpm run test
+
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    # E2E 依赖后端/BFF 在线；CI 单仓无法独立跑全链路，
+    # 仅跑不依赖外部服务的 login/UI smoke（SKIP 后端相关用例）
+    # 跨项目全链路 e2e 在 workspace 根 e2e-cross workflow。
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm run install:e2e:ci
+
+      - name: E2E smoke (login UI, 无需后端)
+        env:
+          LUBAN_E2E_USE_PLAYWRIGHT_CHROMIUM: "1"
+          SKIP_LUBAN_E2E_SERVER: "0"
+        run: pnpm exec playwright test login.spec.ts

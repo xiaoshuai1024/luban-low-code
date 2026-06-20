@@ -1,88 +1,86 @@
+import { computed, ref, type Ref } from 'vue'
+
 /**
- * useHistory.ts — 画布 schema 撤销/重做栈。
+ * useHistory — 撤销/重做历史栈（深拷贝快照）。
  *
- * 用途：PageEditor 的 schema 变更（人工拖拽/属性编辑/AI 生成）统一 push 入栈，
- * 支持 Ctrl+Z 撤销、Ctrl+Shift+Z 重做。AI 改动与人工改动同等可撤销（plan §4.2/Q5）。
+ * 用法：在每次 schema mutation 前 push()（记录变更前快照），undo/redo 切换 current。
+ * push 后开新分支，清空 future（标准 undo/redo 语义）。
  *
- * 设计：
- *   - undoStack 存"变更前"的旧态快照；push(prev) 在每次变更前调用。
- *   - undo(currentSchema)：把当前态存入 redoStack，弹出 undoStack 顶旧态返回。
- *   - redo(currentSchema)：把当前态存入 undoStack，弹出 redoStack 顶返回。
- *   - 深拷贝快照避免引用串扰；容量上限 50。
- *   - 标识 source: 'manual' | 'ai'，供 UI 区分。
- *
- * 不持久化（仅内存）；页面刷新清空（与 engine 现有"手动 Ctrl+S 持久化"一致）。
+ * @param current 响应式状态引用（如 PageEditor 的 schema ref）
+ * @param opts.limit 最大历史步数，默认 50（防内存膨胀）
  */
-import { ref, computed } from 'vue'
-import type { PageSchema } from '@/types/schema'
-
-export type ChangeSource = 'manual' | 'ai'
-
-interface HistoryEntry {
-  schema: PageSchema
-  source: ChangeSource
-  /** 变更描述（供 UI 撤销提示，如"AI 生成页面"） */
-  label?: string
+export interface HistoryOptions {
+  limit?: number
 }
 
-const MAX_STACK = 50
-
-export interface UseHistoryReturn {
-  canUndo: import('vue').ComputedRef<boolean>
-  canRedo: import('vue').ComputedRef<boolean>
-  push: (schema: PageSchema, source?: ChangeSource, label?: string) => void
-  undo: (currentSchema: PageSchema) => PageSchema | null
-  redo: (currentSchema: PageSchema) => PageSchema | null
-  clear: () => void
-  size: import('vue').ComputedRef<number>
-  /** 上一次 undo 来源（供 UI 提示"已撤销 AI 生成"） */
-  lastUndoneSource: import('vue').ComputedRef<ChangeSource | null>
-}
-
-function clone(schema: PageSchema): PageSchema {
-  return JSON.parse(JSON.stringify(schema))
-}
-
-export function useHistory() {
-  const undoStack = ref<HistoryEntry[]>([])
-  const redoStack = ref<HistoryEntry[]>([])
-  const lastSource = ref<ChangeSource | null>(null)
-
-  const canUndo = computed(() => undoStack.value.length > 0)
-  const canRedo = computed(() => redoStack.value.length > 0)
-  const size = computed(() => undoStack.value.length)
-  const lastUndoneSource = computed(() => lastSource.value)
-
-  function push(schema: PageSchema, source: ChangeSource = 'manual', label?: string) {
-    undoStack.value.push({ schema: clone(schema), source, label })
-    // 新变更 → 清空 redo 栈（标准撤销语义）
-    redoStack.value = []
-    if (undoStack.value.length > MAX_STACK) {
-      undoStack.value.shift()
+function clone<T>(v: T): T {
+  // Prefer structuredClone (handles Date/Map/Set/undefined correctly); fall back to
+  // JSON clone for environments without it. JSON clone silently drops non-JSON
+  // types, which was a latent bug if the schema ever gains such fields.
+  if (typeof structuredClone === 'function') {
+    try {
+      return structuredClone(v)
+    } catch {
+      // fall through to JSON clone
     }
   }
+  return JSON.parse(JSON.stringify(v)) as T
+}
 
-  function undo(currentSchema: PageSchema): PageSchema | null {
-    const entry = undoStack.value.pop()
-    if (!entry) return null
-    // 当前态入 redo
-    redoStack.value.push({ schema: clone(currentSchema), source: entry.source, label: entry.label })
-    lastSource.value = entry.source
-    return clone(entry.schema)
+export function useHistory<T>(current: Ref<T>, opts: HistoryOptions = {}) {
+  const limit = opts.limit ?? 50
+  const past = ref<T[]>([]) as Ref<T[]>
+  const future = ref<T[]>([]) as Ref<T[]>
+
+  const canUndo = computed(() => past.value.length > 0)
+  const canRedo = computed(() => future.value.length > 0)
+
+  /** 在 mutation 前调用：把当前状态压入 past，并清空 redo 分支 */
+  function push(): void {
+    past.value.push(clone(current.value))
+    if (past.value.length > limit) past.value.shift()
+    future.value = []
   }
 
-  function redo(currentSchema: PageSchema): PageSchema | null {
-    const entry = redoStack.value.pop()
-    if (!entry) return null
-    undoStack.value.push({ schema: clone(currentSchema), source: entry.source, label: entry.label })
-    return clone(entry.schema)
+  /**
+   * 记录一个已捕获的变更前快照（仅在 mutation 成功后调用）。
+   *
+   * 用途：PageEditor 的 handler「先 mutate 再 push」模式需要这个 —— 旧的 push() 在
+   * mutate 前调用，no-op 的 mutation（如 moveChild 返回 false、节点不存在 early-return）
+   * 也会污染撤销栈。新模式：const prev = history.snapshot(); mutate(); if (ok) history.pushSnapshot(prev)。
+   * pushSnapshot 复用与 push 相同的栈管理（limit 截断 + 清 future），保证 undo 语义正确。
+   */
+  function snapshot(): T {
+    return clone(current.value)
   }
 
-  function clear() {
-    undoStack.value = []
-    redoStack.value = []
-    lastSource.value = null
+  function pushSnapshot(prev: T): void {
+    past.value.push(prev)
+    if (past.value.length > limit) past.value.shift()
+    future.value = []
   }
 
-  return { canUndo, canRedo, push, undo, redo, clear, size, lastUndoneSource }
+  /** 撤销：当前压入 future，回退到 past 栈顶。空栈返回 false */
+  function undo(): boolean {
+    if (past.value.length === 0) return false
+    future.value.push(clone(current.value))
+    current.value = past.value.pop() as T
+    return true
+  }
+
+  /** 重做：当前压入 past，前进到 future 栈顶。空栈返回 false */
+  function redo(): boolean {
+    if (future.value.length === 0) return false
+    past.value.push(clone(current.value))
+    current.value = future.value.pop() as T
+    return true
+  }
+
+  /** 清空历史（如加载新页面后重置） */
+  function reset(): void {
+    past.value = []
+    future.value = []
+  }
+
+  return { canUndo, canRedo, push, snapshot, pushSnapshot, undo, redo, reset }
 }

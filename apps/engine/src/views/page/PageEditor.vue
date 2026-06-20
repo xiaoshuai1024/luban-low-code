@@ -25,7 +25,7 @@
  *
  * 错误态：loadPage 失败不再静默回退空 schema；显示错误卡片 + 重试按钮。
  */
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   ElButton,
@@ -41,6 +41,7 @@ import {
   ElMessageBox,
 } from 'element-plus'
 import { getPage, savePage, createPage, publishPage } from '@/api/page'
+import { getDatasources, queryDatasource } from '@/api/datasource'
 import type { PageSchema, NodeSchema } from '@/types/schema'
 import {
   LubanDesigner,
@@ -50,11 +51,12 @@ import {
 } from 'luban-low-code'
 import PropertyPanel from './components/PropertyPanel.vue'
 import ComponentTree from './components/ComponentTree.vue'
-import AiAssistantPanel from './components/AiAssistantPanel.vue'
 import { findNode } from './components/schemaTree'
 import { useHistory } from '@/composables/useHistory'
+import { useKeyboard } from '@/composables/useKeyboard'
+import { useFeatureGate } from '@/composables/useFeatureGate'
 import { usePageEditorApi } from '@/composables/usePageEditorApi'
-import { FeatureGate } from '@/featuregates'
+import AiAssistantPanel from './components/AiAssistantPanel.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -66,6 +68,11 @@ const pageName = ref('')
 const pagePath = ref('')
 const pageStatus = ref<string>('draft')
 const schema = ref<PageSchema | null>(null)
+/** 当前 site 的数据源列表（PropertyPanel 数据源区消费）。 */
+const datasources = ref<Array<{ id: string; name: string }>>([])
+/** 预览时数据源拉取器（传给 LubanPage 注入表达式上下文）；透传 node.datasource.params。 */
+const datasourceFetcher = (id: string, params?: Record<string, unknown>) =>
+  queryDatasource(id, params).then((r) => r.data)
 const loading = ref(false)
 const saving = ref(false)
 const publishing = ref(false)
@@ -76,15 +83,33 @@ const selectedId = ref<string | null>(null)
 /** 设计/预览模式切换：true=设计画布，false=只读渲染预览。 */
 const isDesign = ref(true)
 
-/** 撤销/重做栈（人工 + AI 改动统一入栈）。 */
-const history = useHistory()
-/** 画布操作 API 收口（替代原私有 onAddNode/onUpdateProp/…）。 */
-const editorApi = usePageEditorApi(schema, history, selectedId)
+/** 撤销/重做历史栈（结构变更与属性变更均入栈；属性输入噪声由 limit 截断兜底）。 */
+const history = useHistory(schema)
+const { canUndo, canRedo } = history
+const { isEnabled } = useFeatureGate()
+const featureUndo = isEnabled('editor.undo')
+const featureShortcuts = isEnabled('editor.shortcuts')
 
-/** AI 助手开关（FeatureGate ai_assistant_enabled，默认 true）。 */
-const aiEnabled = FeatureGate.aiAssistant()
-/** AI 侧边面板展开状态。 */
-const aiPanelOpen = ref(true)
+/**
+ * 画布操作收口（plan P1-T8）：所有 schema mutation 经 api，撤销栈语义统一。
+ * AI 面板（AiAssistantPanel）与用户操作共享同一 schema + 撤销栈 ——
+ * AI 改动可被 Ctrl+Z 撤销（plan §3 验收口径）。
+ */
+const api = usePageEditorApi({ schema, history, selectedId })
+
+/** AI 助手面板开关（FeatureGate ai.assistant 关则隐藏入口，编辑器回归原状）。 */
+const featureAiAssistant = isEnabled('ai.assistant')
+const aiPanelOpen = ref(false)
+
+if (featureShortcuts) {
+  useKeyboard({
+    undo: () => history.undo(),
+    redo: () => history.redo(),
+    save: () => handleSave(),
+    delete: () => { if (selectedId.value) api.deleteNode(selectedId.value) },
+    duplicate: () => { if (selectedId.value) api.duplicateNode(selectedId.value) },
+  })
+}
 
 /** 物料面板分组（一次性派生；物料注册在 luban-low-code side-effect import 完成）。 */
 const paletteGroups = computed(() => getPaletteGroups())
@@ -132,6 +157,9 @@ async function loadPage() {
         root: { id: 'root', type: 'LubanContainer', props: {}, children: [] },
       }
     }
+    // R4a: clear the undo/redo stack on page switch so Ctrl+Z can't cross into
+    // the previous page's schema (data-safety: history is per-page, not global).
+    history.reset()
   } catch (e) {
     // 不再静默回退；记录错误供 UI 显示重试卡片。
     loadError.value = (e as Error)?.message || '加载页面失败'
@@ -211,55 +239,10 @@ function goBack() {
   router.push(`/sites/${siteId.value}/pages`)
 }
 
-// === LubanDesigner / 组件树事件（统一委托 usePageEditorApi，变更入撤销栈） ===
-
-function onSelect(id: string | null): void {
-  editorApi.select(id)
-}
-
-/** 新增节点（LubanDesigner add-node / 拖拽 drop）。 */
-function onAddNode(type: string, parentId?: string): void {
-  editorApi.addNode(type, parentId)
-}
-
-/** root 级重排（Sortable onEnd）。 */
-function onReorder(fromIdx: number, toIdx: number): void {
-  editorApi.reorder(fromIdx, toIdx)
-}
-
-/** 属性面板回写 props。 */
-function onUpdateProp(nodeId: string, key: string, value: unknown): void {
-  editorApi.updateProp(nodeId, key, value)
-}
-
-/** 删除节点。 */
-function onDeleteNode(nodeId: string): void {
-  editorApi.deleteNode(nodeId)
-}
-
-/** 复制节点。 */
-function onDuplicateNode(nodeId: string): void {
-  editorApi.duplicateNode(nodeId)
-}
-
-/** 组件树上移/下移。 */
-function onMove(parentId: string | null, fromIdx: number, toIdx: number): void {
-  editorApi.move(parentId, fromIdx, toIdx)
-}
-
-// === 撤销/重做（Ctrl+Z / Ctrl+Shift+Z），含 AI 改动 ===
-
-function onKeydown(e: KeyboardEvent) {
-  if (!(e.ctrlKey || e.metaKey)) return
-  const key = e.key.toLowerCase()
-  if (key === 'z' && !e.shiftKey) {
-    e.preventDefault()
-    editorApi.undo()
-  } else if ((key === 'z' && e.shiftKey) || key === 'y') {
-    e.preventDefault()
-    editorApi.redo()
-  }
-}
+// === LubanDesigner / 组件树事件 ===
+// 所有 schema mutation 已收口到 usePageEditorApi（api.*）。
+// 模板事件绑定直接委托 api.select/addNode/reorder/moveNode/updateProp/updateEvent/
+// updateDatasource/deleteNode/duplicateNode/move（见 template）。
 
 // === 物料拖拽（左侧 → 画布） ===
 
@@ -269,17 +252,22 @@ function onPaletteDragStart(e: DragEvent, type: string): void {
   e.dataTransfer.setData('application/json', JSON.stringify({ type }))
 }
 
+async function loadDatasources() {
+  if (!siteId.value) return
+  try {
+    const { data } = await getDatasources(siteId.value)
+    datasources.value = (data ?? []).map((d) => ({ id: d.id, name: d.name }))
+  } catch {
+    datasources.value = []
+  }
+}
+
 onMounted(() => {
   loadPage()
-  window.addEventListener('keydown', onKeydown)
+  loadDatasources()
 })
-onUnmounted(() => {
-  window.removeEventListener('keydown', onKeydown)
-})
-watch([siteId, pageId], () => {
-  history.clear()
-  loadPage()
-})
+watch([siteId, pageId], loadPage)
+watch(siteId, loadDatasources)
 </script>
 
 <template>
@@ -298,7 +286,21 @@ watch([siteId, pageId], () => {
             {{ pageStatus === 'published' ? '已发布' : '草稿' }}
           </ElTag>
         </ElFormItem>
-        <ElFormItem>
+        <ElFormItem v-if="featureUndo">
+          <ElButton
+            :disabled="!canUndo"
+            title="撤销 (Ctrl+Z)"
+            @click="history.undo()"
+          >
+            ↶ 撤销
+          </ElButton>
+          <ElButton
+            :disabled="!canRedo"
+            title="重做 (Ctrl+Shift+Z / Ctrl+Y)"
+            @click="history.redo()"
+          >
+            ↷ 重做
+          </ElButton>
           <ElButton
             :type="isDesign ? 'default' : 'primary'"
             @click="isDesign = !isDesign"
@@ -317,6 +319,16 @@ watch([siteId, pageId], () => {
             发布
           </ElButton>
           <ElButton @click="goBack">返回列表</ElButton>
+          <!-- AI 助手入口（FeatureGate ai.assistant 关则隐藏，编辑器回归原状 plan §6.5） -->
+          <ElButton
+            v-if="featureAiAssistant"
+            type="primary"
+            plain
+            title="AI 助手：自然语言生成/编辑页面"
+            @click="aiPanelOpen = true"
+          >
+            ✨ AI 助手
+          </ElButton>
         </ElFormItem>
       </ElForm>
     </ElCard>
@@ -356,11 +368,12 @@ watch([siteId, pageId], () => {
           :design-mode="true"
           :show-toolbar="false"
           placeholder="从左侧拖拽组件到此处"
-          @select="onSelect"
-          @add-node="onAddNode"
-          @reorder="onReorder"
+          @select="api.select"
+          @add-node="api.addNode"
+          @reorder="api.reorder"
+          @move-node="api.moveNode"
         />
-        <LubanPage v-else :schema="schema" />
+        <LubanPage v-else :schema="schema" :datasource-fetcher="datasourceFetcher" />
       </ElMain>
 
       <ElAside width="300px" class="page-editor__aside page-editor__right">
@@ -368,44 +381,35 @@ watch([siteId, pageId], () => {
           :schema="schema"
           :selected-id="selectedId"
           :get-label="getLabel"
-          @select="onSelect"
-          @delete="onDeleteNode"
-          @move="onMove"
+          @select="api.select"
+          @delete="api.deleteNode"
+          @move="api.move"
         />
         <div class="page-editor__right-divider" />
         <PropertyPanel
           :node="selectedNode"
           :meta="selectedMeta"
-          @update:prop="onUpdateProp"
-          @delete="onDeleteNode"
-          @duplicate="onDuplicateNode"
-        />
-      </ElAside>
-
-      <!-- AI 助手面板（FeatureGate ai_assistant_enabled，默认 true；关闭则不渲染） -->
-      <ElAside
-        v-if="aiEnabled && aiPanelOpen"
-        width="340px"
-        class="page-editor__aside page-editor__ai"
-      >
-        <AiAssistantPanel
-          :editor-api="editorApi"
-          :schema="schema"
-          :site-id="siteId"
-          :page-id="pageId"
+          :datasources="datasources"
+          @update:prop="api.updateProp"
+          @update:event="api.updateEvent"
+          @update:datasource="api.updateDatasource"
+          @delete="api.deleteNode"
+          @duplicate="api.duplicateNode"
         />
       </ElAside>
     </ElContainer>
 
-    <!-- AI 面板折叠按钮（FeatureGate 关闭时不渲染） -->
-    <button
-      v-if="aiEnabled"
-      class="page-editor__ai-toggle"
-      :title="aiPanelOpen ? '收起 AI 助手' : '展开 AI 助手'"
-      @click="aiPanelOpen = !aiPanelOpen"
-    >
-      AI
-    </button>
+    <!-- AI 助手右侧抽屉浮层（零侵入：不破坏三栏 flex，叠加在右侧 ElAside 之上 plan §4.3）。
+         AI 改动经 api（usePageEditorApi）落地，自动入撤销栈，可 Ctrl+Z 撤销。 -->
+    <AiAssistantPanel
+      v-if="featureAiAssistant"
+      v-model="aiPanelOpen"
+      :site-id="siteId"
+      :page-id="pageId"
+      :schema="schema"
+      :api="api"
+      :selected-id="selectedId"
+    />
   </div>
 </template>
 
@@ -505,42 +509,5 @@ watch([siteId, pageId], () => {
     color: #f56c6c;
     margin: 0 0 8px;
   }
-
-  &__ai {
-    border-left: 1px solid #ebeef5;
-    background: #fafafa;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-
-  &__ai-toggle {
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 24px;
-    height: 56px;
-    border: 1px solid #dcdfe6;
-    border-right: none;
-    border-radius: 6px 0 0 6px;
-    background: #fff;
-    color: #409eff;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    z-index: 10;
-    writing-mode: vertical-rl;
-    letter-spacing: 2px;
-    box-shadow: -2px 0 4px rgba(0, 0, 0, 0.04);
-
-    &:hover {
-      background: #ecf5ff;
-    }
-  }
-}
-
-.page-editor {
-  position: relative;
 }
 </style>

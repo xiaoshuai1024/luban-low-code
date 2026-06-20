@@ -6,9 +6,9 @@
  * 选中、删除、上移/下移/拖拽排序使用。
  *
  * 类型说明：
- * - NodeSchema 来自 engine 本地 `@/types/schema`，与 PageEditor.vue / api/page.ts
- *   保持一致（含 eventBindings 字段）。
- * - 与 luban-low-code 导出的 NodeSchema 结构兼容（luban-low-code 为子集）。
+ * - NodeSchema 来自 `@/types/schema`（re-export luban-low-code，single source），
+ *   含第1波新增 visible/loop/events/datasource/locked/hidden 字段。
+ * - eventBindings（旧）已统一为 events。
  *
  * 不变量：
  * - root 节点本身不可被删除/移动（findParent(root.id) === null）。
@@ -99,6 +99,37 @@ export function moveChild(
   }
   const [removed] = children.splice(fromIdx, 1)
   children.splice(toIdx, 0, removed)
+  return true
+}
+
+/**
+ * 跨父节点移动：把 nodeId 从原父级移到 toParentId（null=root 级）的 toIdx 位置。
+ * 用于跨容器拖拽（Sortable group onEnd）。root 自身不可移动；目标容器自动初始化
+ * children；同父级移动时自动校正 toIdx（移除点偏移）。
+ * @returns true 成功；false 未找到/目标不存在/异常。
+ */
+export function moveNodeAcross(
+  root: NodeSchema,
+  nodeId: string,
+  toParentId: string | null,
+  toIdx: number,
+): boolean {
+  if (!root || root.id === nodeId) return false
+  const node = findNode(root, nodeId)
+  const fromParent = findParent(root, nodeId)
+  if (!node || !fromParent || !fromParent.children) return false
+  const toParent = toParentId ? findNode(root, toParentId) : root
+  if (!toParent) return false
+  if (!toParent.children) toParent.children = []
+  const fromIdx = fromParent.children.findIndex((c) => c.id === nodeId)
+  if (fromIdx < 0) return false
+  const [moved] = fromParent.children.splice(fromIdx, 1)
+  // 同父级且原索引在目标之前：移除后 toIdx 须校正
+  let adjustedTo = toIdx
+  if (fromParent === toParent && fromIdx < toIdx) adjustedTo = toIdx - 1
+  if (adjustedTo < 0) adjustedTo = 0
+  if (adjustedTo > toParent.children.length) adjustedTo = toParent.children.length
+  toParent.children.splice(adjustedTo, 0, moved)
   return true
 }
 

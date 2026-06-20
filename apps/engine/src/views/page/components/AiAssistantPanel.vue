@@ -1,304 +1,481 @@
 <script setup lang="ts">
 /**
- * AiAssistantPanel.vue — AI 助手侧边面板（右侧抽屉）。
+ * AiAssistantPanel.vue — AI 助手侧边抽屉（plan P1-T8/T9 + P2-T4）。
  *
- * 交互链（plan §4.2/§4.3）：
- *   输入需求 → streamAi(/ai/chat) → 流式显示进度 → confirm 展示待确认 schema 预览
- *   → [应用到画布]（经 usePageEditorApi.applySchema + history.push 入撤销栈）
- *     / [拒绝]
+ * 形态：ElDrawer 右侧浮层（零侵入，不破坏 PageEditor 三栏 flex 布局 plan §4.3）。
+ * 三 tab：
+ *   [对话]    自然语言生成/编辑页面（SSE 流式 + HITL 确认）
+ *   [引导]    读当前 schema 给下一步建议（规则化，GET /ai/guidance）
+ *   [设计稿]  设计稿转页面（plan P2-T4，FeatureGate ai.design_to_page 控制）
  *
- * 四态：加载(流式 spinner) / 空(引导建议) / 错(校验失败) / 成功(预览+确认)。
- * 模型只读展示当前部署模型（/ai/config）。
+ * 四态（plan §4.2）：加载(generating spinner) / 空(引导建议) / 错(failed+重试) /
+ * 成功(awaiting_confirm 预览+确认)。
  *
- * FeatureGate ai_assistant_enabled 关闭 → 整个面板不渲染（PageEditor 控制挂载）。
+ * 落地：确认后经 usePageEditorApi.replaceSchema（整页）落画布，自动入撤销栈
+ * （Ctrl+Z 可撤销 AI 改动 plan §3 验收口径）。会话状态经 useAiStore（pinia）。
  */
-import { ref, onMounted, nextTick, watch } from 'vue'
-import { ElInput, ElButton, ElTag, ElEmpty, ElMessage } from 'element-plus'
+import { ref, computed, watch, onMounted } from 'vue'
+import {
+  ElDrawer,
+  ElTabs,
+  ElTabPane,
+  ElInput,
+  ElButton,
+  ElMessage,
+  ElEmpty,
+  ElAlert,
+  ElTag,
+  ElCard,
+} from 'element-plus'
 import { useAiStore } from '@/stores/ai'
-import { streamAi, getAiConfig, type AiConfig } from '@/api/ai'
-import type { UsePageEditorApiReturn } from '@/composables/usePageEditorApi'
+import { useFeatureGate } from '@/composables/useFeatureGate'
+import {
+  streamChat,
+  streamDesignToPage,
+  getAiConfig,
+  getAiGuidance,
+  AiApiError,
+  type AiGuidanceTip,
+} from '@/api/ai'
 import type { PageSchema, NodeSchema } from '@/types/schema'
+import type { PageEditorApi } from '@/composables/usePageEditorApi'
+import SchemaTreePreview from './SchemaTreePreview.vue'
+import DesignUploader from './DesignUploader.vue'
+import DesignPreview from './DesignPreview.vue'
 
-const props = defineProps<{
-  /** 由 PageEditor 注入的画布操作 API */
-  editorApi: UsePageEditorApiReturn
-  /** 当前 schema（供预览/上下文，AI 服务侧可读） */
+interface Props {
+  modelValue: boolean
+  siteId: string
+  pageId: string
   schema: PageSchema | null
-  /** siteId/pageId（传给 AI 服务） */
-  siteId?: string
-  pageId?: string
-}>()
+  api: PageEditorApi
+  selectedId: string | null
+}
 
-const ai = useAiStore()
-const input = ref('')
-const config = ref<AiConfig | null>(null)
-const loadingConfig = ref(false)
-const activeController = ref<AbortController | null>(null)
-const messagesRef = ref<HTMLElement | null>(null)
+const props = defineProps<Props>()
+const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>()
 
-onMounted(loadConfig)
+const store = useAiStore()
+const { isEnabled } = useFeatureGate()
+const featureDesignToPage = isEnabled('ai.design_to_page')
 
-async function loadConfig() {
-  loadingConfig.value = true
+const drawerOpen = computed({
+  get: () => props.modelValue,
+  set: (v) => emit('update:modelValue', v),
+})
+
+const activeTab = ref<'chat' | 'guidance' | 'design'>('chat')
+const inputText = ref('')
+const guidanceTips = ref<AiGuidanceTip[]>([])
+const guidanceLoading = ref(false)
+const applying = ref(false)
+
+let abortCtrl: AbortController | null = null
+
+/** 当前画布是否为空（仅 root 无 children）。 */
+const schemaEmpty = computed(() => {
+  return !props.schema?.root?.children || props.schema.root.children.length === 0
+})
+
+onMounted(async () => {
+  // 拉取模型配置（只读展示当前部署模型 plan §4.3 模型展示只读）
   try {
-    config.value = await getAiConfig()
-  } catch (e) {
-    // 配置获取失败不阻断（功能未启用时面板会提示）
-    config.value = null
-  } finally {
-    loadingConfig.value = false
+    const cfg = await getAiConfig()
+    store.setConfig(cfg)
+  } catch {
+    // 配置拉取失败不阻断面板（功能可能仍可用）
   }
-}
+})
 
-async function scrollToBottom() {
-  await nextTick()
-  if (messagesRef.value) messagesRef.value.scrollTop = messagesRef.value.scrollHeight
-}
-
-watch(() => ai.messages.length, scrollToBottom)
-
-async function handleSend() {
-  const text = input.value.trim()
+/** 发送对话生成请求。 */
+async function send() {
+  const text = inputText.value.trim()
   if (!text) return
-  if (ai.isGenerating) return
+  if (store.isGenerating) return
 
-  input.value = ''
-  ai.startGenerating(text)
+  inputText.value = ''
+  store.pushUserMessage(text)
 
-  activeController.value = streamAi(
-    '/ai/chat',
-    { siteId: props.siteId, pageId: props.pageId, message: text },
-    {
-      onProgress: (ev) => {
-        // 流式进度/工具调用摘要
-        const label = progressLabel(ev)
-        if (label) ai.pushAiMessage({ kind: (ev.type as 'progress' | 'tool' | 'warning') ?? 'progress', text: label })
-      },
-      onConfirm: (ev) => {
-        ai.setConfirm(ev.schema, ev.session_id)
-      },
-      onError: (ev) => {
-        ai.markFailed(ev.message)
-      },
-      onDone: () => {
-        // applied/rejected 由用户操作触发；done 仅在无 confirm 时收尾
-        if (ai.status === 'generating') ai.markFailed('未收到确认事件')
-      },
+  abortCtrl?.abort()
+  abortCtrl = new AbortController()
+  try {
+    for await (const ev of streamChat(
+      { siteId: props.siteId, pageId: props.pageId, message: text, context: { currentSchema: props.schema } },
+      abortCtrl.signal,
+    )) {
+      store.consumeEvent(ev)
     }
-  )
-}
-
-function progressLabel(ev: { type: string; [k: string]: unknown }): string | null {
-  if (ev.type === 'progress' && ev.message) return `🔄 ${ev.message}`
-  if (ev.type === 'tool') {
-    if (ev.tool === 'understand') return `🔍 理解需求…`
-    if (ev.tool === 'retrieve') return `🔍 检索物料：${Array.isArray(ev.materials) ? (ev.materials as string[]).join('、') : ''}`
-    if (ev.tool === 'generate') return ev.ok ? '✍️ 生成页面结构…' : `⚠️ 生成失败：${ev.error ?? ''}`
-    if (ev.tool === 'validate') return ev.ok ? '✅ 校验通过' : `⚠️ 校验失败，重试…`
-    if (ev.tool === 'feedback') return '🔄 校验失败，重新生成…'
+  } catch (e) {
+    if (e instanceof AiApiError) {
+      if (e.code === 'AI_FEATURE_DISABLED') {
+        store.setFailed('AI 生成功能未启用')
+      } else if (e.code === 'UNAUTHENTICATED') {
+        store.setFailed('登录已过期，请重新登录')
+      } else {
+        store.setFailed(e.message)
+      }
+    } else if ((e as Error)?.name !== 'AbortError') {
+      store.setFailed((e as Error)?.message || '生成失败，请重试')
+    }
   }
-  if (ev.type === 'warning' && ev.missing_materials) return `⚠️ 物料未注册：${(ev.missing_materials as string[]).join('、')}`
-  if (ev.type === 'intent') return `📌 意图：${ev.summary ?? ''}`
-  return null
 }
 
-function handleApply() {
-  if (!ai.pendingSchema) return
-  props.editorApi.applySchema(ai.pendingSchema, 'AI 生成页面')
-  ai.markApplied()
-  ElMessage.success('已应用到画布（可 Ctrl+Z 撤销）')
-}
-
-function handleReject() {
-  ai.markRejected()
-}
-
-function handleCancel() {
-  activeController.value?.abort()
-  ai.markFailed('已取消')
-}
-
-/** schema 预览：树形简化（type + props 关键字段），非纯 JSON dump */
-function previewTree(schema: PageSchema | null | undefined): string {
-  if (!schema?.root) return '（空）'
-  const lines: string[] = []
-  const walk = (node: NodeSchema, depth: number) => {
-    const pad = '  '.repeat(depth)
-    const label = node.type
-    const propHint = node.props && Object.keys(node.props).length
-      ? ` (${Object.entries(node.props).slice(0, 2).map(([k, v]) => `${k}=${String(v)}`).join(', ')})`
-      : ''
-    lines.push(`${pad}- ${label}${propHint}`)
-    for (const c of node.children ?? []) walk(c, depth + 1)
+/** 确认应用 schema 到画布（整页生成 → replaceSchema，入撤销栈）。 */
+function applySchema() {
+  if (!store.pendingSchema) return
+  applying.value = true
+  try {
+    const newRoot = store.pendingSchema.root as NodeSchema
+    props.api.replaceSchema(newRoot)
+    store.confirmApply()
+    ElMessage.success('已应用到画布（Ctrl+Z 可撤销）')
+  } catch (e) {
+    ElMessage.error((e as Error)?.message || '应用失败')
+  } finally {
+    applying.value = false
   }
-  walk(schema.root, 0)
-  return lines.join('\n')
 }
+
+function rejectSchema() {
+  store.confirmReject()
+}
+
+/** 加载引导建议（切到引导 tab 时）。 */
+async function loadGuidance() {
+  if (guidanceTips.value.length > 0) return
+  guidanceLoading.value = true
+  try {
+    const res = await getAiGuidance(schemaEmpty.value)
+    guidanceTips.value = res.tips
+  } catch (e) {
+    if (e instanceof AiApiError && e.code === 'AI_FEATURE_DISABLED') {
+      guidanceTips.value = [{ level: 'warn', title: '引导未启用', detail: '当前部署未开启 AI 引导功能' }]
+    } else {
+      guidanceTips.value = []
+    }
+  } finally {
+    guidanceLoading.value = false
+  }
+}
+
+/** 切 tab 时触发对应加载。 */
+watch(activeTab, (tab) => {
+  if (tab === 'guidance') loadGuidance()
+})
+
+/** 抽屉关闭时中止进行中的请求。 */
+watch(drawerOpen, (open) => {
+  if (!open) {
+    abortCtrl?.abort()
+  }
+})
+
+/** 引导建议点击 action → 填入对话输入。 */
+function applyGuidanceAction(tip: AiGuidanceTip) {
+  if (tip.action) {
+    inputText.value = tip.action
+    activeTab.value = 'chat'
+  }
+}
+
+/** 重试（failed 态）。 */
+function retry() {
+  const lastUser = [...store.messages].reverse().find((m) => m.role === 'user')
+  if (lastUser) {
+    store.resetToIdle()
+    inputText.value = lastUser.content
+    send()
+  } else {
+    store.resetToIdle()
+  }
+}
+
+// ===== 设计稿转页面（plan P2-T4）=====
+const designImageUrl = ref<string | null>(null)
+const designSteps = computed(() => store.pendingSteps)
+
+/** 设计稿上传后发起 design-to-page 请求。 */
+async function onDesignSelect(file: File) {
+  designImageUrl.value = URL.createObjectURL(file)
+  store.resetToIdle()
+  store.pushUserMessage('（设计稿转页面）')
+
+  abortCtrl?.abort()
+  abortCtrl = new AbortController()
+  try {
+    for await (const ev of streamDesignToPage(
+      { image: file, siteId: props.siteId, pageId: props.pageId, context: { currentSchema: props.schema } },
+      abortCtrl.signal,
+    )) {
+      store.consumeEvent(ev)
+    }
+  } catch (e) {
+    if (e instanceof AiApiError) {
+      if (e.code === 'AI_FEATURE_DISABLED') {
+        store.setFailed('设计稿功能未启用')
+      } else if (e.code === 'INVALID_IMAGE') {
+        store.setFailed('图片不合法：' + e.message)
+      } else if (e.code === 'UNAUTHENTICATED') {
+        store.setFailed('登录已过期，请重新登录')
+      } else {
+        store.setFailed(e.message)
+      }
+    } else if ((e as Error)?.name !== 'AbortError') {
+      store.setFailed((e as Error)?.message || '设计稿理解失败，请重试')
+    }
+  }
+}
+
+/** 设计稿确认应用（复用对话的 applySchema，整页 replaceSchema 入撤销栈）。 */
 </script>
 
 <template>
-  <div class="ai-panel">
-    <div class="ai-panel__header">
-      <span class="ai-panel__title">AI 助手</span>
-      <ElTag v-if="config" size="small" type="info">
-        {{ config.model.name }}
+  <ElDrawer
+    v-model="drawerOpen"
+    title="AI 助手"
+    direction="rtl"
+    size="420px"
+    :destroy-on-close="false"
+    class="ai-panel"
+  >
+    <div class="ai-panel__model" v-if="store.config">
+      <ElTag size="small" type="info">
+        模型：{{ store.config.model.provider }} / {{ store.config.model.name }}
       </ElTag>
     </div>
 
-    <!-- 消息流 -->
-    <div ref="messagesRef" class="ai-panel__messages">
-      <ElEmpty v-if="ai.messages.length === 0" description="描述你想要的页面，AI 帮你生成" :image-size="60" />
-      <div
-        v-for="msg in ai.messages"
-        :key="msg.id"
-        class="ai-panel__msg"
-        :class="`ai-panel__msg--${msg.role}`"
-      >
-        <div class="ai-panel__msg-role">{{ msg.role === 'user' ? '我' : 'AI' }}</div>
-        <div class="ai-panel__msg-body">
-          <div v-if="msg.text">{{ msg.text }}</div>
-          <!-- 待确认 schema 预览（树形，非 JSON dump） -->
-          <pre v-if="msg.kind === 'confirm'" class="ai-panel__preview">{{ previewTree(msg.pendingSchema) }}</pre>
+    <ElTabs v-model="activeTab" class="ai-panel__tabs">
+      <!-- 对话 tab -->
+      <ElTabPane label="对话" name="chat">
+        <div class="ai-panel__messages">
+          <ElEmpty v-if="store.messages.length === 0 && !store.isGenerating" description="描述你想要的页面，AI 帮你生成" />
+          <template v-for="msg in store.messages" :key="msg.id">
+            <div :class="['ai-panel__msg', `ai-panel__msg--${msg.role}`]">
+              <div class="ai-panel__msg-role">{{ msg.role === 'user' ? '我' : 'AI' }}</div>
+              <div class="ai-panel__msg-content">{{ msg.content }}</div>
+            </div>
+          </template>
+
+          <!-- 流式进度（generating 态） -->
+          <div v-if="store.isGenerating" class="ai-panel__progress">
+            <div v-for="(step, idx) in store.pendingSteps" :key="idx" class="ai-panel__step">
+              <span v-if="step.type === 'progress'">🔍 {{ step.message }}</span>
+              <span v-else-if="step.type === 'tool'">🛠 {{ step.tool }}</span>
+              <span v-else-if="step.type === 'intent'">💡 {{ step.summary }}</span>
+              <span v-else-if="step.type === 'warning'">⚠️ 缺少物料：{{ step.missing_materials.join(', ') }}</span>
+            </div>
+            <span class="ai-panel__spinner">生成中…</span>
+          </div>
+
+          <!-- 错误态 -->
+          <ElAlert
+            v-if="store.isFailed"
+            :title="store.error || '生成失败'"
+            type="error"
+            show-icon
+            :closable="false"
+          >
+            <ElButton size="small" @click="retry">重试</ElButton>
+          </ElAlert>
+
+          <!-- 待确认预览（awaiting_confirm 态） -->
+          <div v-if="store.hasPending" class="ai-panel__confirm">
+            <div class="ai-panel__confirm-title">✅ 已生成，请确认</div>
+            <SchemaTreePreview :schema="store.pendingSchema" class="ai-panel__preview" />
+            <div class="ai-panel__confirm-actions">
+              <ElButton type="primary" :loading="applying" @click="applySchema">应用到画布</ElButton>
+              <ElButton @click="rejectSchema">拒绝</ElButton>
+            </div>
+          </div>
         </div>
-      </div>
-      <div v-if="ai.isGenerating" class="ai-panel__msg ai-panel__msg--ai">
-        <div class="ai-panel__msg-role">AI</div>
-        <div class="ai-panel__msg-body"><span class="ai-panel__spinner" />正在生成…</div>
-      </div>
-    </div>
 
-    <!-- 确认操作 -->
-    <div v-if="ai.isAwaitingConfirm" class="ai-panel__confirm">
-      <ElButton type="primary" size="small" @click="handleApply">应用到画布</ElButton>
-      <ElButton size="small" @click="handleReject">拒绝</ElButton>
-    </div>
+        <!-- 输入区 -->
+        <div class="ai-panel__input">
+          <ElInput
+            v-model="inputText"
+            type="textarea"
+            :rows="2"
+            placeholder="描述你想要的页面，如「做一个用户列表页」"
+            @keydown.enter.exact.prevent="send"
+          />
+          <ElButton type="primary" :loading="store.isGenerating" @click="send">发送</ElButton>
+        </div>
+      </ElTabPane>
 
-    <!-- 输入区 -->
-    <div class="ai-panel__input">
-      <ElInput
-        v-model="input"
-        type="textarea"
-        :rows="2"
-        placeholder="描述你想要的页面，如：做一个用户列表页"
-        :disabled="ai.isGenerating"
-        @keydown.enter.exact.prevent="handleSend"
-      />
-      <div class="ai-panel__input-actions">
-        <ElButton v-if="ai.isGenerating" size="small" @click="handleCancel">取消</ElButton>
-        <ElButton v-else type="primary" size="small" :disabled="!input.trim()" @click="handleSend">
-          发送
-        </ElButton>
-      </div>
-    </div>
-  </div>
+      <!-- 引导 tab -->
+      <ElTabPane label="引导" name="guidance">
+        <div v-loading="guidanceLoading" class="ai-panel__guidance">
+          <ElEmpty v-if="!guidanceLoading && guidanceTips.length === 0" description="暂无引导建议" />
+          <ElCard
+            v-for="(tip, idx) in guidanceTips"
+            :key="idx"
+            shadow="hover"
+            class="ai-panel__tip"
+          >
+            <div class="ai-panel__tip-title">
+              <ElTag size="small" :type="tip.level === 'warn' ? 'warning' : tip.level === 'block' ? 'danger' : 'info'">
+                {{ tip.title }}
+              </ElTag>
+            </div>
+            <p class="ai-panel__tip-detail">{{ tip.detail }}</p>
+            <ElButton v-if="tip.action" link type="primary" @click="applyGuidanceAction(tip)">
+              {{ tip.action }}
+            </ElButton>
+          </ElCard>
+        </div>
+      </ElTabPane>
+
+      <!-- 设计稿 tab（plan P2-T4，FeatureGate ai.design_to_page 控制） -->
+      <ElTabPane v-if="featureDesignToPage" label="设计稿" name="design">
+        <div class="ai-panel__design">
+          <DesignUploader :disabled="store.isGenerating" @select="onDesignSelect" />
+
+          <!-- 流式理解进度 + 对照预览（generating / awaiting_confirm 态） -->
+          <template v-if="store.isGenerating || store.hasPending || store.isFailed">
+            <DesignPreview
+              :image-url="designImageUrl"
+              :schema="store.pendingSchema"
+              :steps="designSteps"
+            />
+          </template>
+          <ElEmpty
+            v-else
+            description="拖入设计稿图片，AI 识别布局与组件生成页面"
+          />
+
+          <!-- 错误态 -->
+          <ElAlert
+            v-if="store.isFailed"
+            :title="store.error || '设计稿理解失败'"
+            type="error"
+            show-icon
+            :closable="false"
+          />
+
+          <!-- 待确认 HITL（复用对话的 confirm/reject） -->
+          <div v-if="store.hasPending" class="ai-panel__confirm-actions">
+            <ElButton type="primary" :loading="applying" @click="applySchema">应用到画布</ElButton>
+            <ElButton @click="rejectSchema">拒绝</ElButton>
+          </div>
+        </div>
+      </ElTabPane>
+    </ElTabs>
+  </ElDrawer>
 </template>
 
 <style lang="scss" scoped>
 .ai-panel {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-
-  &__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 12px;
-    border-bottom: 1px solid #ebeef5;
-    flex-shrink: 0;
+  &__model {
+    margin-bottom: 8px;
   }
 
-  &__title {
-    font-size: 13px;
-    font-weight: 600;
-    color: #303133;
+  &__tabs {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
   }
 
   &__messages {
-    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 200px;
+    max-height: 60vh;
     overflow-y: auto;
-    padding: 8px 12px;
-    min-height: 0;
+    padding: 4px;
   }
 
   &__msg {
-    margin-bottom: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    max-width: 90%;
 
     &--user {
-      .ai-panel__msg-role { color: #409eff; }
-      .ai-panel__msg-body {
-        background: #ecf5ff;
-        align-self: flex-end;
-      }
+      align-self: flex-end;
+      background: #ecf5ff;
+      color: #303133;
     }
-    &--ai {
-      .ai-panel__msg-role { color: #67c23a; }
-      .ai-panel__msg-body { background: #f4f4f5; }
+
+    &--assistant {
+      align-self: flex-start;
+      background: #f4f4f5;
+      color: #303133;
     }
   }
 
   &__msg-role {
     font-size: 11px;
+    color: #909399;
     margin-bottom: 2px;
   }
 
-  &__msg-body {
-    font-size: 13px;
-    line-height: 1.5;
-    padding: 8px 10px;
+  &__progress {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+    background: #fafafa;
     border-radius: 6px;
-    color: #303133;
   }
 
-  &__preview {
-    margin: 6px 0 0;
-    padding: 8px;
-    background: #fff;
-    border: 1px solid #dcdfe6;
-    border-radius: 4px;
-    font-size: 12px;
-    line-height: 1.5;
-    white-space: pre-wrap;
-    word-break: break-all;
-    max-height: 240px;
-    overflow: auto;
+  &__step {
+    font-size: 13px;
+    color: #606266;
   }
 
   &__spinner {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    border: 2px solid #dcdfe6;
-    border-top-color: #409eff;
-    border-radius: 50%;
-    animation: ai-spin 0.8s linear infinite;
-    margin-right: 6px;
-    vertical-align: middle;
+    font-size: 13px;
+    color: #409eff;
+    margin-top: 4px;
   }
 
   &__confirm {
+    border: 1px solid #d9ecff;
+    border-radius: 8px;
+    padding: 12px;
+    background: #fff;
+  }
+
+  &__confirm-title {
+    font-weight: 600;
+    color: #67c23a;
+    margin-bottom: 8px;
+  }
+
+  &__preview {
+    margin: 8px 0;
+    max-height: 240px;
+    overflow-y: auto;
+  }
+
+  &__confirm-actions {
     display: flex;
     gap: 8px;
-    padding: 8px 12px;
-    border-top: 1px solid #ebeef5;
-    flex-shrink: 0;
   }
 
   &__input {
-    border-top: 1px solid #ebeef5;
-    padding: 8px 12px;
-    flex-shrink: 0;
-  }
-
-  &__input-actions {
     display: flex;
-    justify-content: flex-end;
-    margin-top: 6px;
+    gap: 8px;
+    align-items: flex-end;
+    margin-top: 12px;
   }
-}
 
-@keyframes ai-spin {
-  to { transform: rotate(360deg); }
+  &__guidance {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__tip {
+    :deep(.el-card__body) {
+      padding: 12px;
+    }
+  }
+
+  &__tip-detail {
+    font-size: 13px;
+    color: #606266;
+    margin: 8px 0;
+  }
 }
 </style>

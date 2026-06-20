@@ -5,20 +5,25 @@ import { DEFAULT_SITE_SLUG } from "~/utils/routes";
 import { useSitePageStore } from "~/stores/sitePage";
 import type { SubmitConfig } from "~/composables/useLeadSubmit";
 
-const props = withDefaults(
-  defineProps<{ site?: string; path?: string }>(),
-  { site: "", path: "/" }
-);
-
 const config = useRuntimeConfig().public;
 const defaultSiteSlug = (config.defaultSiteSlug as string) || DEFAULT_SITE_SLUG;
 const sitePageStore = useSitePageStore();
+const route = useRoute();
 
-const siteSlug = computed(() => props.site || defaultSiteSlug);
+// 路由模式 /:site/:path* —— site 为单段，path* 为多段（数组）。
+// 不依赖 props 传参（props:true 与通配 path* 不兼容，会把数组原样透传），
+// 改为直接读 route.params 并规范化为字符串。
+const siteSlug = computed(() => {
+  const s = route.params.site;
+  const val = Array.isArray(s) ? s[0] : s;
+  return val || defaultSiteSlug;
+});
 const path = computed(() => {
-  const p = props.path;
-  if (!p || p === "") return "/";
-  return p.startsWith("/") ? p : `/${p}`;
+  const p = route.params.path;
+  const segs = Array.isArray(p) ? p : p != null ? [p] : [];
+  if (segs.length === 0) return "/";
+  const joined = segs.join("/");
+  return joined.startsWith("/") ? joined : `/${joined}`;
 });
 
 const { data: page, error, status } = usePageByPath(siteSlug, path);
@@ -34,7 +39,7 @@ onBeforeUnmount(() => {
 });
 
 useHead({
-  title: page.value?.name ?? "Page",
+  title: () => page.value?.name ?? "Page",
 });
 
 // --- Lead form submit handling ---
@@ -45,9 +50,13 @@ const formSubmitConfig = computed<SubmitConfig | null>(() => {
   return extractSubmitConfig(page.value.schema.root);
 });
 
-/** Walk the schema tree to find LubanForm's submit config and formId */
+/** Walk the schema tree to find LubanForm/LubanLeadCapture's submit config and formId */
 function extractSubmitConfig(node: any): SubmitConfig | null {
-  if (node.type === "LubanForm" && node.props?.submitConfig) {
+  // D15-E3：LubanLeadCapture 也走同一提交链路（RuntimeRenderer @submit 分支已扩展）
+  if (
+    (node.type === "LubanForm" || node.type === "LubanLeadCapture") &&
+    node.props?.submitConfig
+  ) {
     return node.props.submitConfig as SubmitConfig;
   }
   if (node.children) {

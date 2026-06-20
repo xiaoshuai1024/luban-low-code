@@ -1,14 +1,19 @@
 /**
- * materials barrel — 14 物料统一注册入口（聚合收口层）。
+ * materials barrel — 20 物料统一注册入口（聚合收口层）。
  *
  * 职责：
- *  1. import 全部 14 个 material 定义（side-effect + re-export）；
+ *  1. import 全部 20 个 material 定义（side-effect + re-export）；
  *  2. 调用 `materialRegistry.register(...)` 将每个物料纳入 registry；
  *  3. 导出 `materials` 数组与各 material 常量，供下游（registry/palette/
  *     componentMeta）经 registry 派生旧 ComponentMeta。
  *
  * 注册容错：重复注册（如热重载/测试隔离多次 import 本模块）会先 unregister
  * 再 register，避免 MaterialRegistry.register 抛 "duplicate name"。
+ *
+ * 物料构成：14 基础物料（general/content/layout/form）+ W1-T6 第1波新增
+ * 6 物料（data-display/table · navigation/menu,tabs · feedback/modal,
+ * drawer,toast）。后 6 物料的 category 不在旧 palette「信息/表单」映射集，
+ * 由 PropertyPanel/registry 直接消费，不影响旧 palette 分组计数。
  *
  * @since 0.1.0
  */
@@ -35,9 +40,17 @@ import { radioGroupMaterial } from './form/radio-group/material';
 import { switchMaterial } from './form/switch/material';
 // === general/text（与 button 同组，import 分组保持文件来源可读）===
 import { textMaterial } from './general/text/material';
+// === data-display / navigation / feedback（W1-T6 第1波新增 6 物料）===
+import { tableMaterial } from './data-display/table/material';
+import { menuMaterial } from './navigation/menu/material';
+import { tabsMaterial } from './navigation/tabs/material';
+import { modalMaterial } from './feedback/modal/material';
+import { drawerMaterial } from './feedback/drawer/material';
+import { toastMaterial } from './feedback/toast/material';
 
 /**
- * 全部 14 物料定义（注册顺序：general → content → layout → form）。
+ * 全部 20 物料定义（注册顺序：general → content → layout → form
+ * → data-display/navigation/feedback）。
  *
  * 顺序仅影响 palette 默认展示顺序的稳定性，不影响 registry 行为
  *（registry 内部用 Map，按 name 索引）。
@@ -57,6 +70,13 @@ export const materials: MaterialDefinition[] = [
   checkboxMaterial,
   radioGroupMaterial,
   switchMaterial,
+  // === W1-T6 第1波新增 6 物料 ===
+  tableMaterial,
+  menuMaterial,
+  tabsMaterial,
+  modalMaterial,
+  drawerMaterial,
+  toastMaterial,
 ];
 
 /**
@@ -93,3 +113,10 @@ export { selectMaterial } from './form/select/material';
 export { checkboxMaterial } from './form/checkbox/material';
 export { radioGroupMaterial } from './form/radio-group/material';
 export { switchMaterial } from './form/switch/material';
+// === W1-T6 第1波新增 6 物料 re-export ===
+export { tableMaterial } from './data-display/table/material';
+export { menuMaterial } from './navigation/menu/material';
+export { tabsMaterial } from './navigation/tabs/material';
+export { modalMaterial } from './feedback/modal/material';
+export { drawerMaterial } from './feedback/drawer/material';
+export { toastMaterial } from './feedback/toast/material';

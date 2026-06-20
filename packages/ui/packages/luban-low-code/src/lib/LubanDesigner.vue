@@ -24,6 +24,8 @@ const emit = defineEmits<{
   'add-node': [type: string, parentId?: string];
   /** Emit when root.children are reordered (fromIndex, toIndex); parent may call reorderRootChildren */
   reorder: [fromIndex: number, toIndex: number];
+  /** 跨容器拖拽：nodeId 从 fromParentId 移到 toParentId 的 toIndex（null=root 级） */
+  'move-node': [nodeId: string, fromParentId: string | null, toParentId: string | null, toIndex: number];
 }>();
 
 const formState = computed(() => props.schema?.formState ?? {});
@@ -64,13 +66,30 @@ function onPaletteDrop(e: DragEvent): void {
 function initSortable(): void {
   if (!sortableRef.value || !props.schema?.root?.children?.length) return;
   sortableInstance?.destroy();
+  sortableRef.value.dataset.parentId = ''; // root 级标识
   sortableInstance = Sortable.create(sortableRef.value, {
     animation: 150,
+    group: 'luban-nodes',
+    // FINDING-1: locked nodes can't be dragged out (plan §4.2).
+    filter: '.design-renderer__wrapper--locked',
+    preventOnFilter: false,
     onEnd(ev) {
       const oldIndex = ev.oldIndex;
       const newIndex = ev.newIndex;
       if (oldIndex == null || newIndex == null) return;
-      emit('reorder', oldIndex, newIndex);
+      const fromParent = (ev.from as HTMLElement).dataset.parentId ?? '';
+      const toParent = (ev.to as HTMLElement).dataset.parentId ?? '';
+      const nodeId = (ev.item as HTMLElement).dataset.nodeId ?? '';
+      // revert DOM：跨容器时还原 Sortable 的 DOM 移动，交由 Vue 按 schema 重渲染
+      if (ev.from !== ev.to && ev.item.parentNode === ev.to) {
+        ev.from.insertBefore(ev.item, ev.from.children[oldIndex] ?? null);
+      }
+      if (!nodeId) return;
+      if (fromParent === toParent) {
+        emit('reorder', oldIndex, newIndex);
+      } else {
+        emit('move-node', nodeId, fromParent || null, toParent || null, newIndex);
+      }
     },
   });
 }
@@ -112,6 +131,7 @@ watch(
               v-for="child in schema.root.children"
               :key="child.id"
               class="luban-designer__sortable-item"
+              :data-node-id="child.id"
             >
               <DesignRenderer
                 :root="child"
@@ -121,6 +141,7 @@ watch(
                 :placeholder-text="placeholder"
                 @select="onSelect"
                 @add-node="(type, parentId) => emit('add-node', type, parentId)"
+                @move-node="(nodeId, from, to, idx) => emit('move-node', nodeId, from, to, idx)"
               />
             </div>
           </div>

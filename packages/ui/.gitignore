@@ -51,3 +51,8 @@ test-output
 .nx/**
 .cursor/
 .tmpdeps/
+
+# logs & build artifacts
+*.log
+*.tsbuildinfo
+playwright-report/

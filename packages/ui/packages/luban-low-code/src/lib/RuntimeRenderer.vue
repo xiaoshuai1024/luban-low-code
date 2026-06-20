@@ -2,7 +2,9 @@
 import { getComponent } from './registry';
 import type { NodeSchema } from './schema';
 import { validate, type ValidationRule } from './validation';
-import { inject } from 'vue';
+import { evaluate, evaluateBoolean, interpolate } from './expression';
+import { createActionRunner, type ActionContext } from './action';
+import { computed, inject } from 'vue';
 
 /** Optional form submit handler provided by the host app (e.g. website DynamicPage) */
 interface FormSubmitPayload {
@@ -26,9 +28,59 @@ const props = withDefaults(
     root: NodeSchema;
     formState: Record<string, unknown>;
     formErrors?: Record<string, string>;
+    /** 表达式上下文（数据源数据等），与 formState 合并供 visible/loop/events 求值 */
+    ctx?: Record<string, unknown>;
   }>(),
-  { formErrors: () => ({}) }
+  { formErrors: () => ({}), ctx: () => ({}) }
 );
+
+/** 表达式求值上下文：数据源 ctx + $form（表单字段值，供 visible 等引用） */
+const evalCtx = computed<Record<string, unknown>>(() => ({
+  ...props.ctx,
+  $form: props.formState,
+}));
+
+/** 条件渲染：visible 表达式求值（undefined/缺省=true；危险表达式默认 false 不渲染） */
+function isNodeVisible(node: NodeSchema): boolean {
+  return evaluateBoolean(node.visible, evalCtx.value);
+}
+
+/** 循环渲染：loop.data 求值为数组（表达式或字面量），按元素多次渲染本节点 */
+const loopItems = computed<unknown[]>(() => {
+  if (!props.root.loop) return [];
+  const data = props.root.loop.data;
+  const resolved = typeof data === 'string' ? evaluate(data, evalCtx.value) : data;
+  return Array.isArray(resolved) ? resolved : [];
+});
+/** 去掉 loop 字段的 root 副本（递归渲染时不再触发 loop） */
+const rootWithoutLoop = computed<NodeSchema>(() => {
+  const { loop: _loop, ...rest } = props.root;
+  return rest as NodeSchema;
+});
+/** 每次循环把 itemVar/keyVar 注入表达式上下文 */
+function loopCtx(item: unknown, idx: number): Record<string, unknown> {
+  const itemVar = props.root.loop?.itemVar ?? 'item';
+  const keyVar = props.root.loop?.keyVar ?? 'index';
+  return { ...evalCtx.value, [itemVar]: item, [keyVar]: idx };
+}
+
+/** 事件动作执行器（host 可 provide 'lubanActionRunner' 覆盖，如注入 router.navigate） */
+const actionRunner = inject('lubanActionRunner', createActionRunner());
+
+/** 把节点 events（事件名→动作表达式）解析为 v-on 可用的 handler map */
+function resolveEvents(
+  events: Record<string, string> | undefined,
+): Record<string, (e: unknown) => void> {
+  const out: Record<string, (e: unknown) => void> = {};
+  if (!events) return out;
+  for (const [eventName, actionExpr] of Object.entries(events)) {
+    out[eventName] = () => {
+      const actx: ActionContext = { vars: evalCtx.value };
+      actionRunner.run(actionExpr, actx);
+    };
+  }
+  return out;
+}
 
 function getFormValue(name: string | undefined): unknown {
   if (name == null) return undefined;
@@ -86,7 +138,12 @@ function formValueProps(nodeProps: Record<string, unknown> | undefined, name: st
 function componentProps(nodeProps: Record<string, unknown> | undefined): Record<string, unknown> {
   if (nodeProps == null) return {};
   const { content: _c, text: _t, rules: _r, ...rest } = nodeProps;
-  return rest;
+  // 字符串 props 做 {{}} 插值（数据驱动：props 可引用 ctx/$form 变量）
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(rest)) {
+    out[k] = typeof v === 'string' ? interpolate(v, evalCtx.value) : v;
+  }
+  return out;
 }
 
 function slotContent(): string {
@@ -98,10 +155,21 @@ function slotContent(): string {
 </script>
 
 <template>
-  <template v-if="root">
+  <template v-if="root && isNodeVisible(root)">
+    <!-- loop: 按 loop.data 数组重复渲染本节点（每 item 注入 ctx） -->
+    <template v-if="root.loop && loopItems.length">
+      <RuntimeRenderer
+        v-for="(item, idx) in loopItems"
+        :key="idx"
+        :root="rootWithoutLoop"
+        :form-state="formState"
+        :form-errors="formErrors"
+        :ctx="loopCtx(item, idx)"
+      />
+    </template>
     <!-- Form value components: bind v-model to formState + validation error -->
     <component
-      v-if="getComponent(root.type) && isFormValueType(root.type)"
+      v-else-if="!root.loop && getComponent(root.type) && isFormValueType(root.type)"
       :is="getComponent(root.type)"
       v-bind="formValueProps(root.props as Record<string, unknown>, root.props?.name as string)"
       :model-value="
@@ -122,6 +190,7 @@ function slotContent(): string {
         :root="child"
         :form-state="formState"
         :form-errors="formErrors"
+        :ctx="evalCtx"
       />
     </component>
     <!-- Non-form components: props only, optional slot from content/text -->
@@ -129,6 +198,7 @@ function slotContent(): string {
       v-else-if="getComponent(root.type)"
       :is="getComponent(root.type)"
       v-bind="componentProps(root.props as Record<string, unknown>)"
+      v-on="resolveEvents(root.events)"
       @submit="
         formSubmitHandler && root.type === 'LubanForm'
           ? formSubmitHandler({
@@ -146,6 +216,7 @@ function slotContent(): string {
           :root="child"
           :form-state="formState"
           :form-errors="formErrors"
+          :ctx="evalCtx"
         />
       </template>
       <template v-else-if="slotContent()">{{ slotContent() }}</template>
@@ -157,6 +228,7 @@ function slotContent(): string {
         :root="child"
         :form-state="formState"
         :form-errors="formErrors"
+        :ctx="evalCtx"
       />
     </template>
   </template>

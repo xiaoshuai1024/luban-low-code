@@ -2,6 +2,13 @@
   "name": "@luban-ui/luban-ui-e2e",
   "version": "0.0.1",
   "private": true,
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:install": "playwright install chrome"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  },
   "nx": {
     "implicitDependencies": [
       "@luban-ui/luban-ui"

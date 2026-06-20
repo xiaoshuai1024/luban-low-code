@@ -19,6 +19,7 @@
 import { computed } from 'vue'
 import { ElTree, ElButton, ElEmpty } from 'element-plus'
 import type { PageSchema, NodeSchema } from '@/types/schema'
+import { isFeatureEnabled } from '@/config/features'
 
 interface Props {
   schema: PageSchema | null
@@ -39,7 +40,14 @@ const emit = defineEmits<{
   (e: 'select', nodeId: string | null): void
   (e: 'delete', nodeId: string): void
   (e: 'move', parentId: string | null, fromIdx: number, toIdx: number): void
+  /** Y3：切换节点锁定态 */
+  (e: 'lock', nodeId: string): void
+  /** Y3：切换节点隐藏态 */
+  (e: 'hide', nodeId: string): void
 }>()
+
+/** Y3：锁定/隐藏按钮开关（FeatureGate 控制） */
+const lockHideEnabled = isFeatureEnabled('treeLockHide')
 
 /**
  * ElTree 需要一个根数组。schema.root 自身（LubanContainer）通常不展示
@@ -147,7 +155,19 @@ function handleMoveDown(node: NodeSchema): void {
 }
 
 function handleDelete(node: NodeSchema): void {
+  // Y3：锁定节点禁止删除
+  if (node.locked) return
   emit('delete', node.id)
+}
+
+/** Y3：切换锁定态 */
+function handleToggleLock(node: NodeSchema): void {
+  emit('lock', node.id)
+}
+
+/** Y3：切换隐藏态 */
+function handleToggleHide(node: NodeSchema): void {
+  emit('hide', node.id)
 }
 </script>
 
@@ -190,7 +210,28 @@ function handleDelete(node: NodeSchema): void {
             :class="{ 'is-selected': data.id === selectedId }"
           >
             <span class="component-tree__node-label">{{ resolveLabel(data) }}</span>
+            <!-- Y3：锁定/隐藏态徽标 -->
+            <span v-if="lockHideEnabled && data.locked" class="component-tree__badge" title="已锁定">🔒</span>
+            <span v-if="lockHideEnabled && data.hidden" class="component-tree__badge" title="已隐藏">🚫</span>
             <span v-if="!readonly" class="component-tree__node-actions">
+              <ElButton
+                v-if="lockHideEnabled"
+                link
+                size="small"
+                :title="data.locked ? '解锁 (L)' : '锁定 (L)'"
+                @click.stop="handleToggleLock(data)"
+              >
+                {{ data.locked ? '🔓' : '🔒' }}
+              </ElButton>
+              <ElButton
+                v-if="lockHideEnabled"
+                link
+                size="small"
+                :title="data.hidden ? '显示 (H)' : '隐藏 (H)'"
+                @click.stop="handleToggleHide(data)"
+              >
+                {{ data.hidden ? '👁' : '👁‍🗨' }}
+              </ElButton>
               <ElButton
                 link
                 size="small"
@@ -211,6 +252,8 @@ function handleDelete(node: NodeSchema): void {
                 link
                 type="danger"
                 size="small"
+                :disabled="data.locked === true"
+                :title="data.locked ? '锁定节点不可删除' : '删除'"
                 @click.stop="handleDelete(data)"
               >
                 删除
@@ -296,6 +339,12 @@ function handleDelete(node: NodeSchema): void {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  &__badge {
+    font-size: 12px;
+    flex-shrink: 0;
+    margin-left: 2px;
   }
 
   &__node-actions {

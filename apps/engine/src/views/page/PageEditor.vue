@@ -56,6 +56,7 @@ import PropertyPanel from './components/PropertyPanel.vue'
 import ComponentTree from './components/ComponentTree.vue'
 import DatasourceManageDialog from './components/DatasourceManageDialog.vue'
 import PageSeoPanel from './components/PageSeoPanel.vue'
+import VersionHistory from './components/VersionHistory.vue'
 import { findNode, findParent, removeNode, moveChild, moveNodeAcross } from './components/schemaTree'
 import { useHistory } from '@/composables/useHistory'
 import { useKeyboard } from '@/composables/useKeyboard'
@@ -64,6 +65,15 @@ import type { PageSeo } from '@/types/schema'
 
 /** V2-T2 SEO FeatureGate */
 const seoEnabled = isFeatureEnabled('seo')
+/** V2-T8 版本历史 FeatureGate */
+const versionHistoryEnabled = isFeatureEnabled('versionHistory')
+/** V2-T8 版本历史抽屉 */
+const versionHistoryVisible = ref(false)
+
+/** V2-T8 回滚后重新加载页面 */
+function onVersionRollback(): void {
+  loadPage()
+}
 
 const route = useRoute()
 const router = useRouter()
@@ -605,6 +615,14 @@ watch(siteId, loadDatasources)
         <ElButton size="small" :type="isDesign ? 'default' : 'primary'" @click="isDesign = !isDesign">
           {{ isDesign ? '预览' : '设计' }}
         </ElButton>
+        <!-- V2-T8 版本历史入口 -->
+        <ElButton
+          v-if="versionHistoryEnabled"
+          size="small"
+          :disabled="isNew"
+          title="版本历史与回滚"
+          @click="versionHistoryVisible = true"
+        >历史</ElButton>
         <ElButton size="small" type="primary" :loading="saving" @click="handleSave">
           {{ isNew ? '创建' : '保存' }}
         </ElButton>
@@ -692,6 +710,13 @@ watch(siteId, loadDatasources)
           <div class="page-editor__right-divider" />
           <PageSeoPanel :seo="pageSeo" @update:seo="onUpdateSeo" />
         </template>
+      <!-- V2-T8 版本历史抽屉 -->
+      <VersionHistory
+        v-model="versionHistoryVisible"
+        :site-id="siteId"
+        :page-id="pageId || ''"
+        @rollback="onVersionRollback"
+      />
         <!-- D15-B1 数据源管理弹窗 -->
         <DatasourceManageDialog
           v-model="datasourceDialogVisible"

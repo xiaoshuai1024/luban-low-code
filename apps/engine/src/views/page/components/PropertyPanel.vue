@@ -364,6 +364,14 @@ const ANIMATION_TRIGGERS: { label: string; value: AnimationTrigger }[] = [
   { label: '加载 (load)', value: 'load' },
 ]
 
+/** V2-T5 物料能力约束：若物料声明了 animationTriggers，仅显示声明的 trigger；
+ * 未声明则全部显示（向后兼容） */
+const availableTriggers = computed(() => {
+  const allowed = props.meta?.capabilities?.animationTriggers
+  if (!allowed || allowed.length === 0) return ANIMATION_TRIGGERS
+  return ANIMATION_TRIGGERS.filter((t) => allowed.includes(t.value))
+})
+
 function getAnimValue(key: string): unknown {
   return props.node?.animation?.[key as keyof typeof props.node.animation]
 }
@@ -814,7 +822,7 @@ function handleVarNameChange(varName: string): void {
                 style="flex: 1"
                 @update:model-value="(v: string) => handleAnimInput('trigger', v)"
               >
-                <ElOption v-for="opt in ANIMATION_TRIGGERS" :key="opt.value" :label="opt.label" :value="opt.value" />
+                <ElOption v-for="opt in availableTriggers" :key="opt.value" :label="opt.label" :value="opt.value" />
               </ElSelect>
             </div>
             <div class="property-panel__anim-row">

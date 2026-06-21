@@ -402,6 +402,13 @@ function onClearSelection(): void {
   selectedId.value = null
 }
 
+/** V2-T11 框选：LubanDesigner 拖框后 emit 框内节点 id */
+function onFrameSelect(nodeIds: string[]): void {
+  if (!multiSelectEnabled || nodeIds.length === 0) return
+  selectedIds.value = nodeIds
+  selectedId.value = nodeIds[nodeIds.length - 1] ?? null
+}
+
 /** V2-T11 批量设置样式（对齐：把选中节点的同 key style 统一） */
 function onBatchAlign(type: 'left' | 'center' | 'right'): void {
   if (!schema.value?.root || selectedIds.value.length === 0) return
@@ -830,6 +837,7 @@ watch(siteId, () => {
           :breakpoint="currentBreakpoint"
           placeholder="从左侧拖拽组件到此处"
           @select="onSelect"
+          @multi-select="onFrameSelect"
           @add-node="onAddNode"
           @reorder="onReorder"
           @move-node="onMoveNode"

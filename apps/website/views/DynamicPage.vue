@@ -139,6 +139,10 @@ const {
   reset: resetSubmit,
 } = useLeadSubmit({
   onSuccess(result) {
+    // V2-T10 埋点：留资提交成功事件
+    const { $analytics } = useNuxtApp() as { $analytics?: { track: (e: string, p?: Record<string, unknown>) => void } };
+    $analytics?.track("lead_submit", { formId: formSubmitConfig.value?.formId ?? "default" });
+    $analytics?.track("generate_lead", { formId: formSubmitConfig.value?.formId ?? "default" });
     // Handle redirect / popup / toast modes
     const cfg = formSubmitConfig.value;
     if (cfg?.mode === "redirect" && cfg.redirectUrl) {

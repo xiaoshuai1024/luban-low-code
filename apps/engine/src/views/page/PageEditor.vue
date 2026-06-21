@@ -117,6 +117,10 @@ const loadError = ref<string | null>(null)
 
 /** 选中节点 id（画布选中、组件树选中、属性面板共同消费）。null 表示未选。 */
 const selectedId = ref<string | null>(null)
+/** V2-T11 多选：所有选中节点 ID（单选时含 1 个；selectedId 为主要焦点） */
+const selectedIds = ref<string[]>([])
+/** V2-T11 多选 FeatureGate */
+const multiSelectEnabled = isFeatureEnabled('multiSelect')
 /** 设计/预览模式切换：true=设计画布，false=只读渲染预览。 */
 const isDesign = ref(true)
 
@@ -322,6 +326,86 @@ function goBack() {
 
 function onSelect(id: string | null): void {
   selectedId.value = id
+  selectedIds.value = id ? [id] : []
+}
+
+/** V2-T11 批量删除选中节点 */
+function onBatchDelete(): void {
+  if (!schema.value?.root || selectedIds.value.length === 0) return
+  history.push()
+  for (const id of selectedIds.value) {
+    if (id === schema.value.root.id) continue // 不删 root
+    const parent = findParent(schema.value.root, id)
+    if (parent) removeNode(schema.value.root, id)
+  }
+  selectedIds.value = []
+  selectedId.value = null
+  ElMessage.success('已批量删除')
+}
+
+/** V2-T11 批量复制选中节点（复制到各自 parent 末尾） */
+function onBatchDuplicate(): void {
+  if (!schema.value?.root || selectedIds.value.length === 0) return
+  history.push()
+  const newIds: string[] = []
+  for (const id of selectedIds.value) {
+    if (id === schema.value.root.id) continue
+    const node = findNode(schema.value.root, id)
+    if (!node) continue
+    const parent = findParent(schema.value.root, id)
+    if (!parent || !parent.children) continue
+    const copy = JSON.parse(JSON.stringify(node)) as typeof node
+    copy.id = `${node.type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    parent.children.push(copy)
+    newIds.push(copy.id)
+  }
+  selectedIds.value = newIds
+  selectedId.value = newIds[newIds.length - 1] ?? null
+  ElMessage.success(`已复制 ${newIds.length} 个节点`)
+}
+
+/**
+ * V2-T11 全选当前焦点节点的同级节点（批量栏按钮）。
+ * 把 selectedId 所在 parent 的所有 children 加入 selectedIds。
+ */
+function onSelectAllSiblings(): void {
+  if (!schema.value?.root || !selectedId.value || !multiSelectEnabled) return
+  const root = schema.value.root
+  const parent = findParent(root, selectedId.value)
+  if (parent?.children) {
+    selectedIds.value = parent.children.map((c) => c.id)
+    ElMessage.success(`已选中 ${selectedIds.value.length} 个同级节点`)
+  }
+}
+
+/** V2-T11 清空多选 */
+function onClearSelection(): void {
+  selectedIds.value = []
+  selectedId.value = null
+}
+
+/** V2-T11 批量设置样式（对齐：把选中节点的同 key style 统一） */
+function onBatchAlign(type: 'left' | 'center' | 'right'): void {
+  if (!schema.value?.root || selectedIds.value.length === 0) return
+  const root = schema.value.root
+  history.push()
+  // 取首个选中节点的 left 作为对齐基准，统一所有选中节点 left
+  const first = selectedIds.value
+    .map((id) => findNode(root, id))
+    .find((n) => n && n.id !== root.id)
+  if (!first?.style?.left && type !== 'center') {
+    ElMessage.warning('基准节点无 left 值，无法对齐')
+    return
+  }
+  const baseLeft = first?.style?.left
+  for (const id of selectedIds.value) {
+    const node = findNode(root, id)
+    if (!node || id === root.id) continue
+    if (!node.style) node.style = {}
+    if (type === 'left' && baseLeft) node.style.left = baseLeft
+    if (type === 'center') node.style.margin = '0 auto'
+  }
+  ElMessage.success('已批量对齐')
 }
 
 /**
@@ -603,6 +687,16 @@ watch(siteId, loadDatasources)
         </ElTag>
       </div>
       <div class="page-editor__designer-bar-center">
+        <!-- V2-T11 多选批量操作栏（选中 ≥2 显示） -->
+        <div v-if="multiSelectEnabled && selectedIds.length > 1" class="page-editor__multiselect-bar">
+          <ElTag size="small" type="info">已选 {{ selectedIds.length }}</ElTag>
+          <ElButton size="small" @click="onBatchDuplicate">复制</ElButton>
+          <ElButton size="small" @click="onBatchAlign('left')">左对齐</ElButton>
+          <ElButton size="small" @click="onBatchAlign('center')">居中</ElButton>
+          <ElButton size="small" type="danger" @click="onBatchDelete">删除</ElButton>
+          <ElButton size="small" text @click="onClearSelection">取消选择</ElButton>
+        </div>
+        <ElButton v-else-if="multiSelectEnabled && selectedId && selectedId !== schema?.root?.id" size="small" text @click="onSelectAllSiblings">全选同级</ElButton>
         <!-- V2-T4 断点切换器 -->
         <div v-if="responsiveEnabled" class="page-editor__breakpoints">
           <ElButton
@@ -814,6 +908,15 @@ watch(siteId, loadDatasources)
     display: inline-flex;
     align-items: center;
     gap: 4px;
+  }
+
+  &__multiselect-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 8px;
+    background: #ecf5ff;
+    border-radius: 4px;
   }
 
   &__panel-title {

@@ -10,6 +10,23 @@ const defaultSiteSlug = (config.defaultSiteSlug as string) || DEFAULT_SITE_SLUG;
 const sitePageStore = useSitePageStore();
 const route = useRoute();
 
+/**
+ * V2-T7 CMS collection 拉取器：供 LubanPage 渲染 cmsBinding 节点。
+ * 调公开端点 /api/public/sites/:slug/collections/:collectionId/items，
+ * 返回 ResolvedCollectionItem[]（id + data + updatedAt）。
+ */
+const collectionFetcher = async (collectionId: string) => {
+  const slug = siteSlug.value;
+  const res = await $fetch<
+    Array<{ id: string; data?: Record<string, unknown>; updatedAt?: string }>
+  >(`/api/public/sites/${encodeURIComponent(slug)}/collections/${encodeURIComponent(collectionId)}/items`);
+  return (res ?? []).map((it) => ({
+    id: it.id,
+    data: it.data ?? {},
+    updatedAt: it.updatedAt,
+  }));
+};
+
 // 路由模式 /:site/:path* —— site 为单段，path* 为多段（数组）。
 // 不依赖 props 传参（props:true 与通配 path* 不兼容，会把数组原样透传），
 // 改为直接读 route.params 并规范化为字符串。
@@ -189,7 +206,7 @@ function dismissError() {
     </template>
     <template v-else-if="schema?.root">
       <ClientOnly>
-        <LubanPage :schema="schema" />
+        <LubanPage :schema="schema" :collection-fetcher="collectionFetcher" />
         <template #fallback>
           <div class="loading">Loading...</div>
         </template>

@@ -30,6 +30,7 @@ import {
 } from 'element-plus'
 import type { NodeSchema } from '@/types/schema'
 import type { ComponentMeta, PropSchemaItem, PropSchema } from 'luban-low-code'
+import type { ResponsiveBreakpoint } from 'luban-low-code'
 import { isFeatureEnabled } from '@/config/features'
 
 /** D15-B1 数据源管理/测试连通开关（FeatureGate） */
@@ -37,6 +38,8 @@ const datasourceManageEnabled = isFeatureEnabled('datasourceManage')
 const testConnectEnabled = isFeatureEnabled('testConnect')
 /** D15-A3 样式面板开关（FeatureGate） */
 const styleEnabled = isFeatureEnabled('style')
+/** V2-T4 响应式开关（FeatureGate） */
+const responsiveEnabled = isFeatureEnabled('responsive')
 
 interface DatasourceOption {
   id: string
@@ -49,6 +52,8 @@ interface Props {
   /** 当前 site 可用的数据源列表（PageEditor 加载传入） */
   datasources?: DatasourceOption[]
   readonly?: boolean
+  /** V2-T4 当前断点：决定样式分区写入 node.style（desktop）还是 node.responsive[bp] */
+  breakpoint?: ResponsiveBreakpoint
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -56,6 +61,7 @@ const props = withDefaults(defineProps<Props>(), {
   meta: null,
   datasources: () => [],
   readonly: false,
+  breakpoint: 'desktop',
 })
 
 const emit = defineEmits<{
@@ -233,6 +239,20 @@ function handleJsonInput(key: string, text: string): void {
 
 // === 样式分区（D15-A3，W1-T7）：节点级 style 配置 ===
 /**
+ * V2-T4：样式分区标题携带当前断点提示。
+ * desktop = "样式"；tablet/mobile = "样式（平板）"/"样式（手机）"。
+ */
+const styleSectionLabel = computed(() => {
+  if (!responsiveEnabled) return '样式';
+  const bpLabel: Record<ResponsiveBreakpoint, string> = {
+    desktop: '样式',
+    tablet: '样式（平板）',
+    mobile: '样式（手机）',
+  };
+  return bpLabel[props.breakpoint];
+});
+
+/**
  * 危险 CSS 值过滤（§8.2 安全 A03）：拒绝 expression()/javascript:/url(javascript:)
  * 等可能在旧浏览器执行的注入向量。值在写入 node.style 前先过此函数。
  */
@@ -251,25 +271,56 @@ function isSafeCssValue(value: string): boolean {
   return true
 }
 
-/** 读取节点某 CSS 属性值（node.style[key]）。 */
+/**
+ * V2-T4：按当前断点定位样式源对象。
+ * desktop → node.style（基础）；tablet/mobile → node.responsive[bp]（惰性初始化）。
+ * 返回引用，调用方直接写键值；新增的对象会挂回 node.responsive。
+ */
+function resolveStyleTarget(): Record<string, string> | null {
+  if (!props.node) return null;
+  if (props.breakpoint === 'desktop') {
+    if (!props.node.style) props.node.style = {};
+    return props.node.style;
+  }
+  // tablet/mobile
+  if (!props.node.responsive) props.node.responsive = {};
+  const bp = props.breakpoint;
+  if (bp === 'tablet') {
+    if (!props.node.responsive.tablet) props.node.responsive.tablet = {};
+    return props.node.responsive.tablet;
+  }
+  if (!props.node.responsive.mobile) props.node.responsive.mobile = {};
+  return props.node.responsive.mobile;
+}
+
+/** 读取节点某 CSS 属性值（按当前断点：desktop=style，其它=responsive[bp]）。 */
 function getStyleValue(key: string): string {
-  return (props.node?.style?.[key] as string) ?? ''
+  if (!props.node) return '';
+  if (props.breakpoint === 'desktop') {
+    return (props.node.style?.[key] as string) ?? '';
+  }
+  const r = props.node.responsive;
+  if (!r) return '';
+  const bpStyles = props.breakpoint === 'tablet' ? r.tablet : r.mobile;
+  return (bpStyles?.[key] as string) ?? '';
 }
 
 /**
- * 写入节点 CSS 属性：安全过滤后写 node.style[key]，emit update:style。
- * 危险值静默丢弃（不写不 emit），由调用方 UI 不显示即可。
+ * 写入节点 CSS 属性（按当前断点）：安全过滤后写，emit update:style。
+ * desktop → node.style；tablet/mobile → node.responsive[bp]。
+ * 危险值静默丢弃（不写不 emit）。
  */
 function handleStyleInput(key: string, value: string): void {
-  if (!props.node) return
-  if (value && !isSafeCssValue(value)) return // 危险值拒绝
-  if (!props.node.style) props.node.style = {}
+  if (!props.node) return;
+  if (value && !isSafeCssValue(value)) return; // 危险值拒绝
+  const target = resolveStyleTarget();
+  if (!target) return;
   if (value === '') {
-    delete props.node.style[key]
+    delete target[key];
   } else {
-    props.node.style[key] = value
+    target[key] = value;
   }
-  emit('update:style', props.node.id, key, value)
+  emit('update:style', props.node.id, key, value);
 }
 
 /** 预设阴影选项（boxShadow） */
@@ -508,7 +559,7 @@ function handleVarNameChange(varName: string): void {
       </ElFormItem>
 
       <!-- D15-A3 样式分区（5 折叠组：尺寸/背景/边框/排版/布局/阴影） -->
-      <ElFormItem v-if="styleEnabled" label="样式">
+      <ElFormItem v-if="styleEnabled" :label="styleSectionLabel">
         <ElCollapse class="property-panel__style-collapse">
           <!-- 尺寸 -->
           <ElCollapseItem title="尺寸" name="size">

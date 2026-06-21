@@ -51,6 +51,7 @@ import {
   reorderRootChildren,
   isContainerType,
 } from 'luban-low-code'
+import type { ResponsiveBreakpoint } from 'luban-low-code'
 import PropertyPanel from './components/PropertyPanel.vue'
 import ComponentTree from './components/ComponentTree.vue'
 import DatasourceManageDialog from './components/DatasourceManageDialog.vue'
@@ -91,6 +92,26 @@ const loadError = ref<string | null>(null)
 const selectedId = ref<string | null>(null)
 /** 设计/预览模式切换：true=设计画布，false=只读渲染预览。 */
 const isDesign = ref(true)
+
+/** V2-T4 当前断点（设计态；透传给 LubanDesigner→DesignRenderer 渲染对应断点 style） */
+const currentBreakpoint = ref<ResponsiveBreakpoint>('desktop')
+/** V2-T4 响应式 FeatureGate */
+const responsiveEnabled = isFeatureEnabled('responsive')
+
+/** 断点对应的画布模拟宽度（设计态可视化；desktop=100%） */
+const BREAKPOINT_WIDTHS: Record<ResponsiveBreakpoint, string> = {
+  desktop: '100%',
+  tablet: '768px',
+  mobile: '375px',
+}
+const canvasWidth = computed(() =>
+  responsiveEnabled ? BREAKPOINT_WIDTHS[currentBreakpoint.value] : '100%'
+)
+
+/** V2-T4 切换断点 */
+function setBreakpoint(bp: ResponsiveBreakpoint): void {
+  currentBreakpoint.value = bp
+}
 
 /** 撤销/重做历史栈（结构变更与属性变更均入栈；属性输入噪声由 limit 截断兜底）。 */
 const history = useHistory(schema)
@@ -530,7 +551,28 @@ watch(siteId, loadDatasources)
         </ElTag>
       </div>
       <div class="page-editor__designer-bar-center">
-        <span class="page-editor__designer-path">{{ pagePath || '/' }}</span>
+        <!-- V2-T4 断点切换器 -->
+        <div v-if="responsiveEnabled" class="page-editor__breakpoints">
+          <ElButton
+            size="small"
+            :type="currentBreakpoint === 'desktop' ? 'primary' : 'default'"
+            title="桌面端 (desktop)"
+            @click="setBreakpoint('desktop')"
+          >💻 桌面</ElButton>
+          <ElButton
+            size="small"
+            :type="currentBreakpoint === 'tablet' ? 'primary' : 'default'"
+            title="平板端 (tablet, 768px)"
+            @click="setBreakpoint('tablet')"
+          >📱 平板</ElButton>
+          <ElButton
+            size="small"
+            :type="currentBreakpoint === 'mobile' ? 'primary' : 'default'"
+            title="手机端 (mobile, 375px)"
+            @click="setBreakpoint('mobile')"
+          >📱 手机</ElButton>
+        </div>
+        <span v-else class="page-editor__designer-path">{{ pagePath || '/' }}</span>
       </div>
       <div class="page-editor__designer-bar-right">
         <ElButton size="small" :disabled="!canUndo" title="撤销 (Ctrl+Z)" @click="history.undo()">↶</ElButton>
@@ -576,11 +618,13 @@ watch(siteId, loadDatasources)
       </ElAside>
 
       <ElMain class="page-editor__main">
+        <div class="page-editor__canvas-wrap" :style="{ maxWidth: canvasWidth }">
         <LubanDesigner
           v-if="isDesign"
           v-model:schema="schema"
           :design-mode="true"
           :show-toolbar="false"
+          :breakpoint="currentBreakpoint"
           placeholder="从左侧拖拽组件到此处"
           @select="onSelect"
           @add-node="onAddNode"
@@ -588,6 +632,7 @@ watch(siteId, loadDatasources)
           @move-node="onMoveNode"
         />
         <LubanPage v-else :schema="schema" :datasource-fetcher="datasourceFetcher" />
+        </div>
       </ElMain>
 
       <ElAside width="300px" class="page-editor__aside page-editor__right">
@@ -606,6 +651,7 @@ watch(siteId, loadDatasources)
           :node="selectedNode"
           :meta="selectedMeta"
           :datasources="datasources"
+          :breakpoint="currentBreakpoint"
           @update:prop="onUpdateProp"
           @update:event="onUpdateEvent"
           @update:datasource="onUpdateDatasource"
@@ -682,6 +728,17 @@ watch(siteId, loadDatasources)
     background: #fff;
     padding: 12px;
     overflow: auto;
+  }
+
+  &__canvas-wrap {
+    margin: 0 auto;
+    transition: max-width 0.2s ease;
+  }
+
+  &__breakpoints {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
   }
 
   &__panel-title {

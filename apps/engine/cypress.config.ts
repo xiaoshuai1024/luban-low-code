@@ -7,4 +7,8 @@ export default defineConfig({
     specPattern: 'cypress/e2e/**/*.cy.ts',
     video: false,
   },
+  env: {
+    LUBAN_E2E_ACCOUNT: 'e2e',
+    LUBAN_E2E_PASSWORD: 'e2e@2026',
+  },
 })

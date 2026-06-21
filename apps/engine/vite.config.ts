@@ -20,7 +20,7 @@ export default defineConfig({
     allowedHosts: ['localhost', '127.0.0.1', 'test.local'],
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:3100',
         changeOrigin: true,
       },
     },

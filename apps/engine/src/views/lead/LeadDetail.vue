@@ -153,10 +153,10 @@ onMounted(fetchDetail)
             {{ val }}
           </ElDescriptionsItem>
           <ElDescriptionsItem label="来源表单">
-            {{ lead.formName || lead.formId }}
+            {{ lead.formName || '未知表单' }}
           </ElDescriptionsItem>
           <ElDescriptionsItem label="渠道">
-            {{ lead.utm?.source || lead.channelId || '-' }}
+            {{ lead.utm?.source || '-' }}
           </ElDescriptionsItem>
           <ElDescriptionsItem v-if="lead.utm?.campaign" label="活动">
             {{ lead.utm.campaign }}

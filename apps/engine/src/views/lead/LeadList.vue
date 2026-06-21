@@ -262,7 +262,7 @@ onMounted(() => {
       </ElTableColumn>
       <ElTableColumn label="渠道" width="100">
         <template #default="{ row }">
-          {{ row.utm?.source || row.channelId || '-' }}
+          {{ row.utm?.source || '-' }}
         </template>
       </ElTableColumn>
       <ElTableColumn label="创建时间" width="180">

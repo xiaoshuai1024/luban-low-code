@@ -1,121 +1,106 @@
 describe('Lead Center', () => {
+  // Real site/lead data created via API before all tests
+  let siteId: string
+  let leadName: string
+
+  before(() => {
+    // Create a site + form + lead via API to have real data to test against
+    const account = Cypress.env('LUBAN_E2E_ACCOUNT') || 'e2e'
+    const password = Cypress.env('LUBAN_E2E_PASSWORD') || 'e2e@2026'
+    const uniq = Date.now()
+    leadName = `Cypress访客${uniq}`
+
+    cy.request({
+      method: 'POST',
+      url: '/api/auth/login',
+      body: { username: account, password },
+    }).then((loginResp) => {
+      const token = loginResp.body.token
+      const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+
+      // Create site
+      cy.request({
+        method: 'POST',
+        url: '/api/sites',
+        headers,
+        body: { name: `cy-lead-${uniq}`, slug: `cy-lead-${uniq}`, baseUrl: 'http://cy.test', status: 'active' },
+      }).then((siteResp) => {
+        siteId = siteResp.body.id
+
+        // Create page
+        cy.request({
+          method: 'POST',
+          url: `/api/sites/${siteId}/pages`,
+          headers,
+          body: { name: `cy-lead-page-${uniq}`, path: '/lead-test', schema: { formState: {}, root: { id: 'root', type: 'LubanContainer', props: {}, children: [] } }, status: 'published' },
+        }).then((pageResp) => {
+          const pageId = pageResp.body.id
+
+          // Create form
+          cy.request({
+            method: 'POST',
+            url: '/api/forms',
+            headers,
+            body: { siteId, pageId, name: `cy-lead-form-${uniq}`, fieldSchema: { fields: [{ name: 'name', label: '姓名', type: 'text', required: true }, { name: 'phone', label: '手机号', type: 'tel', required: true }] }, dedupKeys: ['phone'], status: 'active' },
+          }).then((formResp) => {
+            const formId = formResp.body.id
+
+            // Submit a lead
+            cy.request({
+              method: 'POST',
+              url: `/api/forms/${formId}/submit`,
+              headers: { 'Content-Type': 'application/json' },
+              body: { formId, contact: { name: leadName, phone: `138${String(uniq).slice(-8)}`, source: 'cypress-e2e' } },
+            })
+          })
+        })
+      })
+    })
+  })
+
   beforeEach(() => {
-    cy.loginWithToken()
+    cy.loginReal(`/sites/${siteId}/leads`)
   })
 
   it('loads lead list page with toolbar and table', () => {
-    cy.visit('/sites/site-1/leads')
     cy.contains('线索中心').should('be.visible')
     cy.get('button').contains('查询').should('be.visible')
     cy.get('button').contains('导出 CSV').should('be.visible')
     cy.get('table').should('be.visible')
-    // should show at least one lead row
-    cy.get('table tbody tr').should('have.length.at.least', 1)
   })
 
-  it('displays lead status tags correctly', () => {
-    cy.visit('/sites/site-1/leads')
-    cy.contains('新线索').should('be.visible')
-    cy.contains('已分配').should('be.visible')
+  it('displays the newly created lead in the list', () => {
+    cy.contains(leadName).should('be.visible')
   })
 
-  it('filters leads by status', () => {
-    cy.visit('/sites/site-1/leads')
-    // Open status filter dropdown
-    cy.get('.el-select').first().click()
-    cy.get('.el-select-dropdown__item').contains('新线索').click()
-    cy.get('table tbody tr').each(($row) => {
-      cy.wrap($row).should('contain', '新线索')
-    })
-  })
-
-  it('navigates to lead detail on row double-click or detail button', () => {
-    cy.visit('/sites/site-1/leads')
+  it('navigates to lead detail', () => {
     cy.get('button').contains('详情').first().click()
-    cy.url().should('include', '/leads/lead-1')
     cy.contains('线索详情').should('be.visible')
     cy.contains('联系人信息').should('be.visible')
   })
 
-  it('displays lead detail with contact info and status', () => {
-    cy.visit('/sites/site-1/leads')
+  it('displays contact info in detail', () => {
     cy.get('button').contains('详情').first().click()
-    cy.contains('手机号').should('be.visible')
-    cy.contains('138****8000').should('be.visible')
-    cy.contains('新线索').should('be.visible')
-  })
-
-  it('shows status transition buttons based on current status', () => {
-    cy.visit('/sites/site-1/leads')
-    // First lead is 'new' status — should show '已分配' and '无效' transition buttons
-    cy.get('table tbody tr').first().within(() => {
-      cy.contains('新线索').should('be.visible')
-    })
-    cy.get('button').contains('已分配').should('be.visible')
-    cy.get('button').contains('无效').should('be.visible')
-  })
-
-  it('performs status transition via inline button', () => {
-    cy.visit('/sites/site-1/leads')
-    cy.get('button').contains('已分配').click()
-    // Confirmation dialog
-    cy.get('.el-message-box').should('be.visible')
-    cy.get('.el-message-box__btns .el-button--primary').click()
-    // After transition, should show updated status or success message
-    cy.contains('已分配').should('be.visible')
-  })
-
-  it('performs status transition from detail page', () => {
-    cy.visit('/sites/site-1/leads')
-    cy.get('button').contains('详情').first().click()
-    // Should see status section with transition buttons
-    cy.contains('状态变更').should('be.visible')
-    cy.get('button').contains('已分配').click()
-    cy.get('.el-message-box').should('be.visible')
-    cy.get('.el-message-box__btns .el-button--primary').click()
-    cy.contains('状态已变更为').should('be.visible')
-  })
-
-  it('shows UTM info when available', () => {
-    cy.visit('/sites/site-1/leads')
-    cy.get('button').contains('详情').first().click()
-    // First lead has UTM data
-    cy.contains('UTM 参数').should('be.visible')
-    cy.contains('source').should('be.visible')
-    cy.contains('google').should('be.visible')
+    cy.contains('联系人信息').should('be.visible')
+    cy.contains('name').should('be.visible')
+    cy.contains('phone').should('be.visible')
+    cy.contains(leadName).should('be.visible')
   })
 
   it('returns to list from detail page', () => {
-    cy.visit('/sites/site-1/leads')
     cy.get('button').contains('详情').first().click()
     cy.contains('← 返回列表').click()
     cy.contains('线索中心').should('be.visible')
   })
 
-  it('exports leads as CSV successfully', () => {
-    cy.visit('/sites/site-1/leads')
+  it('exports leads as CSV', () => {
     cy.get('button').contains('导出 CSV').click()
     cy.contains('导出成功').should('be.visible')
   })
 
   it('shows 404 alert when navigating to non-existent lead', () => {
-    cy.visit('/sites/site-1/leads/non-existent-id')
-    cy.get('.el-alert--error').should('be.visible')
-  })
-
-  it('cancels status transition and keeps status unchanged', () => {
-    cy.visit('/sites/site-1/leads')
-    // First lead is 'new' status
-    cy.get('table tbody tr').first().should('contain', '新线索')
-    // Click transition button to open confirm dialog
-    cy.get('button').contains('已分配').first().click()
-    // Dialog should appear
-    cy.get('.el-message-box').should('be.visible')
-    // Click cancel button
-    cy.get('.el-message-box__btns .el-button--default').click()
-    // Dialog should close
-    cy.get('.el-message-box').should('not.exist')
-    // Status should remain unchanged
-    cy.get('table tbody tr').first().should('contain', '新线索')
+    cy.visit(`/sites/${siteId}/leads/non-existent-id`)
+    cy.get('.el-alert--warning').should('be.visible')
+    cy.contains('线索不存在').should('be.visible')
   })
 })

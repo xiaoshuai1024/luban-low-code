@@ -1,6 +1,6 @@
 describe('Navigation', () => {
   beforeEach(() => {
-    cy.loginWithToken()
+    cy.loginReal()
   })
 
   it('dashboard is accessible', () => {

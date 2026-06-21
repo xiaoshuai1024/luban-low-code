@@ -14,4 +14,6 @@ export type {
   NodeLoop,
   NodeDatasource,
   PageSeo,
+  NodeResponsive,
+  ResponsiveBreakpoint,
 } from 'luban-low-code';

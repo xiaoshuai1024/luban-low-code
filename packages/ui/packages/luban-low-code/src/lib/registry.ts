@@ -46,6 +46,10 @@ import { materialRegistry } from './material/registry';
  *    尚未注册该 name，需 fallback 提供 Vue 组件）；
  *  - materialRegistry 未覆盖某 name 时的防御性兜底；
  *  - 接收运行时 registerComponent 写入的自定义覆盖。
+ *
+ * 注：marketing 物料（Hero/CTA/Navbar/...）不在此 fallback，由
+ * materialRegistry 注册的 .component 提供（vitest 经 vite.config.mts
+ * 的 resolve.alias 解析 luban-base dist，component 完整可用）。
  */
 const fallbackRegistry: Record<string, Component> = {
   LubanButton,

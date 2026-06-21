@@ -1,8 +1,8 @@
 /**
- * materials barrel — 20 物料统一注册入口（聚合收口层）。
+ * materials barrel — 24 物料统一注册入口（聚合收口层）。
  *
  * 职责：
- *  1. import 全部 20 个 material 定义（side-effect + re-export）；
+ *  1. import 全部 24 个 material 定义（side-effect + re-export）；
  *  2. 调用 `materialRegistry.register(...)` 将每个物料纳入 registry；
  *  3. 导出 `materials` 数组与各 material 常量，供下游（registry/palette/
  *     componentMeta）经 registry 派生旧 ComponentMeta。
@@ -25,6 +25,7 @@ import type { MaterialDefinition } from '../lib/material/defineMaterial';
 import { buttonMaterial } from './general/button/material';
 // === content 组 ===
 import { bannerMaterial } from './content/banner/material';
+import { contentListMaterial } from './content/content-list/material';
 // === layout 组（含首次纳入的 SidePanel）===
 import { containerMaterial } from './layout/container/material';
 import { rowMaterial } from './layout/row/material';
@@ -47,6 +48,21 @@ import { tabsMaterial } from './navigation/tabs/material';
 import { modalMaterial } from './feedback/modal/material';
 import { drawerMaterial } from './feedback/drawer/material';
 import { toastMaterial } from './feedback/toast/material';
+// === marketing 组 ===
+import { heroMaterial } from './marketing/hero/material';
+import { ctaMaterial } from './marketing/cta/material';
+import { testimonialMaterial } from './marketing/testimonial/material';
+import { leadCaptureMaterial } from './marketing/lead-capture/material';
+// === marketing 组 D15-E1 新增 9 营销建站物料 ===
+import { navbarMaterial } from './marketing/navbar/material';
+import { footerMaterial } from './marketing/footer/material';
+import { featureGridMaterial } from './marketing/feature-grid/material';
+import { statsMaterial } from './marketing/stats/material';
+import { faqMaterial } from './marketing/faq/material';
+import { pricingMaterial } from './marketing/pricing/material';
+import { testimonialCarouselMaterial } from './marketing/testimonial-carousel/material';
+import { galleryMaterial } from './marketing/gallery/material';
+import { logoCloudMaterial } from './marketing/logo-cloud/material';
 
 /**
  * 全部 20 物料定义（注册顺序：general → content → layout → form
@@ -59,6 +75,7 @@ export const materials: MaterialDefinition[] = [
   buttonMaterial,
   textMaterial,
   bannerMaterial,
+  contentListMaterial,
   containerMaterial,
   rowMaterial,
   colMaterial,
@@ -77,6 +94,21 @@ export const materials: MaterialDefinition[] = [
   modalMaterial,
   drawerMaterial,
   toastMaterial,
+  // === marketing 新物料 ===
+  heroMaterial,
+  ctaMaterial,
+  testimonialMaterial,
+  leadCaptureMaterial,
+  // === marketing D15-E1 新增 9 营销建站物料 ===
+  navbarMaterial,
+  footerMaterial,
+  featureGridMaterial,
+  statsMaterial,
+  faqMaterial,
+  pricingMaterial,
+  testimonialCarouselMaterial,
+  galleryMaterial,
+  logoCloudMaterial,
 ];
 
 /**
@@ -102,6 +134,7 @@ registerAll();
 export { buttonMaterial } from './general/button/material';
 export { textMaterial } from './general/text/material';
 export { bannerMaterial } from './content/banner/material';
+export { contentListMaterial } from './content/content-list/material';
 export { containerMaterial } from './layout/container/material';
 export { rowMaterial } from './layout/row/material';
 export { colMaterial } from './layout/col/material';
@@ -120,3 +153,18 @@ export { tabsMaterial } from './navigation/tabs/material';
 export { modalMaterial } from './feedback/modal/material';
 export { drawerMaterial } from './feedback/drawer/material';
 export { toastMaterial } from './feedback/toast/material';
+// === marketing 组 re-export ===
+export { heroMaterial } from './marketing/hero/material';
+export { ctaMaterial } from './marketing/cta/material';
+export { testimonialMaterial } from './marketing/testimonial/material';
+export { leadCaptureMaterial } from './marketing/lead-capture/material';
+// === marketing D15-E1 新增 9 物料 re-export ===
+export { navbarMaterial } from './marketing/navbar/material';
+export { footerMaterial } from './marketing/footer/material';
+export { featureGridMaterial } from './marketing/feature-grid/material';
+export { statsMaterial } from './marketing/stats/material';
+export { faqMaterial } from './marketing/faq/material';
+export { pricingMaterial } from './marketing/pricing/material';
+export { testimonialCarouselMaterial } from './marketing/testimonial-carousel/material';
+export { galleryMaterial } from './marketing/gallery/material';
+export { logoCloudMaterial } from './marketing/logo-cloud/material';

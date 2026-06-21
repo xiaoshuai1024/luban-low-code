@@ -14,6 +14,16 @@ export default defineConfig(() => ({
       tsconfigPath: path.join(import.meta.dirname, 'tsconfig.lib.json'),
     }),
   ],
+  // 测试期将 luban-base 别名指向其 dist（构建产物），而非 @luban-ui/source
+  // 条件解析的 src。原因：vitest 源码模式下经 src barrel 再导出 .vue 时，
+  // 部分 marketing 物料 component 静默为 undefined（monorepo 源码条件解析
+  // 与 vitest vue 插件交互的边缘情况）。dist 是真实发布产物，组件完整。
+  // 仅影响测试解析，不影响构建（build.rollupOptions.external 仍排除 luban-base）。
+  resolve: {
+    alias: {
+      'luban-base': path.resolve(import.meta.dirname, '../luban-base/dist/index.js'),
+    },
+  },
   // Uncomment this if you are using workers.
   // worker: {
   //  plugins: [],

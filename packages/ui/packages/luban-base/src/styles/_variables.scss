@@ -11,3 +11,60 @@ $lb-shadow: 0 1px 3px rgba(0, 0, 0, 0.12) !default;
 $lb-breakpoint-sm: 600px !default;
 $lb-breakpoint-md: 960px !default;
 $lb-breakpoint-lg: 1280px !default;
+
+// === V2-T1 设计 token 扩展（语义化 + 营销建站色板）===
+// 所有新增 token 保留 !default，方便消费方覆盖。
+$lb-bg: #ffffff !default;
+$lb-bg-muted: #f9fafb !default;
+$lb-bg-elevated: #ffffff !default;
+$lb-bg-dark: #1a1a2e !default;
+$lb-border: #e5e7eb !default;
+$lb-border-strong: #d1d5db !default;
+$lb-text-on-dark: #ffffff !default;
+$lb-text-heading: #111827 !default;
+$lb-text-body: #374151 !default;
+$lb-text-muted: #6b7280 !default;
+$lb-accent: #4361ee !default;
+$lb-accent-contrast: #ffffff !default;
+$lb-success-bg: #ecfdf5 !default;
+$lb-success-text: #065f46 !default;
+$lb-warning: #f59e0b !default;
+$lb-star-active: #f59e0b !default;
+$lb-star-inactive: #ddd !default;
+
+// === V2-T1 :root CSS 变量层（运行时换肤入口）===
+// 把 SCSS 变量同步到 :root 自定义属性，组件内用 var(--lb-*) 消费，
+// 运行时 applyTheme(tokens) 覆盖这些自定义属性即可整站换肤。
+:root {
+  --lb-primary: #{$lb-primary};
+  --lb-secondary: #{$lb-secondary};
+  --lb-surface: #{$lb-surface};
+  --lb-error: #{$lb-error};
+  --lb-text-primary: #{$lb-text-primary};
+  --lb-text-secondary: #{$lb-text-secondary};
+  --lb-border-radius: #{$lb-border-radius};
+  --lb-spacing-unit: #{$lb-spacing-unit};
+  --lb-shadow: #{$lb-shadow};
+  --lb-breakpoint-sm: #{$lb-breakpoint-sm};
+  --lb-breakpoint-md: #{$lb-breakpoint-md};
+  --lb-breakpoint-lg: #{$lb-breakpoint-lg};
+
+  // 语义化 token
+  --lb-bg: #{$lb-bg};
+  --lb-bg-muted: #{$lb-bg-muted};
+  --lb-bg-elevated: #{$lb-bg-elevated};
+  --lb-bg-dark: #{$lb-bg-dark};
+  --lb-border: #{$lb-border};
+  --lb-border-strong: #{$lb-border-strong};
+  --lb-text-on-dark: #{$lb-text-on-dark};
+  --lb-text-heading: #{$lb-text-heading};
+  --lb-text-body: #{$lb-text-body};
+  --lb-text-muted: #{$lb-text-muted};
+  --lb-accent: #{$lb-accent};
+  --lb-accent-contrast: #{$lb-accent-contrast};
+  --lb-success-bg: #{$lb-success-bg};
+  --lb-success-text: #{$lb-success-text};
+  --lb-warning: #{$lb-warning};
+  --lb-star-active: #{$lb-star-active};
+  --lb-star-inactive: #{$lb-star-inactive};
+}

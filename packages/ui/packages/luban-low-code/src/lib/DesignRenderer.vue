@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { getComponent } from './registry';
-import type { NodeSchema } from './schema';
+import type { NodeSchema, ResponsiveBreakpoint } from './schema';
 import { isContainerType } from './constants';
 import { validate, type ValidationRule } from './validation';
+import { resolveResponsiveProps } from './responsive';
 import Sortable from 'sortablejs';
-import { onMounted, onBeforeUnmount, ref as vueRef } from 'vue';
+import { onMounted, onBeforeUnmount, ref as vueRef, computed } from 'vue';
 import DesignRendererSelf from './DesignRenderer.vue';
 
 const FORM_VALUE_TYPES = new Set([
@@ -23,8 +24,10 @@ const props = withDefaults(
     formErrors?: Record<string, string>;
     selectedNodeId: string | null;
     placeholderText?: string;
+    /** V2-T4 设计态当前断点：按断点取 resolveResponsiveProps 渲染对应 style */
+    breakpoint?: ResponsiveBreakpoint;
   }>(),
-  { formErrors: () => ({}), placeholderText: '拖拽组件到此处' }
+  { formErrors: () => ({}), placeholderText: '拖拽组件到此处', breakpoint: 'desktop' }
 );
 
 const emit = defineEmits<{
@@ -44,6 +47,13 @@ function onPlaceholderClick(e: Event): void {
   e.stopPropagation();
   emit('select', props.root.id);
 }
+
+/**
+ * V2-T4：按当前断点折叠节点 style。
+ * desktop = node.style；tablet/mobile 浅合并覆盖。
+ * 设计态直接用内联 :style 渲染对应断点（无需 @media）。
+ */
+const resolvedStyle = computed(() => resolveResponsiveProps(props.root, props.breakpoint));
 
 const isEmptyContainer = (): boolean =>
   isContainerType(props.root.type) &&
@@ -183,11 +193,16 @@ onBeforeUnmount(() => {
     <div
       class="design-renderer__wrapper"
       :data-node-id="root.id"
-      :class="{
-        'design-renderer__wrapper--selected': selectedNodeId === root.id,
-        'design-renderer__wrapper--locked': root.locked,
-        'design-renderer__wrapper--hidden': root.hidden,
-      }"
+      :data-lb-node="root.id"
+      :class="[
+        {
+          'design-renderer__wrapper--selected': selectedNodeId === root.id,
+          'design-renderer__wrapper--locked': root.locked,
+          'design-renderer__wrapper--hidden': root.hidden,
+        },
+        root.className,
+      ]"
+      :style="resolvedStyle"
       @click="onWrapperClick($event, root.id)"
     >
       <template v-if="isEmptyContainer()">
@@ -231,6 +246,7 @@ onBeforeUnmount(() => {
             :form-errors="formErrors"
             :selected-node-id="selectedNodeId"
             :placeholder-text="placeholderText"
+            :breakpoint="breakpoint"
             @select="emit('select', $event)"
             @add-node="emit('add-node', $event[0], $event[1])"
           />
@@ -256,6 +272,7 @@ onBeforeUnmount(() => {
                 :form-errors="formErrors"
                 :selected-node-id="selectedNodeId"
                 :placeholder-text="placeholderText"
+                :breakpoint="breakpoint"
                 @select="emit('select', $event)"
                 @add-node="emit('add-node', $event[0], $event[1])"
                 @move-node="(nodeId, from, to, idx) => emit('move-node', nodeId, from, to, idx)"
@@ -273,6 +290,7 @@ onBeforeUnmount(() => {
             :form-errors="formErrors"
             :selected-node-id="selectedNodeId"
             :placeholder-text="placeholderText"
+            :breakpoint="breakpoint"
             @select="emit('select', $event)"
             @add-node="emit('add-node', $event[0], $event[1])"
           />
@@ -292,14 +310,14 @@ onBeforeUnmount(() => {
   transition: outline-color 0.15s ease;
 }
 .design-renderer__wrapper:hover {
-  outline-color: rgba(30, 136, 229, 0.35);
+  outline-color: color-mix(in srgb, var(--lb-primary, #1976d2) 35%, transparent);
 }
 .design-renderer__wrapper--selected {
-  outline: 2px solid #1e88e5;
+  outline: 2px solid var(--lb-primary, #1e88e5);
   outline-offset: 0;
 }
 .design-renderer__wrapper--locked {
-  outline: 2px dashed #9ca3af;
+  outline: 2px dashed var(--lb-text-muted, #9ca3af);
   cursor: not-allowed;
 }
 .design-renderer__wrapper--hidden {
@@ -310,7 +328,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #9ca3af;
+  color: var(--lb-text-muted, #9ca3af);
   font-size: 13px;
   border: 2px dashed rgba(0, 0, 0, 0.15);
   border-radius: 6px;

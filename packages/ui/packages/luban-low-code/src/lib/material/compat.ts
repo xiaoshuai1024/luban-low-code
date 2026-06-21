@@ -20,7 +20,7 @@
 
 import type { Component } from 'vue';
 import type { MaterialDefinition, JSONSchemaProperty, MaterialEvent } from './defineMaterial';
-import type { ComponentMeta, PropSchemaItem } from '../componentMeta';
+import type { ComponentMeta, PropSchemaItem, PropSchema } from '../componentMeta';
 
 /** JSON Schema property → 旧 PropSchemaItem 单字段映射。 */
 function toPropSchemaItem(prop: JSONSchemaProperty): PropSchemaItem {
@@ -59,11 +59,39 @@ function toPropSchemaItem(prop: JSONSchemaProperty): PropSchemaItem {
         default: prop.default,
       };
     case 'array':
-      // 旧 LubanSelect/LubanRadioGroup 的 options 字段为对象数组，
-      // 用 'options' 类型；若元素 schema 非平凡（如嵌套 object），回退 'json'。
+      // 数组元素分类映射（D15-E0 数组可视化编辑器基建）：
+      //  - 元素为 object 且声明了 items.properties → 'array'（带 itemFields），
+      //    PropertyPanel 渲染可视化列表编辑器（每行 N 字段）。
+      //  - 元素为对象数组但 items 缺 properties（如旧 LubanSelect 的 {label,value}
+      //    通过 items.properties 声明）→ 仍走 'array'，由 itemFields 描述。
+      //  - 元素为 primitive（string/number）或无 items → 'options'（沿用旧语义）。
+      //  - 嵌套数组（itemFields 内仍含 array/object）→ 降级 'json'（v1 不支持可视化嵌套）。
+      if (
+        prop.items &&
+        (prop.items.type === 'object' || !prop.items.type) &&
+        prop.items.properties
+      ) {
+        const itemFields = deriveItemFields(prop.items.properties);
+        // 任一字段仍为数组/对象 → 整体降级 json（防嵌套可视化爆炸）
+        if (itemFields && hasNestedComplex(itemFields)) {
+          return {
+            type: 'json',
+            label: prop.label,
+            default: prop.default ?? [],
+          };
+        }
+        return {
+          type: 'array',
+          label: prop.label,
+          default: prop.default ?? [],
+          itemFields,
+        };
+      }
+      // 旧 LubanSelect/LubanRadioGroup 的 options 字段：元素为 {label,value}，
+      // 但若未通过 items.properties 显式声明结构，沿用 'options'。
       if (prop.items && (prop.items.type === 'object' || !prop.items.type)) {
         return {
-          type: 'json',
+          type: 'options',
           label: prop.label,
           default: prop.default ?? [],
         };
@@ -82,6 +110,36 @@ function toPropSchemaItem(prop: JSONSchemaProperty): PropSchemaItem {
         default: prop.default,
       };
   }
+}
+
+/**
+ * 从数组元素 schema 的 properties 派生 itemFields（PropSchema 表）。
+ * 递归调用 toPropSchemaItem，使每字段复用同一映射规则。
+ */
+function deriveItemFields(
+  properties: Record<string, JSONSchemaProperty>
+): PropSchema | undefined {
+  const keys = Object.keys(properties);
+  if (keys.length === 0) return undefined;
+  const out: PropSchema = {};
+  for (const key of keys) {
+    const p = properties[key];
+    if (!p) continue;
+    out[key] = toPropSchemaItem(p);
+  }
+  return out;
+}
+
+/**
+ * 检查 itemFields 是否含嵌套复杂类型（array/json/options）。
+ * 含则父数组降级为 json 编辑（v1 不支持可视化嵌套数组）。
+ */
+function hasNestedComplex(itemFields: PropSchema): boolean {
+  for (const item of Object.values(itemFields)) {
+    if (item.type === 'array' || item.type === 'json') return true;
+    // options 是扁平 {label,value}，不算复杂，保留可视化
+  }
+  return false;
 }
 
 /** 从 required 字段集合判断单个 key 是否必填。 */
@@ -154,5 +212,6 @@ export function toLegacyComponentMeta(def: MaterialDefinition): ComponentMeta {
     events: (def.events ?? []).map((e: MaterialEvent) => e.name),
     isContainer: def.isContainer,
     acceptTypes: def.acceptTypes,
+    capabilities: def.capabilities,
   };
 }

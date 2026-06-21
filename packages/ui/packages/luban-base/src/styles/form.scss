@@ -110,7 +110,7 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background-color: #fff;
+  background-color: var(--lb-bg);
   box-shadow: variables.$lb-shadow;
   transition: transform 0.2s;
 }

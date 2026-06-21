@@ -42,6 +42,12 @@ export interface JSONSchemaProperty {
   default?: unknown;
   /** 字段标签（设计器属性面板展示用，JSON Schema 扩展字段）。 */
   label?: string;
+  /**
+   * 子字段表（type === 'object' 时使用，或作为 items.properties 描述数组元素结构）。
+   * 形式化既有用法：menu/table 等物料已通过结构宽松在 items.properties 声明字段，
+   * 此前未在类型上显式声明；此处补全以支持数组可视化编辑器（compat.ts 据此派生 itemFields）。
+   */
+  properties?: Record<string, JSONSchemaProperty>;
 }
 
 /** propsSchema 顶层对象：properties 为字段表，required 为必填字段列表。 */
@@ -91,6 +97,18 @@ export interface MaterialDefinition {
   events?: MaterialEvent[];
   /** 对外暴露的插槽。 */
   slots?: MaterialSlot[];
+  /**
+   * V2-T5 物料能力声明：该物料支持哪些能力（动画触发类型等）。
+   * PropertyPanel 据此决定是否显示动画分区 + 限定可选 trigger。
+   * 未声明则默认支持全部动画 trigger（向后兼容）。
+   */
+  capabilities?: MaterialCapabilities;
+}
+
+/** V2-T5 物料能力配置 */
+export interface MaterialCapabilities {
+  /** 支持的动画触发类型；未定义 = 全部支持 */
+  animationTriggers?: Array<'in-view' | 'hover' | 'load'>;
 }
 
 /**

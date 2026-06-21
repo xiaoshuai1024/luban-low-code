@@ -24,8 +24,8 @@ import { CONTAINER_TYPES, FORM_CONTROL_TYPES } from '../lib/constants';
 describe('material registry parity', () => {
   const all = materialRegistry.getAll();
 
-  it('registers all 20 materials', () => {
-    expect(all.length).toBe(20);
+  it('registers all 34 materials', () => {
+    expect(all.length).toBe(34);
   });
 
   it('includes SidePanel (首次纳入)', () => {
@@ -135,7 +135,7 @@ describe('material registry parity', () => {
     }
   });
 
-  it('getComponent resolves all 20 materials via registry (no undefined)', () => {
+  it('getComponent resolves all 34 materials via registry (no undefined)', () => {
     // 验证 registry.ts getComponent 经 materialRegistry 取到全部物料的 component
     for (const def of all) {
       const comp = getComponent(def.name);
@@ -143,10 +143,10 @@ describe('material registry parity', () => {
     }
   });
 
-  it('getComponentMeta derives ComponentMeta for all 20 materials', () => {
+  it('getComponentMeta derives ComponentMeta for all 34 materials', () => {
     // 验证 componentMeta.ts 经 compat.toLegacyComponentMeta 派生旧 ComponentMeta
     const metas = getAllComponentMeta();
-    expect(metas.length).toBe(20);
+    expect(metas.length).toBe(34);
     for (const meta of metas) {
       expect(meta.type).toBeTruthy();
       expect(meta.component).toBeDefined();
@@ -154,29 +154,43 @@ describe('material registry parity', () => {
     }
   });
 
-  it('palette still covers the 14 legacy materials across 信息/表单 (W1-T6 new categories excluded)', () => {
-    // W1-T6 新增的 6 物料 category（data-display/navigation/feedback）不在
-    // 旧 palette 的「信息/表单」映射集，故 palette 计数仍为 14；新物料由
-    // PropertyPanel/registry 直接消费。此处锁定该不变量防回归。
-    const items = getPaletteItems();
-    expect(items.length).toBe(14);
+  it('palette covers 7 groups (信息/布局/表单/营销/导航/反馈/数据展示) — D15-E4 重组', () => {
+    // D15-E4：调色板从 2 组扩展为 7 组，全部已注册物料（含 W1-T6 6 物料 +
+    // marketing 物料）首次进入调色板。layout 同时进信息+布局两组。
     const groups = getPaletteGroups();
-    expect(groups.length).toBe(2);
-    expect(groups.map((g) => g.category)).toEqual(['信息', '表单']);
-    // 信息组含 SidePanel（首次纳入）
-    const infoTypes = groups[0].items.map((i) => i.type);
+    expect(groups.length).toBe(7);
+    expect(groups.map((g) => g.category)).toEqual([
+      '信息',
+      '布局',
+      '表单',
+      '营销',
+      '导航',
+      '反馈',
+      '数据展示',
+    ]);
+    // 信息组含 SidePanel
+    const infoTypes = groups.find((g) => g.category === '信息')!.items.map((i) => i.type);
     expect(infoTypes).toContain('LubanSidePanel');
-    // 新物料不在旧 palette 中
-    for (const name of [
-      'LubanTable',
-      'LubanMenu',
-      'LubanTabs',
-      'LubanModal',
-      'LubanDrawer',
-      'LubanToast',
-    ]) {
-      expect(items.some((i) => i.type === name)).toBe(false);
-    }
+    // 营销组含 marketing 物料（Hero/CTA/Testimonial/LeadCapture category=marketing）
+    const marketingTypes = groups.find((g) => g.category === '营销')!.items.map((i) => i.type);
+    expect(marketingTypes).toContain('LubanHero');
+    expect(marketingTypes).toContain('LubanCTA');
+    expect(marketingTypes).toContain('LubanTestimonial');
+    expect(marketingTypes).toContain('LubanLeadCapture');
+    // 导航/反馈/数据展示组首次纳入 W1-T6 6 物料
+    const navTypes = groups.find((g) => g.category === '导航')!.items.map((i) => i.type);
+    expect(navTypes).toContain('LubanMenu');
+    expect(navTypes).toContain('LubanTabs');
+    const feedbackTypes = groups.find((g) => g.category === '反馈')!.items.map((i) => i.type);
+    expect(feedbackTypes).toContain('LubanModal');
+    expect(feedbackTypes).toContain('LubanDrawer');
+    expect(feedbackTypes).toContain('LubanToast');
+    const dataTypes = groups.find((g) => g.category === '数据展示')!.items.map((i) => i.type);
+    expect(dataTypes).toContain('LubanTable');
+    // 扁平列表去重（layout 同时在信息+布局，只算一次）
+    const flat = getPaletteItems();
+    const flatTypes = new Set(flat.map((i) => i.type));
+    expect(flatTypes.size).toBe(flat.length); // 无重复
   });
 
   it('CONTAINER_TYPES and FORM_CONTROL_TYPES derive from registry', () => {

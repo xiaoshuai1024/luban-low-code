@@ -1,4 +1,4 @@
-export type { PageSchema, NodeSchema, NodeLoop, NodeDatasource } from './lib/schema';
+export type { PageSchema, NodeSchema, NodeLoop, NodeDatasource, PageSeo, NodeResponsive, ResponsiveBreakpoint, NodeAnimation, AnimationType, AnimationTrigger, NodeCmsBinding } from './lib/schema';
 export type { ValidationRule } from './lib/validation';
 export { validate } from './lib/validation';
 export { default as LubanDesigner } from './lib/LubanDesigner.vue';
@@ -19,6 +19,42 @@ export {
   canAcceptChild,
 } from './lib/constants';
 export { reorderRootChildren } from './lib/schemaUtils';
+
+// === V2-T4 响应式断点（per-breakpoint style + @media CSS 输出）===
+export {
+  BREAKPOINTS,
+  resolveResponsiveProps,
+  hasResponsiveOverrides,
+} from './lib/responsive';
+export { nodeResponsiveCss, treeResponsiveCss } from './lib/responsiveStyle';
+
+// === V2-T5 动画系统（@keyframes CSS + IntersectionObserver scroll 触发）===
+export {
+  buildAnimationCss,
+  treeAnimationCss,
+  isValidAnimation,
+} from './lib/animation';
+export {
+  useAnimationObserver,
+  collectInViewNodes,
+} from './lib/animationObserver';
+
+// === V2-T12 拖拽对齐辅助线（纯逻辑计算 + DOM rect 收集）===
+export {
+  computeAlignGuides,
+  computeSpacingHints,
+  collectNodeRects,
+  dedupeGuides,
+} from './lib/alignGuides';
+export type { Rect, GuideLine, AlignResult, SpacingHint } from './lib/alignGuides';
+
+// === V2-T7 CMS 绑定解析（纯逻辑）===
+export {
+  resolveCmsProps,
+  sortAndLimitItems,
+  collectBoundCollectionIds,
+} from './lib/cmsBinding';
+export type { CollectionItemData, ResolvedCollectionItem } from './lib/cmsBinding';
 export {
   getPaletteGroups,
   getPaletteItems,

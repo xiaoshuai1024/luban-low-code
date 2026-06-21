@@ -25,22 +25,22 @@
 
   &.lb-button--contained {
     &.lb-button--primary {
-      background-color: variables.$lb-primary;
-      color: #fff;
+      background-color: var(--lb-primary);
+      color: var(--lb-accent-contrast);
       &:not(:disabled):hover {
         background-color: color.adjust(variables.$lb-primary, $lightness: -8%);
       }
     }
     &.lb-button--secondary {
-      background-color: variables.$lb-secondary;
-      color: #fff;
+      background-color: var(--lb-secondary);
+      color: var(--lb-accent-contrast);
       &:not(:disabled):hover {
         background-color: color.adjust(variables.$lb-secondary, $lightness: -8%);
       }
     }
     &.lb-button--surface {
-      background-color: variables.$lb-surface;
-      color: variables.$lb-text-primary;
+      background-color: var(--lb-surface);
+      color: var(--lb-text-primary);
       &:not(:disabled):hover {
         background-color: color.adjust(variables.$lb-surface, $lightness: -5%);
       }
@@ -50,21 +50,21 @@
   &.lb-button--outlined {
     background: transparent;
     &.lb-button--primary {
-      color: variables.$lb-primary;
-      border: 1px solid variables.$lb-primary;
+      color: var(--lb-primary);
+      border: 1px solid var(--lb-primary);
       &:not(:disabled):hover {
         background-color: rgba(variables.$lb-primary, 0.08);
       }
     }
     &.lb-button--secondary {
-      color: variables.$lb-secondary;
-      border: 1px solid variables.$lb-secondary;
+      color: var(--lb-secondary);
+      border: 1px solid var(--lb-secondary);
       &:not(:disabled):hover {
         background-color: rgba(variables.$lb-secondary, 0.08);
       }
     }
     &.lb-button--surface {
-      color: variables.$lb-text-primary;
+      color: var(--lb-text-primary);
       border: 1px solid rgba(0, 0, 0, 0.23);
       &:not(:disabled):hover {
         background-color: rgba(0, 0, 0, 0.04);
@@ -75,19 +75,19 @@
   &.lb-button--text {
     background: transparent;
     &.lb-button--primary {
-      color: variables.$lb-primary;
+      color: var(--lb-primary);
       &:not(:disabled):hover {
         background-color: rgba(variables.$lb-primary, 0.08);
       }
     }
     &.lb-button--secondary {
-      color: variables.$lb-secondary;
+      color: var(--lb-secondary);
       &:not(:disabled):hover {
         background-color: rgba(variables.$lb-secondary, 0.08);
       }
     }
     &.lb-button--surface {
-      color: variables.$lb-text-primary;
+      color: var(--lb-text-primary);
       &:not(:disabled):hover {
         background-color: rgba(0, 0, 0, 0.04);
       }

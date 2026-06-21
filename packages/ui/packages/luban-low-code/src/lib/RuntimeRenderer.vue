@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { getComponent } from './registry';
-import type { NodeSchema } from './schema';
+import type { NodeSchema, ResponsiveBreakpoint } from './schema';
 import { validate, type ValidationRule } from './validation';
 import { evaluate, evaluateBoolean, interpolate } from './expression';
 import { createActionRunner, type ActionContext } from './action';
+import { treeResponsiveCss } from './responsiveStyle';
 import { computed, inject } from 'vue';
 
 /** Optional form submit handler provided by the host app (e.g. website DynamicPage) */
@@ -123,26 +124,73 @@ function validateField(name: string | undefined): void {
 }
 
 /** Props for form value component: base props + modelValue + error/errorMessage from validation */
-function formValueProps(nodeProps: Record<string, unknown> | undefined, name: string | undefined): Record<string, unknown> {
-  if (nodeProps == null) return {};
+function formValueProps(
+  nodeProps: Record<string, unknown> | undefined,
+  name: string | undefined,
+  node: NodeSchema
+): Record<string, unknown> {
+  if (nodeProps == null) return nodeStyleProps(node);
   const { content: _c, text: _t, rules: _r, ...rest } = nodeProps;
   const errorMessage = getFieldError(name);
   return {
     ...rest,
     error: !!errorMessage,
     errorMessage: errorMessage ?? undefined,
+    ...nodeStyleProps(node),
   };
 }
 
 /** Props for component, excluding content/text (used for slot instead) */
-function componentProps(nodeProps: Record<string, unknown> | undefined): Record<string, unknown> {
-  if (nodeProps == null) return {};
+function componentProps(
+  nodeProps: Record<string, unknown> | undefined,
+  node: NodeSchema
+): Record<string, unknown> {
+  // 节点级 style/className 即使 props 为空也要透传（inheritAttrs 落到组件根）
+  if (nodeProps == null) return { ...cmsPropsFor(node), ...nodeStyleProps(node) };
   const { content: _c, text: _t, rules: _r, ...rest } = nodeProps;
   // 字符串 props 做 {{}} 插值（数据驱动：props 可引用 ctx/$form 变量）
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(rest)) {
     out[k] = typeof v === 'string' ? interpolate(v, evalCtx.value) : v;
   }
+  // V2-T7：CMS 绑定解析后的 props 注入（覆盖同名静态 prop，绑定优先）
+  return { ...out, ...cmsPropsFor(node), ...nodeStyleProps(node) };
+}
+
+/**
+ * V2-T7 CMS 绑定：从 inject('lb-cms-resolved') 取本节点已解析的注入 props。
+ * host（LubanPage）拉取 collection items 后，按 nodeId 预计算 resolveCmsProps，
+ * 通过 provide 注入；RuntimeRenderer 读出合并。无绑定时返回 {}。
+ */
+const CMS_RESOLVED_KEY = 'lb-cms-resolved';
+const cmsResolvedMap = inject<Readonly<Record<string, Record<string, unknown>>> | null>(
+  CMS_RESOLVED_KEY,
+  null
+);
+function cmsPropsFor(node: NodeSchema): Record<string, unknown> {
+  if (!cmsResolvedMap || !node.cmsBinding) return {};
+  return cmsResolvedMap[node.id] ?? {};
+}
+
+/**
+ * 节点级样式/类名透传 props（D15-A2）。
+ *
+ * 从 node.style（CSS 属性→值）+ node.className 派生 { style, class }，
+ * 经 componentProps 合并后由 v-bind 流入组件；Vue inheritAttrs 自动把
+ * style/class 合并到组件根元素。仅返回有值的键，避免空对象污染。
+ *
+ * V2-T4：附 data-lb-node 属性，供 @media CSS 选择器定位节点根元素。
+ */
+function nodeStyleProps(node: NodeSchema): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (node.style && Object.keys(node.style).length > 0) {
+    out.style = node.style;
+  }
+  if (node.className) {
+    out.class = node.className;
+  }
+  // V2-T4：始终挂 data-lb-node，使 treeResponsiveCss 的 @media 选择器能命中组件根
+  out['data-lb-node'] = node.id;
   return out;
 }
 
@@ -171,7 +219,7 @@ function slotContent(): string {
     <component
       v-else-if="!root.loop && getComponent(root.type) && isFormValueType(root.type)"
       :is="getComponent(root.type)"
-      v-bind="formValueProps(root.props as Record<string, unknown>, root.props?.name as string)"
+      v-bind="formValueProps(root.props as Record<string, unknown>, root.props?.name as string, root)"
       :model-value="
         root.props?.name != null
           ? getFormValue(root.props.name as string)
@@ -197,14 +245,16 @@ function slotContent(): string {
     <component
       v-else-if="getComponent(root.type)"
       :is="getComponent(root.type)"
-      v-bind="componentProps(root.props as Record<string, unknown>)"
+      v-bind="componentProps(root.props as Record<string, unknown>, root)"
       v-on="resolveEvents(root.events)"
       @submit="
-        formSubmitHandler && root.type === 'LubanForm'
+        formSubmitHandler && (root.type === 'LubanForm' || root.type === 'LubanLeadCapture')
           ? formSubmitHandler({
               formId: (root.props?.formId as string) || '',
-              formState: props.formState,
-              event: $event,
+              formState: root.type === 'LubanLeadCapture'
+                ? ($event as Record<string, unknown>)
+                : props.formState,
+              event: $event as Event,
             })
           : undefined
       "

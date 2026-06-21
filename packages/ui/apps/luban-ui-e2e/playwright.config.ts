@@ -21,10 +21,11 @@ export default defineConfig({
   expect: { timeout: 10_000 },
 
   use: {
-    baseURL: process.env.LUBAN_E2E_BASE_URL ?? 'http://127.0.0.1:4200',
+    baseURL: process.env.LUBAN_E2E_BASE_URL ?? 'http://localhost:4200',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    channel: process.env.LUBAN_E2E_USE_PLAYWRIGHT_CHROMIUM ? undefined : 'chrome',
+    // 使用 Playwright 内置 Chromium（系统无 Chrome 时的回退）
+    channel: process.env.LUBAN_E2E_USE_CHROME ? 'chrome' : undefined,
   },
 
   webServer: process.env.SKIP_LUBAN_E2E_SERVER

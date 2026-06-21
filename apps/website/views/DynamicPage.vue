@@ -14,12 +14,14 @@ const route = useRoute();
  * V2-T7 CMS collection 拉取器：供 LubanPage 渲染 cmsBinding 节点。
  * 调公开端点 /api/public/sites/:slug/collections/:collectionId/items，
  * 返回 ResolvedCollectionItem[]（id + data + updatedAt）。
+ * 注意：须用 bffBaseUrl 前缀（与 usePageByPath/useLeadSubmit 一致），否则打到 website 自身。
  */
 const collectionFetcher = async (collectionId: string) => {
   const slug = siteSlug.value;
+  const bffBase = (config.bffBaseUrl as string)?.replace(/\/$/, "") || "http://127.0.0.1:3100";
   const res = await $fetch<
     Array<{ id: string; data?: Record<string, unknown>; updatedAt?: string }>
-  >(`/api/public/sites/${encodeURIComponent(slug)}/collections/${encodeURIComponent(collectionId)}/items`);
+  >(`${bffBase}/api/public/sites/${encodeURIComponent(slug)}/collections/${encodeURIComponent(collectionId)}/items`);
   return (res ?? []).map((it) => ({
     id: it.id,
     data: it.data ?? {},

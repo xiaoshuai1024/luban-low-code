@@ -14,12 +14,14 @@ import type { SiteAnalytics } from '~/utils/analytics'
 
 const config = useRuntimeConfig()
 const slug = config.public.defaultSiteSlug || 'default'
+const bffBase = (config.public.bffBaseUrl as string)?.replace(/\/$/, '') || 'http://127.0.0.1:3100'
 
 // SSR 预取站点配置（analytics）；失败降级为空（不阻塞渲染）
+// baseURL 须指向 BFF（3100），否则打到 website 自身返回 HTML
 const siteConfig = await useFetch<{ analytics?: SiteAnalytics }>(
   `/api/public/sites/${encodeURIComponent(slug)}/config`,
   {
-    baseURL: '',
+    baseURL: bffBase,
     default: () => ({ analytics: {} }),
     lazy: false,
   }

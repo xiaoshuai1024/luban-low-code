@@ -13,12 +13,13 @@ import type { SiteAnalytics } from '~/utils/analytics'
 export default defineNuxtPlugin(async (nuxtApp) => {
   const config = useRuntimeConfig()
   const slug = config.public.defaultSiteSlug || 'default'
+  const bffBase = (config.public.bffBaseUrl as string)?.replace(/\/$/, '') || 'http://127.0.0.1:3100'
 
   // 预取站点 analytics 配置（与 default.vue layout 同源）
   let analytics: SiteAnalytics | null = null
   try {
     const siteConfig = await $fetch<{ analytics?: SiteAnalytics }>(
-      `/api/public/sites/${encodeURIComponent(slug)}/config`
+      `${bffBase}/api/public/sites/${encodeURIComponent(slug)}/config`
     )
     analytics = siteConfig?.analytics ?? null
   } catch {

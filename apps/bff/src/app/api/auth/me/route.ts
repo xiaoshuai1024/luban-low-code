@@ -25,7 +25,6 @@ export async function GET(req: NextRequest) {
   );
 
   const me = {
-    id: backendMe.id,
     username: payload.username,
     role: backendMe.role ?? payload.role,
   };

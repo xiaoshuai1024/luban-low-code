@@ -9,7 +9,7 @@ interface LoginPayload {
 
 interface LoginResult {
   token: string;
-  user?: { id: string; username: string; name?: string; role?: string };
+  user?: { username: string; name?: string; role?: string };
 }
 
 export async function POST(req: Request) {
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
   const result: LoginResult = {
     token,
     user: {
-      id: backendRes.user.id,
+      // 安全：不暴露 user.id（内部 UUID）
       username: backendRes.user.username,
       name: backendRes.user.name,
       role: backendRes.user.role,

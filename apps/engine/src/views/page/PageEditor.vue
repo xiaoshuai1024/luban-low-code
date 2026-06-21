@@ -42,6 +42,7 @@ import {
 } from 'element-plus'
 import { getPage, savePage, createPage, publishPage } from '@/api/page'
 import { getDatasources, queryDatasource, testDatasource } from '@/api/datasource'
+import { getCollections } from '@/api/collection'
 import type { PageSchema, NodeSchema } from '@/types/schema'
 import {
   LubanDesigner,
@@ -515,6 +516,11 @@ function onUpdateAnimation(nodeId: string, key: string, value: unknown): void {
   ;(node.animation as Record<string, unknown>)[key] = value
 }
 
+/** V2-T7 CMS 绑定回写已由 PropertyPanel 写入 node.cmsBinding；此处入撤销栈 */
+function onUpdateCmsBinding(_nodeId: string): void {
+  history.push()
+}
+
 /** 删除节点：root 不可删；删后清空选中。 */
 function onDeleteNode(nodeId: string): void {
   if (!schema.value?.root) return
@@ -593,6 +599,18 @@ async function loadDatasources() {
   }
 }
 
+/** V2-T7 加载站点 collections（供 PropertyPanel CMS 绑定分区选择） */
+const collections = ref<Array<{ id: string; name: string }>>([])
+async function loadCollections() {
+  if (!siteId.value) return
+  try {
+    const { data } = await getCollections(siteId.value)
+    collections.value = (data ?? []).map((c) => ({ id: c.id, name: c.name }))
+  } catch {
+    collections.value = []
+  }
+}
+
 // === D15-B1 数据源管理弹窗 ===
 const datasourceDialogVisible = ref(false)
 function openDatasourceDialog() {
@@ -619,9 +637,13 @@ async function onTestConnect(dsId: string) {
 onMounted(() => {
   loadPage()
   loadDatasources()
+  loadCollections()
 })
 watch([siteId, pageId], loadPage)
-watch(siteId, loadDatasources)
+watch(siteId, () => {
+  loadDatasources()
+  loadCollections()
+})
 </script>
 
 <template>
@@ -812,12 +834,14 @@ watch(siteId, loadDatasources)
           :node="selectedNode"
           :meta="selectedMeta"
           :datasources="datasources"
+          :collections="collections"
           :breakpoint="currentBreakpoint"
           @update:prop="onUpdateProp"
           @update:event="onUpdateEvent"
           @update:datasource="onUpdateDatasource"
           @update:style="onUpdateStyle"
           @update:animation="onUpdateAnimation"
+          @update:cms-binding="onUpdateCmsBinding"
           @delete="onDeleteNode"
           @duplicate="onDuplicateNode"
           @open-datasource="openDatasourceDialog"

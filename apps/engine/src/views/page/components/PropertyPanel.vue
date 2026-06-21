@@ -27,6 +27,8 @@ import {
   ElColorPicker,
   ElCollapse,
   ElCollapseItem,
+  ElRadioGroup,
+  ElRadio,
 } from 'element-plus'
 import type { NodeSchema } from '@/types/schema'
 import type { ComponentMeta, PropSchemaItem, PropSchema } from 'luban-low-code'
@@ -42,6 +44,8 @@ const styleEnabled = isFeatureEnabled('style')
 const responsiveEnabled = isFeatureEnabled('responsive')
 /** V2-T5 动画开关（FeatureGate） */
 const animationEnabled = isFeatureEnabled('animation')
+/** V2-T7 CMS 绑定开关（FeatureGate） */
+const cmsEnabled = isFeatureEnabled('cms')
 
 interface DatasourceOption {
   id: string
@@ -53,6 +57,8 @@ interface Props {
   meta: ComponentMeta | null
   /** 当前 site 可用的数据源列表（PageEditor 加载传入） */
   datasources?: DatasourceOption[]
+  /** V2-T7 当前 site 可用的 collection 列表（CMS 绑定分区用） */
+  collections?: CollectionOption[]
   readonly?: boolean
   /** V2-T4 当前断点：决定样式分区写入 node.style（desktop）还是 node.responsive[bp] */
   breakpoint?: ResponsiveBreakpoint
@@ -62,9 +68,16 @@ const props = withDefaults(defineProps<Props>(), {
   node: null,
   meta: null,
   datasources: () => [],
+  collections: () => [],
   readonly: false,
   breakpoint: 'desktop',
 })
+
+/** V2-T7 collection 选项（id + name） */
+interface CollectionOption {
+  id: string
+  name: string
+}
 
 const emit = defineEmits<{
   (e: 'update:prop', nodeId: string, key: string, value: unknown): void
@@ -80,6 +93,8 @@ const emit = defineEmits<{
   (e: 'update:style', nodeId: string, key: string, value: string): void
   /** V2-T5：节点动画更新（key 为 animation 字段名，value 为值） */
   (e: 'update:animation', nodeId: string, key: string, value: unknown): void
+  /** V2-T7：节点 CMS 绑定更新（整体 cmsBinding 已写回 node） */
+  (e: 'update:cms-binding', nodeId: string): void
 }>()
 
 /** 有序的 propSchema 条目，便于稳定渲染。 */
@@ -367,6 +382,38 @@ function clearAnimation(): void {
   if (!props.node.animation) return
   props.node.animation = undefined
   emit('update:animation', props.node.id, 'type', undefined)
+}
+
+// === V2-T7 CMS 绑定分区 ===
+/** 当前节点绑定的 collectionId / fieldKey / mode（v-model 友好） */
+const cmsCollectionId = computed<string>({
+  get: () => props.node?.cmsBinding?.collectionId ?? '',
+  set: (v: string) => setCmsField('collectionId', v),
+})
+const cmsFieldKey = computed<string>({
+  get: () => props.node?.cmsBinding?.fieldKey ?? 'title',
+  set: (v: string) => setCmsField('fieldKey', v),
+})
+const cmsMode = computed<'single' | 'list'>({
+  get: () => props.node?.cmsBinding?.mode ?? 'single',
+  set: (v: 'single' | 'list') => setCmsField('mode', v),
+})
+
+/** 写入 node.cmsBinding[key]，惰性初始化 cmsBinding 对象 */
+function setCmsField(key: string, value: unknown): void {
+  if (!props.node) return
+  if (!props.node.cmsBinding) {
+    props.node.cmsBinding = { collectionId: '' }
+  }
+  ;(props.node.cmsBinding as unknown as Record<string, unknown>)[key] = value
+  emit('update:cms-binding', props.node.id)
+}
+
+/** 解绑 CMS */
+function clearCmsBinding(): void {
+  if (!props.node) return
+  props.node.cmsBinding = undefined
+  emit('update:cms-binding', props.node.id)
 }
 
 function handleDelete(): void {
@@ -821,6 +868,48 @@ function handleVarNameChange(varName: string): void {
       </ElFormItem>
 
       <!-- 事件分区：按 meta.events 配动作表达式（W1-T5） -->
+      <!-- V2-T7 CMS 绑定分区（FeatureGate 控制） -->
+      <ElFormItem v-if="cmsEnabled" label="CMS 内容绑定">
+        <div class="property-panel__cms">
+          <div class="property-panel__cms-row">
+            <span class="property-panel__cms-label">集合</span>
+            <ElSelect
+              v-model="cmsCollectionId"
+              placeholder="选择内容集合"
+              size="small"
+              clearable
+              style="flex: 1"
+              @clear="clearCmsBinding"
+            >
+              <ElOption
+                v-for="c in collections"
+                :key="c.id"
+                :label="c.name"
+                :value="c.id"
+              />
+            </ElSelect>
+          </div>
+          <template v-if="cmsCollectionId">
+            <div class="property-panel__cms-row">
+              <span class="property-panel__cms-label">模式</span>
+              <ElRadioGroup v-model="cmsMode" size="small">
+                <ElRadio value="single">单值（取首条字段）</ElRadio>
+                <ElRadio value="list">列表（全部条目）</ElRadio>
+              </ElRadioGroup>
+            </div>
+            <div v-if="cmsMode === 'single'" class="property-panel__cms-row">
+              <span class="property-panel__cms-label">字段</span>
+              <ElInput v-model="cmsFieldKey" size="small" placeholder="如 title" style="flex: 1" />
+            </div>
+            <ElButton size="small" text type="danger" @click="clearCmsBinding">解绑</ElButton>
+          </template>
+          <div v-else class="property-panel__cms-hint">
+            绑定内容集合后，该节点在发布页自动渲染对应内容（运行态由 website 拉取）。
+          </div>
+        </div>
+      </ElFormItem>
+
+      <!-- 事件分区（保留原位） -->
       <ElFormItem v-if="eventNames.length" label="事件动作">
         <div class="property-panel__events">
           <div v-for="ev in eventNames" :key="ev" class="property-panel__event-row">
@@ -1052,6 +1141,34 @@ function handleVarNameChange(varName: string): void {
   &__anim-hint {
     font-size: 11px;
     color: #909399;
+  }
+
+  // === V2-T7 CMS 绑定分区 ===
+  &__cms {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  &__cms-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+  }
+
+  &__cms-label {
+    font-size: 12px;
+    color: #606266;
+    flex-shrink: 0;
+    min-width: 40px;
+  }
+
+  &__cms-hint {
+    font-size: 12px;
+    color: #909399;
+    line-height: 1.5;
   }
 }
 </style>

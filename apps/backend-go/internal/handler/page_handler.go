@@ -49,6 +49,7 @@ type pageSaveRequest struct {
 	Path   string          `json:"path" binding:"required"`
 	Status string          `json:"status"`
 	Schema json.RawMessage `json:"schema"`
+	Seo    json.RawMessage `json:"seo"`
 }
 
 func (h *PageHandler) Create(c *gin.Context) {
@@ -61,7 +62,7 @@ func (h *PageHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, APIError{Code: "INVALID_ARGUMENT", Message: "invalid body"})
 		return
 	}
-	page, err := h.svc.Create(c.Request.Context(), siteID, req.Name, req.Path, req.Status, req.Schema)
+	page, err := h.svc.Create(c.Request.Context(), siteID, req.Name, req.Path, req.Status, req.Schema, req.Seo)
 	if err != nil {
 		writeError(c, err)
 		return
@@ -87,6 +88,7 @@ func (h *PageHandler) Update(c *gin.Context) {
 		Path:   req.Path,
 		Status: req.Status,
 		Schema: req.Schema,
+		Seo:    req.Seo,
 	}
 	if err := h.svc.Update(c.Request.Context(), page); err != nil {
 		writeError(c, err)

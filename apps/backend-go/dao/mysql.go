@@ -120,6 +120,11 @@ func initSchema(db *sqlx.DB) error {
 			UNIQUE KEY uk_datasources_site_name (site_id, name),
 			CONSTRAINT fk_datasources_site FOREIGN KEY (site_id) REFERENCES sites(id)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+		// V2-T2 SEO：pages + sites 增加 seo_json（与 Java Flyway V20260621000003 对齐）。
+		// MySQL 8.0+ 支持 ADD COLUMN IF NOT EXISTS；5.7 需 INFORMATION_SCHEMA 探测，
+		// 此处用 IF NOT EXISTS 兜底（本仓统一 MySQL 8.0，见 plan §9.3）。
+		`ALTER TABLE pages ADD COLUMN IF NOT EXISTS seo_json JSON NULL AFTER schema_json;`,
+		`ALTER TABLE sites ADD COLUMN IF NOT EXISTS seo_json JSON NULL AFTER base_url;`,
 	}
 
 	for _, sql := range stmts {

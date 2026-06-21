@@ -32,10 +32,10 @@ func newPageSvcMock(t *testing.T) (*PageService, sqlmock.Sqlmock) {
 func TestCreate_DefaultStatusDraft(t *testing.T) {
 	svc, mock := newPageSvcMock(t)
 	mock.ExpectExec("INSERT INTO pages").
-		WithArgs(sqlmock.AnyArg(), "s-1", "home", "/", "draft", sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WithArgs(sqlmock.AnyArg(), "s-1", "home", "/", "draft", sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	page, err := svc.Create(context.Background(), "s-1", "home", "/", "", json.RawMessage(`{}`))
+	page, err := svc.Create(context.Background(), "s-1", "home", "/", "", json.RawMessage(`{}`), nil)
 	require.NoError(t, err)
 	require.NotNil(t, page)
 	assert.Equal(t, "draft", page.Status, "empty status should default to draft")
@@ -50,10 +50,10 @@ func TestCreate_DefaultStatusDraft(t *testing.T) {
 func TestCreate_ExplicitStatusPreserved(t *testing.T) {
 	svc, mock := newPageSvcMock(t)
 	mock.ExpectExec("INSERT INTO pages").
-		WithArgs(sqlmock.AnyArg(), "s-1", "home", "/", "published", sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WithArgs(sqlmock.AnyArg(), "s-1", "home", "/", "published", sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	page, err := svc.Create(context.Background(), "s-1", "home", "/", "published", json.RawMessage(`{}`))
+	page, err := svc.Create(context.Background(), "s-1", "home", "/", "published", json.RawMessage(`{}`), nil)
 	require.NoError(t, err)
 	assert.Equal(t, "published", page.Status, "explicit status should be preserved")
 	require.NoError(t, mock.ExpectationsWereMet())
@@ -65,7 +65,7 @@ func TestCreate_PagePathConflictPropagated(t *testing.T) {
 	mock.ExpectExec("INSERT INTO pages").
 		WillReturnError(errors.New("Error 1062: Duplicate entry '/' for key 'idx_site_path'"))
 
-	_, err := svc.Create(context.Background(), "s-1", "home", "/", "draft", json.RawMessage(`{}`))
+	_, err := svc.Create(context.Background(), "s-1", "home", "/", "draft", json.RawMessage(`{}`), nil)
 	assert.ErrorIs(t, err, repository.ErrPagePathConflict)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
@@ -84,7 +84,7 @@ func TestUpdate_PropagatesPageNotFound(t *testing.T) {
 // TestGet_PropagatesPageNotFound 验证 Get 未命中 → ErrPageNotFound。
 func TestGet_PropagatesPageNotFound(t *testing.T) {
 	svc, mock := newPageSvcMock(t)
-	mock.ExpectQuery("SELECT \\* FROM pages").
+	mock.ExpectQuery("SELECT id, site_id").
 		WithArgs("p-1", "s-1").
 		WillReturnError(sql.ErrNoRows)
 

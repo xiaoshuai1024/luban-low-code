@@ -25,7 +25,7 @@ func (s *PageService) Get(ctx context.Context, siteID, pageID string) (*model.Pa
 	return s.repo.Get(ctx, siteID, pageID)
 }
 
-func (s *PageService) Create(ctx context.Context, siteID, name, path, status string, schema json.RawMessage) (*model.Page, error) {
+func (s *PageService) Create(ctx context.Context, siteID, name, path, status string, schema json.RawMessage, seo json.RawMessage) (*model.Page, error) {
 	if status == "" {
 		status = "draft"
 	}
@@ -36,6 +36,7 @@ func (s *PageService) Create(ctx context.Context, siteID, name, path, status str
 		Path:   path,
 		Status: status,
 		Schema: schema,
+		Seo:    seo,
 	}
 	if err := s.repo.Create(ctx, page); err != nil {
 		return nil, err

@@ -7,6 +7,18 @@ export default defineNuxtConfig({
   typescript: {
     strict: true,
   },
+  // V2-T2 默认 head：viewport / charset / titleTemplate；页面级 useSeoMeta 可覆盖
+  app: {
+    head: {
+      charset: "utf-8",
+      viewport: "width=device-width, initial-scale=1",
+      titleTemplate: "%s",
+      htmlAttrs: { lang: "zh-CN" },
+      meta: [
+        { name: "format-detection", content: "telephone=no" },
+      ],
+    },
+  },
   runtimeConfig: {
     public: {
       /** BFF 基地址，请求公开接口时使用，如 https://bff.example.com */

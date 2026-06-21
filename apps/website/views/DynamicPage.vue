@@ -42,6 +42,40 @@ useHead({
   title: () => page.value?.name ?? "Page",
 });
 
+// === V2-T2 SEO 元信息注入（useSeoMeta）===
+// 优先用页面级 seo（page.seo），回退 schema.seo，再回退 page.name。
+// 后端公开端点返回体已下发 seo；website 侧仅做注入，不做字段变换。
+const seo = computed(() => page.value?.seo ?? page.value?.schema?.seo ?? null);
+const seoTitle = computed(() => seo.value?.title || page.value?.name || "");
+const seoDescription = computed(() => seo.value?.description || "");
+const seoOgTitle = computed(() => seo.value?.ogTitle || seoTitle.value);
+const seoOgDescription = computed(() => seo.value?.ogDescription || seoDescription.value);
+const seoOgImage = computed(() => seo.value?.ogImage || "");
+const seoKeywords = computed(() => (seo.value?.keywords ?? []).join(", "));
+const seoCanonical = computed(() => seo.value?.canonical || "");
+const seoRobots = computed(() =>
+  seo.value?.noIndex ? "noindex, nofollow" : "index, follow"
+);
+
+useSeoMeta({
+  title: () => seoTitle.value,
+  description: () => seoDescription.value,
+  keywords: () => seoKeywords.value || undefined,
+  ogTitle: () => seoOgTitle.value,
+  ogDescription: () => seoOgDescription.value,
+  ogImage: () => seoOgImage.value || undefined,
+  ogType: "website",
+  robots: () => seoRobots.value,
+});
+
+// canonical link（useSeoMeta 不直接支持 canonical，单独 useHead 注入）
+useHead({
+  link: () =>
+    seoCanonical.value
+      ? [{ rel: "canonical", href: seoCanonical.value }]
+      : [],
+});
+
 // --- Lead form submit handling ---
 
 /** Extract submitConfig from the page schema's LubanForm node */

@@ -173,9 +173,24 @@ async function loadPage() {
       pagePath.value = ''
       pageStatus.value = 'draft'
       pageSeo.value = {}
-      schema.value = {
-        root: { id: 'root', type: 'LubanContainer', props: {}, children: [] },
+      // V2-T3：优先从 router state 读取模板 schema（PageList 选模板后传入）
+      const tplSchemaRaw = typeof window !== 'undefined' ? window.history.state?.templateSchema : undefined
+      const tplName = typeof window !== 'undefined' ? window.history.state?.templateName : undefined
+      if (tplSchemaRaw) {
+        try {
+          schema.value = JSON.parse(tplSchemaRaw) as PageSchema
+        } catch {
+          schema.value = {
+            root: { id: 'root', type: 'LubanContainer', props: {}, children: [] },
+          }
+        }
+      } else {
+        schema.value = {
+          root: { id: 'root', type: 'LubanContainer', props: {}, children: [] },
+        }
       }
+      // 模板名预填页面名（用户可改）
+      if (tplName) pageName.value = tplName
     } else {
       const { data } = await getPage(siteId.value, pageId.value)
       pageName.value = data.name

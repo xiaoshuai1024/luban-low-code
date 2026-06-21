@@ -1,11 +1,28 @@
 import { request } from './request'
 
+/**
+ * V2-T10 站点级分析埋点配置。
+ * 各平台可选；website SSR 据此注入第三方 SDK 脚本。
+ */
+export interface SiteAnalytics {
+  /** Google Analytics 4 */
+  ga4?: { measurementId: string }
+  /** 百度统计 */
+  baidu?: { id: string }
+  /** Facebook Pixel */
+  facebook?: { pixelId: string }
+}
+
 export interface Site {
   id: string
   name: string
   slug?: string
   baseUrl?: string
   status?: string
+  /** V2-T2 站点级 SEO */
+  seo?: Record<string, unknown>
+  /** V2-T10 站点级分析埋点 */
+  analytics?: SiteAnalytics
   createdAt?: string
   updatedAt?: string
 }

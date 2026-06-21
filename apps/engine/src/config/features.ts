@@ -41,6 +41,29 @@ export const FEATURES = {
   events: envBool('VITE_FEATURE_EVENTS', true),
   /** 数据源绑定分区整体（PropertyPanel 数据源区） */
   datasource: envBool('VITE_FEATURE_DATASOURCE', true),
+  // === V2 设计器 v2 开关（§5.3，默认全开，env 关闭）===
+  /** V2-T4 响应式：per-breakpoint 样式 */
+  responsive: envBool('VITE_FEATURE_RESPONSIVE', true),
+  /** V2-T5 动画分区 */
+  animation: envBool('VITE_FEATURE_ANIMATION', true),
+  /** V2-T2 SEO 分区（页面级） */
+  seo: envBool('VITE_FEATURE_SEO', true),
+  /** V2-T3 模板入口（新建页选模板） */
+  templates: envBool('VITE_FEATURE_TEMPLATES', true),
+  /** V2-T7 CMS 内容集合入口 */
+  cms: envBool('VITE_FEATURE_CMS', true),
+  /** V2-T6 表单管理入口 */
+  forms: envBool('VITE_FEATURE_FORMS', true),
+  /** V2-T8 版本历史入口 */
+  versionHistory: envBool('VITE_FEATURE_VERSION_HISTORY', true),
+  /** V2-T9 出码导出入口 */
+  export: envBool('VITE_FEATURE_EXPORT', true),
+  /** V2-T10 站点级埋点配置 */
+  analytics: envBool('VITE_FEATURE_ANALYTICS', true),
+  /** V2-T11 多选批量 */
+  multiSelect: envBool('VITE_FEATURE_MULTI_SELECT', true),
+  /** V2-T12 对齐辅助线 */
+  alignGuides: envBool('VITE_FEATURE_ALIGN_GUIDES', true),
 } as const
 
 export type FeatureKey = keyof typeof FEATURES

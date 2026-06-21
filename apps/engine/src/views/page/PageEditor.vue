@@ -54,9 +54,15 @@ import {
 import PropertyPanel from './components/PropertyPanel.vue'
 import ComponentTree from './components/ComponentTree.vue'
 import DatasourceManageDialog from './components/DatasourceManageDialog.vue'
+import PageSeoPanel from './components/PageSeoPanel.vue'
 import { findNode, findParent, removeNode, moveChild, moveNodeAcross } from './components/schemaTree'
 import { useHistory } from '@/composables/useHistory'
 import { useKeyboard } from '@/composables/useKeyboard'
+import { isFeatureEnabled } from '@/config/features'
+import type { PageSeo } from '@/types/schema'
+
+/** V2-T2 SEO FeatureGate */
+const seoEnabled = isFeatureEnabled('seo')
 
 const route = useRoute()
 const router = useRouter()
@@ -70,6 +76,8 @@ const pageName = ref('')
 const pagePath = ref('')
 const pageStatus = ref<string>('draft')
 const schema = ref<PageSchema | null>(null)
+/** V2-T2 页面级 SEO（独立于 schema.seo，save/publish 时同步写入两处：PageMeta.seo + schema.seo） */
+const pageSeo = ref<PageSeo>({})
 /** 当前 site 的数据源列表（PropertyPanel 数据源区消费）。 */
 const datasources = ref<Array<{ id: string; name: string }>>([])
 /** 预览时数据源拉取器（传给 LubanPage 注入表达式上下文） */
@@ -143,6 +151,7 @@ async function loadPage() {
       pageName.value = ''
       pagePath.value = ''
       pageStatus.value = 'draft'
+      pageSeo.value = {}
       schema.value = {
         root: { id: 'root', type: 'LubanContainer', props: {}, children: [] },
       }
@@ -151,6 +160,7 @@ async function loadPage() {
       pageName.value = data.name
       pagePath.value = data.path
       pageStatus.value = data.status ?? 'draft'
+      pageSeo.value = data.seo ?? data.schema?.seo ?? {}
       schema.value = data.schema ?? {
         root: { id: 'root', type: 'LubanContainer', props: {}, children: [] },
       }
@@ -161,6 +171,14 @@ async function loadPage() {
     schema.value = null
   } finally {
     loading.value = false
+  }
+}
+
+/** V2-T2 SEO 更新：写 pageSeo + 同步 schema.seo（保证 schema 自洽） */
+function onUpdateSeo(seo: PageSeo): void {
+  pageSeo.value = seo
+  if (schema.value) {
+    schema.value.seo = seo
   }
 }
 
@@ -177,6 +195,7 @@ async function handleSave() {
         name: pageName.value,
         path: pagePath.value,
         schema: schema.value,
+        seo: pageSeo.value,
       })
       ElMessage.success('创建成功')
       router.replace(`/sites/${siteId.value}/pages/${data.id}`)
@@ -185,6 +204,7 @@ async function handleSave() {
         name: pageName.value,
         path: pagePath.value,
         schema: schema.value,
+        seo: pageSeo.value,
       })
       ElMessage.success('保存成功')
     }
@@ -220,6 +240,7 @@ async function handlePublish() {
       name: pageName.value,
       path: pagePath.value,
       schema: schema.value,
+      seo: pageSeo.value,
     })
     pageStatus.value = data?.status ?? 'published'
     ElMessage.success('发布成功')
@@ -594,6 +615,11 @@ watch(siteId, loadDatasources)
           @open-datasource="openDatasourceDialog"
           @test-connect="onTestConnect"
         />
+        <!-- V2-T2 页面级 SEO 配置（FeatureGate 控制；独立分区） -->
+        <template v-if="seoEnabled">
+          <div class="page-editor__right-divider" />
+          <PageSeoPanel :seo="pageSeo" @update:seo="onUpdateSeo" />
+        </template>
         <!-- D15-B1 数据源管理弹窗 -->
         <DatasourceManageDialog
           v-model="datasourceDialogVisible"

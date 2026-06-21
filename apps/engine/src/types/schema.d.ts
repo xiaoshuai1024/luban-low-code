@@ -13,4 +13,5 @@ export type {
   PageSchema,
   NodeLoop,
   NodeDatasource,
+  PageSeo,
 } from 'luban-low-code';

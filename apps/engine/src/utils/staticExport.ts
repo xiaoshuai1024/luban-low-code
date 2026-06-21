@@ -222,3 +222,114 @@ export function downloadHtml(html: string, filename: string): void {
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
 }
+
+/**
+ * V2-T9 多文件导出包：把页面拆为 index.html + assets/style.css + assets/app.js + README.md。
+ * 返回文件列表（{path, content, mime}），供 downloadExportPackage 逐个下载或后续 zip 打包。
+ *
+ * 拆分原则：
+ *  - index.html：结构 + 内联 runtime JS（轻量，无框架）+ 引用 assets/style.css
+ *  - assets/style.css：luban-base CSS + 响应式 @media + 动画 @keyframes
+ *  - assets/app.js：留资表单原生提交逻辑（fetch POST，兜底 mailto）
+ *  - README.md：部署说明
+ */
+export interface ExportFile {
+  path: string
+  content: string
+  mime: string
+}
+
+/** 从 schema 生成多文件导出包（纯函数，可单测）。 */
+export function buildExportPackage(schema: PageSchema, options: ExportOptions = {}): ExportFile[] {
+  const title = options.title || 'Exported Page'
+  const root = schema.root
+  const responsiveCss = treeResponsiveCss(root)
+  const animationCss = treeAnimationCss(root)
+  const baseCss = options.inlineBaseCss === false ? '' : BASE_CSS
+  const bodyHtml = nodeToHtml(root)
+
+  const seo = schema.seo
+  const metaTags: string[] = []
+  if (seo?.description) metaTags.push(`  <meta name="description" content="${esc(seo.description)}">`)
+  if (seo?.keywords?.length) metaTags.push(`  <meta name="keywords" content="${esc(seo.keywords.join(', '))}">`)
+  if (seo?.ogTitle) metaTags.push(`  <meta property="og:title" content="${esc(seo.ogTitle)}">`)
+  if (seo?.ogDescription) metaTags.push(`  <meta property="og:description" content="${esc(seo.ogDescription)}">`)
+  if (seo?.ogImage) metaTags.push(`  <meta property="og:image" content="${esc(seo.ogImage)}">`)
+  if (seo?.noIndex) metaTags.push(`  <meta name="robots" content="noindex, nofollow">`)
+  const canonical = seo?.canonical ? `\n  <link rel="canonical" href="${esc(seo.canonical)}">` : ''
+
+  const cssContent = `${baseCss}\n${responsiveCss}\n${animationCss}`
+  const jsContent = `// Luban 导出页运行时：原生留资表单提交
+document.addEventListener('submit', function(e) {
+  var form = e.target;
+  if (!form.matches('form.lb-lead')) return;
+  e.preventDefault();
+  var action = form.getAttribute('action') || '';
+  if (!action || action === '#' || action.indexOf('mailto:') === 0) {
+    // 无后端端点：mailto 兜底
+    if (action.indexOf('mailto:') === 0) { window.location.href = action; }
+    return;
+  }
+  var data = {};
+  new FormData(form).forEach(function(v, k) { data[k] = v; });
+  fetch(action, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+    .then(function(r) { if (r.ok) { form.reset(); alert('提交成功'); } })
+    .catch(function() { alert('提交失败，请重试'); });
+});`
+
+  const indexHtml = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${esc(title)}</title>
+${metaTags.join('\n')}${canonical}
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+${bodyHtml}
+<script src="assets/app.js"></script>
+</body>
+</html>`
+
+  const readme = `# ${title}
+
+由 Luban 设计器导出的静态站点。
+
+## 文件结构
+- index.html — 页面入口
+- assets/style.css — 样式（含响应式断点 + 动画）
+- assets/app.js — 留资表单提交逻辑
+
+## 部署
+将本目录上传到任意静态托管（Nginx / Vercel / GitHub Pages / 对象存储）即可。
+`
+
+  return [
+    { path: 'index.html', content: indexHtml, mime: 'text/html' },
+    { path: 'assets/style.css', content: cssContent, mime: 'text/css' },
+    { path: 'assets/app.js', content: jsContent, mime: 'application/javascript' },
+    { path: 'README.md', content: readme, mime: 'text/markdown' },
+  ]
+}
+
+/**
+ * 触发浏览器逐个下载多文件包（无 zip 依赖；浏览器逐文件下载）。
+ * 文件名带前缀目录名（如 mypage/index.html）。
+ * SSR 安全。
+ */
+export function downloadExportPackage(files: ExportFile[], packageDir: string): void {
+  if (typeof document === 'undefined' || typeof window === 'undefined') return
+  const safeDir = packageDir.replace(/[^\w\u4e00-\u9fa5-]/g, '_') || 'export'
+  for (const f of files) {
+    const blob = new Blob([f.content], { type: `${f.mime};charset=utf-8` })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${safeDir}/${f.path}`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+}

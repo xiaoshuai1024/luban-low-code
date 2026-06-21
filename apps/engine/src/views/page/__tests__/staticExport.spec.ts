@@ -10,7 +10,7 @@
  *  - 未知组件占位
  */
 import { describe, it, expect } from 'vitest'
-import { schemaToHtml } from '@/utils/staticExport'
+import { schemaToHtml, buildExportPackage } from '@/utils/staticExport'
 import type { PageSchema } from '@/types/schema'
 
 describe('V2-T9 schemaToHtml', () => {
@@ -221,5 +221,73 @@ describe('V2-T9 schemaToHtml', () => {
     expect(html).toContain('type="tel"')
     expect(html).toContain('type="email"')
     expect(html).toContain('type="submit"')
+  })
+})
+
+describe('V2-T9 buildExportPackage (多文件)', () => {
+  it('生成 4 个文件（index.html + style.css + app.js + README）', () => {
+    const schema: PageSchema = {
+      root: { id: 'root', type: 'LubanContainer', props: {}, children: [] },
+    }
+    const files = buildExportPackage(schema, { title: '测试' })
+    expect(files.length).toBe(4)
+    expect(files.map((f) => f.path)).toEqual([
+      'index.html',
+      'assets/style.css',
+      'assets/app.js',
+      'README.md',
+    ])
+  })
+
+  it('index.html 引用 assets/style.css 而非内联', () => {
+    const schema: PageSchema = {
+      root: { id: 'root', type: 'LubanContainer', props: {}, children: [] },
+    }
+    const files = buildExportPackage(schema)
+    const index = files.find((f) => f.path === 'index.html')!
+    expect(index.content).toContain('<link rel="stylesheet" href="assets/style.css">')
+    expect(index.content).toContain('<script src="assets/app.js">')
+  })
+
+  it('style.css 含响应式 + 动画 CSS', () => {
+    const schema: PageSchema = {
+      root: {
+        id: 'root',
+        type: 'LubanContainer',
+        children: [
+          {
+            id: 'n1',
+            type: 'LubanText',
+            style: { fontSize: '16px' },
+            responsive: { mobile: { fontSize: '12px' } },
+            animation: { type: 'fade', trigger: 'load' },
+          },
+        ],
+      },
+    }
+    const files = buildExportPackage(schema)
+    const css = files.find((f) => f.path === 'assets/style.css')!
+    expect(css.content).toContain('@media')
+    expect(css.content).toContain('@keyframes lb-anim-fade')
+  })
+
+  it('app.js 含留资表单提交逻辑', () => {
+    const schema: PageSchema = {
+      root: { id: 'root', type: 'LubanContainer', props: {}, children: [] },
+    }
+    const files = buildExportPackage(schema)
+    const js = files.find((f) => f.path === 'assets/app.js')!
+    expect(js.content).toContain('lb-lead')
+    expect(js.content).toContain('fetch')
+  })
+
+  it('README 含部署说明', () => {
+    const schema: PageSchema = {
+      root: { id: 'root', type: 'LubanContainer', props: {}, children: [] },
+    }
+    const files = buildExportPackage(schema, { title: '我的站点' })
+    const readme = files.find((f) => f.path === 'README.md')!
+    expect(readme.content).toContain('我的站点')
+    expect(readme.content).toContain('部署')
   })
 })

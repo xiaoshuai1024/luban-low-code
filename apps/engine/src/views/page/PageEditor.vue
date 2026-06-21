@@ -39,6 +39,9 @@ import {
   ElMain,
   ElTag,
   ElMessageBox,
+  ElDropdown,
+  ElDropdownMenu,
+  ElDropdownItem,
 } from 'element-plus'
 import { getPage, savePage, createPage, publishPage } from '@/api/page'
 import { getDatasources, queryDatasource, testDatasource } from '@/api/datasource'
@@ -63,7 +66,7 @@ import { useHistory } from '@/composables/useHistory'
 import { useKeyboard } from '@/composables/useKeyboard'
 import { isFeatureEnabled } from '@/config/features'
 import type { PageSeo } from '@/types/schema'
-import { schemaToHtml, downloadHtml } from '@/utils/staticExport'
+import { schemaToHtml, downloadHtml, buildExportPackage, downloadExportPackage } from '@/utils/staticExport'
 
 /** V2-T2 SEO FeatureGate */
 const seoEnabled = isFeatureEnabled('seo')
@@ -91,6 +94,20 @@ function onExportHtml(): void {
   const safeName = (pageName.value || 'page').replace(/[^\w\u4e00-\u9fa5-]/g, '_')
   downloadHtml(html, `${safeName}.html`)
   ElMessage.success('已导出 HTML 文件')
+}
+
+/** V2-T9 出码：导出多文件包（index.html + assets/style.css + assets/app.js + README） */
+function onExportPackage(): void {
+  if (!schema.value) {
+    ElMessage.warning('页面内容为空，无法导出')
+    return
+  }
+  const files = buildExportPackage(schema.value, {
+    title: pageName.value || pagePath.value || '导出页面',
+  })
+  const safeName = (pageName.value || 'page').replace(/[^\w\u4e00-\u9fa5-]/g, '_')
+  downloadExportPackage(files, safeName)
+  ElMessage.success(`已导出 ${files.length} 个文件`)
 }
 
 const route = useRoute()
@@ -756,13 +773,16 @@ watch(siteId, () => {
           title="版本历史与回滚"
           @click="versionHistoryVisible = true"
         >历史</ElButton>
-        <!-- V2-T9 出码导出入口 -->
-        <ElButton
-          v-if="exportEnabled"
-          size="small"
-          title="导出独立 HTML 静态页"
-          @click="onExportHtml"
-        >导出</ElButton>
+        <!-- V2-T9 出码导出入口（下拉：单文件 / 多文件包） -->
+        <ElDropdown v-if="exportEnabled" trigger="click" @command="(cmd: string) => cmd === 'package' ? onExportPackage() : onExportHtml()">
+          <ElButton size="small" title="导出静态页">导出 ▾</ElButton>
+          <template #dropdown>
+            <ElDropdownMenu>
+              <ElDropdownItem command="html">单文件 HTML（内联，推荐）</ElDropdownItem>
+              <ElDropdownItem command="package">多文件包（index.html + assets/）</ElDropdownItem>
+            </ElDropdownMenu>
+          </template>
+        </ElDropdown>
         <ElButton size="small" type="primary" :loading="saving" @click="handleSave">
           {{ isNew ? '创建' : '保存' }}
         </ElButton>

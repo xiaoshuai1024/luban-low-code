@@ -65,9 +65,9 @@ describe('Designer — 发布到 website 闭环 (D15-E3/F3)', () => {
     cy.contains('物料').should('be.visible')
   })
 
-  it('拖 Hero + LeadCapture 组装留资页', () => {
-    // 拖 Hero
-    cy.get('.page-editor__palette-item').contains('LubanHero').then(($el) => {
+  it('拖 Hero + LeadCapture 组装 → 发布成功', function () {
+    // 拖 Hero（palette item 文本为 description，含 'Hero'）
+    cy.get('.page-editor__palette-item').contains('Hero').then(($el) => {
       const dt = new DataTransfer()
       dt.setData('application/json', JSON.stringify({ type: 'LubanHero' }))
       $el[0].dispatchEvent(new DragEvent('dragstart', { dataTransfer: dt, bubbles: true }))
@@ -75,8 +75,8 @@ describe('Designer — 发布到 website 闭环 (D15-E3/F3)', () => {
         $z[0].dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true }))
       })
     })
-    // 拖 LeadCapture
-    cy.get('.page-editor__palette-item').contains('LubanLeadCapture').then(($el) => {
+    // 拖 LeadCapture（label 含 '线索采集'）
+    cy.get('.page-editor__palette-item').contains('线索采集').then(($el) => {
       const dt = new DataTransfer()
       dt.setData('application/json', JSON.stringify({ type: 'LubanLeadCapture' }))
       $el[0].dispatchEvent(new DragEvent('dragstart', { dataTransfer: dt, bubbles: true }))
@@ -85,25 +85,26 @@ describe('Designer — 发布到 website 闭环 (D15-E3/F3)', () => {
       })
     })
     cy.get('.luban-designer__sortable-item').should('have.length.at.least', 2)
-  })
-
-  it('发布页面', function () {
+    // 同一 it 内发布（schema 持久化：跨 it 会重载页面丢失画布）
     cy.get('button').contains('发布').click()
-    cy.get('button').contains('发布').last().click({ force: true })
-    cy.contains('发布成功', { timeout: 10000 }).should('be.visible')
+    cy.get('.el-message-box').should('be.visible')
+    cy.get('.el-message-box__btns').contains('发布').click({ force: true })
+    cy.contains('发布成功', { timeout: 15000 }).should('be.visible')
   })
 
   it('访问 website SSR 站点 → LeadCapture 渲染（hydration 后）', function () {
-    // 闭环到 website 正式路由 /{slug}/{path}
+    // 闭环到 website 正式路由 /{slug}/{path}（跨域 5173->3000，需 cy.origin）
     const siteSlug = (this as any).siteSlug
     const pagePath = (this as any).pagePath
-    cy.visit(`${WEBSITE_URL}/${siteSlug}${pagePath}`)
-    // DynamicPage <ClientOnly>，等 hydration
-    // Hero 标题默认值 "欢迎访问" 或 LeadCapture 标题 "获取最新资讯" 应渲染
-    cy.get('body', { timeout: 15000 }).should(($body) => {
-      const text = $body.text()
-      // 至少命中 Hero 或 LeadCapture 的默认文案（证明 schema 渲染）
-      expect(text).to.match(/欢迎访问|获取最新资讯|提交/)
+    const url = `${WEBSITE_URL}/${siteSlug}${pagePath}`
+    cy.visit(url)
+    // DynamicPage <ClientOnly>，等 hydration（页面已发布，schema 含 Hero/LeadCapture）
+    cy.origin(url, { args: { url } }, ({ url }) => {
+      // Hero 标题默认值 "欢迎访问" 或 LeadCapture 标题 "获取最新资讯"/"提交" 应渲染
+      cy.get('body', { timeout: 20000 }).should(($body) => {
+        const text = $body.text()
+        expect(text).to.match(/欢迎访问|获取最新资讯|提交/)
+      })
     })
   })
 

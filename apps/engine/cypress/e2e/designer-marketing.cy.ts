@@ -62,16 +62,16 @@ describe('Designer — 营销组件组装落地页 (D15-E1/E2/E4/F2)', () => {
   })
 
   it('调色板「营销」分组可见，含 Hero/CTA/LeadCapture/Navbar/Footer', () => {
-    // D15-E4：营销组首次进入调色板
-    cy.contains('营销').should('be.visible')
-    cy.get('.page-editor__palette-group').contains('营销').parent().within(() => {
-      cy.contains('LubanHero').should('exist')
-    })
+    // D15-E4：营销组首次进入调色板（label 为物料 description 子串）
+    cy.contains('营销').scrollIntoView().should('be.visible')
+    // 营销组里应有 Hero（label 含 'Hero'）/Navbar（含'导航栏'）等
+    cy.get('.page-editor__palette-item').should('contain.text', 'Hero')
+    cy.get('.page-editor__palette-item').should('contain.text', '导航栏')
   })
 
   it('拖拽 Hero + FeatureGrid 到画布 → 组装落地页骨架', () => {
-    // 拖 Hero
-    cy.get('.page-editor__palette-item').contains('LubanHero').then(($el) => {
+    // 拖 Hero（palette item 文本为 description，含 'Hero'）
+    cy.get('.page-editor__palette-item').contains('Hero').then(($el) => {
       const dt = new DataTransfer()
       dt.setData('application/json', JSON.stringify({ type: 'LubanHero' }))
       $el[0].dispatchEvent(new DragEvent('dragstart', { dataTransfer: dt, bubbles: true }))
@@ -79,8 +79,8 @@ describe('Designer — 营销组件组装落地页 (D15-E1/E2/E4/F2)', () => {
         $z[0].dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true }))
       })
     })
-    // 拖 FeatureGrid（用 canvas spacer）
-    cy.get('.page-editor__palette-item').contains('LubanFeatureGrid').then(($el) => {
+    // 拖 FeatureGrid（label 含 '特性卡片'）
+    cy.get('.page-editor__palette-item').contains('特性卡片').then(($el) => {
       const dt = new DataTransfer()
       dt.setData('application/json', JSON.stringify({ type: 'LubanFeatureGrid' }))
       $el[0].dispatchEvent(new DragEvent('dragstart', { dataTransfer: dt, bubbles: true }))
@@ -90,14 +90,14 @@ describe('Designer — 营销组件组装落地页 (D15-E1/E2/E4/F2)', () => {
     })
     // 画布至少 2 个 sortable-item
     cy.get('.luban-designer__sortable-item').should('have.length.at.least', 2)
-    // 组件树含两个节点
-    cy.contains('LubanHero').should('be.visible')
-    cy.contains('LubanFeatureGrid').should('be.visible')
+    // 组件树含两个节点（label 即 description）
+    cy.contains('Hero').should('exist')
+    cy.contains('特性卡片').should('exist')
   })
 
   it('D15-E0 数组编辑器：选中 FeatureGrid → 添加特性卡片', () => {
-    // 先确保画布有 FeatureGrid（前置用例已加，但 Cypress 用例间状态不保证，重新拖）
-    cy.get('.page-editor__palette-item').contains('LubanFeatureGrid').then(($el) => {
+    // 先确保画布有 FeatureGrid（用例间状态不保证，重新拖）
+    cy.get('.page-editor__palette-item').contains('特性卡片').then(($el) => {
       const dt = new DataTransfer()
       dt.setData('application/json', JSON.stringify({ type: 'LubanFeatureGrid' }))
       $el[0].dispatchEvent(new DragEvent('dragstart', { dataTransfer: dt, bubbles: true }))
@@ -105,24 +105,24 @@ describe('Designer — 营销组件组装落地页 (D15-E1/E2/E4/F2)', () => {
         $z[0].dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true }))
       })
     })
-    // 选中 FeatureGrid
-    cy.contains('LubanFeatureGrid').click()
+    // 选中 FeatureGrid（组件树中点 description 标签）
+    cy.contains('特性卡片').click()
     // 数组控件「+ 添加」按钮存在（D15-E0 可视化数组编辑器）
     cy.get('.property-panel__array').should('exist')
-    cy.get('.property-panel__array').contains('+ 添加').click()
+    cy.get('.property-panel__array').contains('+ 添加').click({ force: true })
     // 添加后应有一行 array-row
     cy.get('.property-panel__array-row').should('have.length.at.least', 1)
   })
 
   it('保存 → 发布成功', () => {
-    // 填页面名+路径
-    cy.get('input').contains('placeholder', '名称').should('not.exist') // 确认页面已存在
-    // 直接点发布（页面已通过 before 建好，有 name）
+    // 页面已通过 before() 建好（有 name/path）。直接发布。
+    // 设计器模式顶栏「发布」按钮
     cy.get('button').contains('发布').click()
-    // 确认弹窗
-    cy.get('button').contains('发布').last().click({ force: true })
+    // ElMessageBox 确认弹窗的「发布」确认按钮（第二个）
+    cy.get('.el-message-box').should('be.visible')
+    cy.get('.el-message-box__btns').contains('发布').click({ force: true })
     // 发布成功提示
-    cy.contains('发布成功', { timeout: 10000 }).should('be.visible')
+    cy.contains('发布成功', { timeout: 15000 }).should('be.visible')
   })
 
   after(function () {

@@ -193,9 +193,11 @@ describe('Designer — 画布拖拽与编辑', () => {
     cy.get('.luban-designer__sortable-item').first().click()
     // 样式分区应可见（FeatureGate 默认全开）
     cy.contains('样式').should('be.visible')
-    // 展开背景折叠组，输入背景色
-    cy.contains('背景').click()
-    cy.get('input[placeholder="#fff 或 rgb()"]').first().type('#ff0000{enter}')
+    // 展开背景折叠组（ElCollapseItem header）并等动画
+    cy.get('.property-panel__style-collapse .el-collapse-item__header').contains('背景').click()
+    cy.get('.property-panel__style-collapse .el-collapse-item__content').should('be.visible')
+    // 输入背景色（force：collapse 展开瞬间可能仍有 transition）
+    cy.get('input[placeholder="#fff 或 rgb()"]').first().type('#ff0000{enter}', { force: true })
     // 验证 wrapper style 含该色（设计态实时预览）
     cy.get('.design-renderer__wrapper').first().should('have.attr', 'style').and('include', 'background-color')
     // 撤销
@@ -219,10 +221,12 @@ describe('Designer — 画布拖拽与编辑', () => {
     })
     // 组件树应出现锁定按钮（FeatureGate treeLockHide 默认开）
     cy.contains('组件树').should('be.visible')
-    // 点击锁定按钮（首个 🔒 文本按钮）
-    cy.get('.component-tree__node-actions').contains('🔒').first().click()
-    // 锁定后删除按钮应 disabled
-    cy.get('.component-tree__node-actions').contains('删除').first().should('be.disabled')
+    // 锁定按钮在 node-actions 内，hover 才显示；用 force 点击绕过可见性
+    cy.get('.component-tree__node-actions button[title*="锁定"]').first().click({ force: true })
+    // 先确认锁定徽标出现（证明 locked 态已写入）
+    cy.get('.component-tree__badge[title="已锁定"]').should('exist')
+    // 锁定后删除按钮应 disabled（ElButton 根 button 元素带 disabled）
+    cy.get('.component-tree__node-actions').contains('删除').closest('button').should('be.disabled')
   })
 
   it('D15-A2 预览模式：样式在 LubanPage runtime 同样生效', () => {
@@ -236,8 +240,9 @@ describe('Designer — 画布拖拽与编辑', () => {
       })
     })
     cy.get('.luban-designer__sortable-item').first().click()
-    cy.contains('背景').click()
-    cy.get('input[placeholder="#fff 或 rgb()"]').first().type('#00ff00{enter}')
+    cy.get('.property-panel__style-collapse .el-collapse-item__header').contains('背景').click()
+    cy.get('.property-panel__style-collapse .el-collapse-item__content').should('be.visible')
+    cy.get('input[placeholder="#fff 或 rgb()"]').first().type('#00ff00{enter}', { force: true })
     // 切换预览
     cy.get('button').contains('预览').click()
     // LubanPage 渲染（LubanDesigner 消失）

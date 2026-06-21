@@ -83,6 +83,13 @@ const router = createRouter({
           component: () => import('@/views/form/FormConfig.vue'),
           meta: { title: '编辑表单' },
         },
+        // === V2-T7 CMS 内容集合 ===
+        {
+          path: 'sites/:siteId/collections',
+          name: 'CollectionList',
+          component: () => import('@/views/cms/CollectionList.vue'),
+          meta: { title: 'CMS 内容集合' },
+        },
         {
           path: 'users',
           name: 'UserList',

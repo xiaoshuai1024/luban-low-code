@@ -22,6 +22,7 @@ import {
   ChatDotSquare,
   ArrowRight,
   Document,
+  Files,
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -32,6 +33,7 @@ const menuItems = [
   { path: '/sites', title: '站点管理', icon: Collection },
   { path: null, title: '线索中心', icon: ChatDotSquare, key: 'leads' },
   { path: null, title: '表单管理', icon: Document, key: 'forms' },
+  { path: null, title: 'CMS 内容', icon: Files, key: 'cms' },
   { path: '/users', title: '用户管理', icon: User },
   { path: '/settings', title: '系统设置', icon: Setting },
 ]
@@ -45,6 +47,12 @@ function getLeadsPath(): string {
 function getFormsPath(): string {
   const siteId = localStorage.getItem('luban_current_site_id')
   return siteId ? `/sites/${siteId}/forms` : '/sites'
+}
+
+/** V2-T7 CMS 内容集合路径 */
+function getCollectionsPath(): string {
+  const siteId = localStorage.getItem('luban_current_site_id')
+  return siteId ? `/sites/${siteId}/collections` : '/sites'
 }
 
 function handleLogout() {
@@ -68,6 +76,7 @@ function handleLogout() {
         @select="(index: string) => {
           if (index === 'leads') { router.push(getLeadsPath()); }
           if (index === 'forms') { router.push(getFormsPath()); }
+          if (index === 'cms') { router.push(getCollectionsPath()); }
         }"
       >
         <ElMenuItem

@@ -21,17 +21,19 @@ export default defineConfig({
   expect: { timeout: 10_000 },
 
   use: {
-    baseURL: process.env.LUBAN_E2E_BASE_URL ?? 'http://127.0.0.1:3000',
+    baseURL: process.env.LUBAN_E2E_BASE_URL ?? 'http://localhost:3000',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    channel: process.env.LUBAN_E2E_USE_PLAYWRIGHT_CHROMIUM ? undefined : 'chrome',
+    // 使用 Playwright 内置 Chromium（系统无 Chrome 时的回退）
+    // 如需使用系统 Chrome，设置 LUBAN_E2E_USE_CHROME=1
+    channel: process.env.LUBAN_E2E_USE_CHROME ? 'chrome' : undefined,
   },
 
   webServer: process.env.SKIP_LUBAN_E2E_SERVER
     ? undefined
     : {
         command: 'nuxt dev --port 3000',
-        url: 'http://127.0.0.1:3000',
+        url: 'http://localhost:3000',
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,
         env: {

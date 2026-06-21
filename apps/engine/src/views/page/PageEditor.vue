@@ -62,17 +62,34 @@ import { useHistory } from '@/composables/useHistory'
 import { useKeyboard } from '@/composables/useKeyboard'
 import { isFeatureEnabled } from '@/config/features'
 import type { PageSeo } from '@/types/schema'
+import { schemaToHtml, downloadHtml } from '@/utils/staticExport'
 
 /** V2-T2 SEO FeatureGate */
 const seoEnabled = isFeatureEnabled('seo')
 /** V2-T8 版本历史 FeatureGate */
 const versionHistoryEnabled = isFeatureEnabled('versionHistory')
+/** V2-T9 出码导出 FeatureGate */
+const exportEnabled = isFeatureEnabled('export')
 /** V2-T8 版本历史抽屉 */
 const versionHistoryVisible = ref(false)
 
 /** V2-T8 回滚后重新加载页面 */
 function onVersionRollback(): void {
   loadPage()
+}
+
+/** V2-T9 出码：导出当前页面为独立 HTML 文件下载 */
+function onExportHtml(): void {
+  if (!schema.value) {
+    ElMessage.warning('页面内容为空，无法导出')
+    return
+  }
+  const html = schemaToHtml(schema.value, {
+    title: pageName.value || pagePath.value || '导出页面',
+  })
+  const safeName = (pageName.value || 'page').replace(/[^\w\u4e00-\u9fa5-]/g, '_')
+  downloadHtml(html, `${safeName}.html`)
+  ElMessage.success('已导出 HTML 文件')
 }
 
 const route = useRoute()
@@ -623,6 +640,13 @@ watch(siteId, loadDatasources)
           title="版本历史与回滚"
           @click="versionHistoryVisible = true"
         >历史</ElButton>
+        <!-- V2-T9 出码导出入口 -->
+        <ElButton
+          v-if="exportEnabled"
+          size="small"
+          title="导出独立 HTML 静态页"
+          @click="onExportHtml"
+        >导出</ElButton>
         <ElButton size="small" type="primary" :loading="saving" @click="handleSave">
           {{ isNew ? '创建' : '保存' }}
         </ElButton>

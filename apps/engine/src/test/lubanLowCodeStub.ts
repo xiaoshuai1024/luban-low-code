@@ -187,3 +187,75 @@ export function treeResponsiveCss(root: { responsive?: { tablet?: Record<string,
   walk(root)
   return parts.join('\n')
 }
+
+// === V2-T5 动画 stub（纯逻辑子集）===
+const ANIM_KEYFRAMES: Record<string, string> = {
+  fade: `@keyframes lb-anim-fade { from { opacity: 0; } to { opacity: 1; } }`,
+  'slide-up': `@keyframes lb-anim-slide-up { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }`,
+  'slide-left': `@keyframes lb-anim-slide-left { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: translateX(0); } }`,
+  zoom: `@keyframes lb-anim-zoom { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }`,
+  flip: `@keyframes lb-anim-flip { from { opacity: 0; transform: perspective(400px) rotateY(90deg); } to { opacity: 1; transform: perspective(400px) rotateY(0); } }`,
+}
+
+export function buildAnimationCss(nodeId: string, anim: { type?: string; duration?: number; delay?: number; easing?: string; trigger?: string } | undefined): string {
+  if (!anim || !anim.type || !ANIM_KEYFRAMES[anim.type]) return ''
+  const type = anim.type
+  const duration = anim.duration ?? 600
+  const delay = anim.delay ?? 0
+  const easing = anim.easing ?? 'ease-out'
+  const trigger = anim.trigger ?? 'load'
+  const selector = `[data-lb-node="${nodeId}"]`
+  const kf = ANIM_KEYFRAMES[type]
+  const animProps = `lb-anim-${type} ${duration}ms ${easing} ${delay}ms both`
+  if (trigger === 'hover') return `${kf}\n${selector}:hover { animation: ${animProps}; }`
+  if (trigger === 'in-view') return `${kf}\n${selector}.lb-anim-pending { opacity: 0; }\n${selector}.lb-anim-playing { animation: ${animProps}; }`
+  return `${kf}\n${selector} { animation: ${animProps}; }`
+}
+
+export function isValidAnimation(anim: { type?: string } | undefined): boolean {
+  return !!(anim && anim.type && ANIM_KEYFRAMES[anim.type])
+}
+
+export function treeAnimationCss(root: { id?: string; animation?: { type?: string; duration?: number; delay?: number; easing?: string; trigger?: string }; children?: unknown[] }): string {
+  const parts: string[] = []
+  const seen = new Set<string>()
+  function walk(node: { id?: string; animation?: { type?: string; duration?: number; delay?: number; easing?: string; trigger?: string }; children?: unknown[] }): void {
+    if (node.id && node.animation) {
+      const css = buildAnimationCss(node.id, node.animation)
+      if (css) {
+        const type = node.animation.type
+        if (type) {
+          if (seen.has(type)) {
+            parts.push(css.replace(ANIM_KEYFRAMES[type], '').trim())
+          } else {
+            seen.add(type)
+            parts.push(css)
+          }
+        }
+      }
+    }
+    if (node.children) {
+      for (const c of node.children) walk(c as { id?: string; animation?: { type?: string; duration?: number; delay?: number; easing?: string; trigger?: string }; children?: unknown[] })
+    }
+  }
+  walk(root)
+  return parts.join('\n')
+}
+
+export function collectInViewNodes(root: { id?: string; animation?: { trigger?: string; type?: string }; children?: unknown[] }): { id: string }[] {
+  const out: { id: string }[] = []
+  function walk(node: { id?: string; animation?: { trigger?: string; type?: string }; children?: unknown[] }): void {
+    if (node.id && node.animation?.trigger === 'in-view' && node.animation.type) {
+      out.push({ id: node.id })
+    }
+    if (node.children) {
+      for (const c of node.children) walk(c as { id?: string; animation?: { trigger?: string; type?: string }; children?: unknown[] })
+    }
+  }
+  walk(root)
+  return out
+}
+
+export function useAnimationObserver(): { observe: () => void; disconnect: () => void } {
+  return { observe: () => {}, disconnect: () => {} }
+}

@@ -30,7 +30,7 @@ import {
 } from 'element-plus'
 import type { NodeSchema } from '@/types/schema'
 import type { ComponentMeta, PropSchemaItem, PropSchema } from 'luban-low-code'
-import type { ResponsiveBreakpoint } from 'luban-low-code'
+import type { ResponsiveBreakpoint, AnimationType, AnimationTrigger } from 'luban-low-code'
 import { isFeatureEnabled } from '@/config/features'
 
 /** D15-B1 数据源管理/测试连通开关（FeatureGate） */
@@ -40,6 +40,8 @@ const testConnectEnabled = isFeatureEnabled('testConnect')
 const styleEnabled = isFeatureEnabled('style')
 /** V2-T4 响应式开关（FeatureGate） */
 const responsiveEnabled = isFeatureEnabled('responsive')
+/** V2-T5 动画开关（FeatureGate） */
+const animationEnabled = isFeatureEnabled('animation')
 
 interface DatasourceOption {
   id: string
@@ -76,6 +78,8 @@ const emit = defineEmits<{
   (e: 'test-connect', datasourceId: string): void
   /** D15-A3：节点级样式更新（key 为 CSS 属性名，value 为值） */
   (e: 'update:style', nodeId: string, key: string, value: string): void
+  /** V2-T5：节点动画更新（key 为 animation 字段名，value 为值） */
+  (e: 'update:animation', nodeId: string, key: string, value: unknown): void
 }>()
 
 /** 有序的 propSchema 条目，便于稳定渲染。 */
@@ -330,6 +334,40 @@ const SHADOW_PRESETS = [
   { label: '中', value: '0 4px 12px rgba(0,0,0,0.15)' },
   { label: '大', value: '0 10px 30px rgba(0,0,0,0.2)' },
 ]
+
+// === V2-T5 动画分区 ===
+const ANIMATION_TYPES: { label: string; value: AnimationType }[] = [
+  { label: '淡入 (fade)', value: 'fade' },
+  { label: '上滑 (slide-up)', value: 'slide-up' },
+  { label: '左滑 (slide-left)', value: 'slide-left' },
+  { label: '缩放 (zoom)', value: 'zoom' },
+  { label: '翻转 (flip)', value: 'flip' },
+]
+const ANIMATION_TRIGGERS: { label: string; value: AnimationTrigger }[] = [
+  { label: '进入视口 (in-view)', value: 'in-view' },
+  { label: '悬停 (hover)', value: 'hover' },
+  { label: '加载 (load)', value: 'load' },
+]
+
+function getAnimValue(key: string): unknown {
+  return props.node?.animation?.[key as keyof typeof props.node.animation]
+}
+
+/** 写入节点 animation 字段：惰性初始化 animation 对象，emit update:animation */
+function handleAnimInput(key: string, value: unknown): void {
+  if (!props.node) return
+  if (!props.node.animation) props.node.animation = {}
+  ;(props.node.animation as Record<string, unknown>)[key] = value
+  emit('update:animation', props.node.id, key, value)
+}
+
+/** 清除动画配置（type 设空即视为无动画，渲染零输出） */
+function clearAnimation(): void {
+  if (!props.node) return
+  if (!props.node.animation) return
+  props.node.animation = undefined
+  emit('update:animation', props.node.id, 'type', undefined)
+}
 
 function handleDelete(): void {
   if (!props.node) return
@@ -704,6 +742,84 @@ function handleVarNameChange(varName: string): void {
         </ElCollapse>
       </ElFormItem>
 
+      <!-- V2-T5 动画分区（FeatureGate 控制） -->
+      <ElFormItem v-if="animationEnabled" label="动画">
+        <div class="property-panel__animation">
+          <div class="property-panel__anim-row">
+            <span class="property-panel__anim-label">类型</span>
+            <ElSelect
+              :model-value="getAnimValue('type') as AnimationType | undefined"
+              placeholder="无动画"
+              size="small"
+              style="flex: 1"
+              clearable
+              @update:model-value="(v: unknown) => v ? handleAnimInput('type', v) : clearAnimation()"
+            >
+              <ElOption v-for="opt in ANIMATION_TYPES" :key="opt.value" :label="opt.label" :value="opt.value" />
+            </ElSelect>
+          </div>
+          <template v-if="getAnimValue('type')">
+            <div class="property-panel__anim-row">
+              <span class="property-panel__anim-label">触发</span>
+              <ElSelect
+                :model-value="(getAnimValue('trigger') as AnimationTrigger | undefined) ?? 'load'"
+                size="small"
+                style="flex: 1"
+                @update:model-value="(v: string) => handleAnimInput('trigger', v)"
+              >
+                <ElOption v-for="opt in ANIMATION_TRIGGERS" :key="opt.value" :label="opt.label" :value="opt.value" />
+              </ElSelect>
+            </div>
+            <div class="property-panel__anim-row">
+              <span class="property-panel__anim-label">时长(ms)</span>
+              <ElInputNumber
+                :model-value="Number(getAnimValue('duration') ?? 600)"
+                :min="0"
+                :step="100"
+                size="small"
+                controls-position="right"
+                style="flex: 1"
+                @update:model-value="(v?: number) => handleAnimInput('duration', v ?? 600)"
+              />
+            </div>
+            <div class="property-panel__anim-row">
+              <span class="property-panel__anim-label">延迟(ms)</span>
+              <ElInputNumber
+                :model-value="Number(getAnimValue('delay') ?? 0)"
+                :min="0"
+                :step="100"
+                size="small"
+                controls-position="right"
+                style="flex: 1"
+                @update:model-value="(v?: number) => handleAnimInput('delay', v ?? 0)"
+              />
+            </div>
+            <div class="property-panel__anim-row">
+              <span class="property-panel__anim-label">缓动</span>
+              <ElSelect
+                :model-value="(getAnimValue('easing') as string | undefined) ?? 'ease-out'"
+                size="small"
+                style="flex: 1"
+                @update:model-value="(v: string) => handleAnimInput('easing', v)"
+              >
+                <ElOption label="ease-out" value="ease-out" />
+                <ElOption label="ease-in" value="ease-in" />
+                <ElOption label="ease-in-out" value="ease-in-out" />
+                <ElOption label="linear" value="linear" />
+              </ElSelect>
+            </div>
+            <div v-if="getAnimValue('trigger') === 'in-view'" class="property-panel__anim-row">
+              <span class="property-panel__anim-label">重复</span>
+              <ElSwitch
+                :model-value="Boolean(getAnimValue('scrollRepeat'))"
+                @update:model-value="(v: string | number | boolean) => handleAnimInput('scrollRepeat', Boolean(v))"
+              />
+              <span class="property-panel__anim-hint">每次进入视口重播</span>
+            </div>
+          </template>
+        </div>
+      </ElFormItem>
+
       <!-- 事件分区：按 meta.events 配动作表达式（W1-T5） -->
       <ElFormItem v-if="eventNames.length" label="事件动作">
         <div class="property-panel__events">
@@ -909,6 +1025,33 @@ function handleVarNameChange(varName: string): void {
     margin-top: auto;
     padding-top: 12px;
     border-top: 1px solid #ebeef5;
+  }
+
+  // === V2-T5 动画分区 ===
+  &__animation {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  &__anim-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+  }
+
+  &__anim-label {
+    font-size: 12px;
+    color: #606266;
+    flex-shrink: 0;
+    min-width: 56px;
+  }
+
+  &__anim-hint {
+    font-size: 11px;
+    color: #909399;
   }
 }
 </style>

@@ -16,4 +16,7 @@ export type {
   PageSeo,
   NodeResponsive,
   ResponsiveBreakpoint,
+  NodeAnimation,
+  AnimationType,
+  AnimationTrigger,
 } from 'luban-low-code';

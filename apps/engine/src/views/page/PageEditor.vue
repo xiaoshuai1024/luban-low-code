@@ -394,6 +394,16 @@ function onUpdateStyle(nodeId: string, key: string, value: string): void {
   }
 }
 
+/** V2-T5 属性面板动画分区回写：写 node.animation[key]，入撤销栈 */
+function onUpdateAnimation(nodeId: string, key: string, value: unknown): void {
+  if (!schema.value?.root) return
+  const node = findNode(schema.value.root, nodeId)
+  if (!node) return
+  history.push()
+  if (!node.animation) node.animation = {}
+  ;(node.animation as Record<string, unknown>)[key] = value
+}
+
 /** 删除节点：root 不可删；删后清空选中。 */
 function onDeleteNode(nodeId: string): void {
   if (!schema.value?.root) return
@@ -671,6 +681,7 @@ watch(siteId, loadDatasources)
           @update:event="onUpdateEvent"
           @update:datasource="onUpdateDatasource"
           @update:style="onUpdateStyle"
+          @update:animation="onUpdateAnimation"
           @delete="onDeleteNode"
           @duplicate="onDuplicateNode"
           @open-datasource="openDatasourceDialog"

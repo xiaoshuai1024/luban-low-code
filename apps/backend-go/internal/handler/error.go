@@ -53,6 +53,12 @@ func writeError(c *gin.Context, err error) {
 		c.JSON(http.StatusNotFound, APIError{Code: "DATASOURCE_NOT_FOUND", Message: "数据源不存在"})
 	case repository.ErrDatasourceNameConflict:
 		c.JSON(http.StatusConflict, APIError{Code: "DATASOURCE_NAME_CONFLICT", Message: "数据源名称已存在"})
+	case repository.ErrCollectionNotFound:
+		c.JSON(http.StatusNotFound, APIError{Code: "COLLECTION_NOT_FOUND", Message: "内容集合不存在"})
+	case repository.ErrCollectionNameConflict:
+		c.JSON(http.StatusConflict, APIError{Code: "COLLECTION_NAME_CONFLICT", Message: "内容集合名称已存在"})
+	case repository.ErrCollectionItemNotFound:
+		c.JSON(http.StatusNotFound, APIError{Code: "COLLECTION_ITEM_NOT_FOUND", Message: "内容项不存在"})
 	default:
 		c.JSON(http.StatusInternalServerError, APIError{Code: "INTERNAL", Message: err.Error()})
 	}

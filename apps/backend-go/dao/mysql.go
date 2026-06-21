@@ -125,6 +125,29 @@ func initSchema(db *sqlx.DB) error {
 		// 此处用 IF NOT EXISTS 兜底（本仓统一 MySQL 8.0，见 plan §9.3）。
 		`ALTER TABLE pages ADD COLUMN IF NOT EXISTS seo_json JSON NULL AFTER schema_json;`,
 		`ALTER TABLE sites ADD COLUMN IF NOT EXISTS seo_json JSON NULL AFTER base_url;`,
+		// V2-T7 CMS：collections + collection_items（与 Java Flyway V20260621000001 对齐）。
+		`CREATE TABLE IF NOT EXISTS collections (
+			id                VARCHAR(36)  PRIMARY KEY,
+			site_id           VARCHAR(36)  NOT NULL,
+			name              VARCHAR(255) NOT NULL,
+			field_schema_json JSON         NOT NULL,
+			status            VARCHAR(32)  NOT NULL DEFAULT 'active',
+			created_at        DATETIME(3)  NOT NULL,
+			updated_at        DATETIME(3)  NOT NULL,
+			UNIQUE KEY uk_collections_site_name (site_id, name),
+			CONSTRAINT fk_collections_site FOREIGN KEY (site_id) REFERENCES sites(id)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+		`CREATE TABLE IF NOT EXISTS collection_items (
+			id             VARCHAR(36)  PRIMARY KEY,
+			collection_id  VARCHAR(36)  NOT NULL,
+			data_json      JSON         NOT NULL,
+			status         VARCHAR(32)  NOT NULL DEFAULT 'active',
+			created_at     DATETIME(3)  NOT NULL,
+			updated_at     DATETIME(3)  NOT NULL,
+			CONSTRAINT fk_items_collection FOREIGN KEY (collection_id) REFERENCES collections(id) ON DELETE CASCADE,
+			KEY idx_items_collection_status (collection_id, status),
+			KEY idx_items_updated (collection_id, updated_at)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
 	}
 
 	for _, sql := range stmts {

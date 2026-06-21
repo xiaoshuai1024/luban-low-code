@@ -28,6 +28,7 @@ func InitRouter() *gin.Engine {
 	userRepo := repository.NewUserRepository(dao.DB)
 	settingsRepo := repository.NewSettingsRepository(dao.DB)
 	datasourceRepo := repository.NewDatasourceRepository(dao.DB)
+	collectionRepo := repository.NewCollectionRepository(dao.DB)
 
 	authSvc := service.NewAuthService(userRepo)
 	siteSvc := service.NewSiteService(siteRepo)
@@ -36,6 +37,7 @@ func InitRouter() *gin.Engine {
 	settingsSvc := service.NewSettingsService(settingsRepo, dao.RDB)
 	publicSvc := service.NewPublicService(siteRepo, pageRepo)
 	datasourceSvc := service.NewDatasourceService(datasourceRepo, siteRepo)
+	collectionSvc := service.NewCollectionService(collectionRepo, siteRepo)
 
 	authH := handler.NewAuthHandler(authSvc)
 	siteH := handler.NewSiteHandler(siteSvc)
@@ -44,6 +46,7 @@ func InitRouter() *gin.Engine {
 	settingsH := handler.NewSettingsHandler(settingsSvc)
 	publicH := handler.NewPublicHandler(publicSvc)
 	datasourceH := handler.NewDatasourceHandler(datasourceSvc)
+	collectionH := handler.NewCollectionHandler(collectionSvc)
 
 	mw := middleware.NewMiddleware()
 
@@ -96,6 +99,21 @@ func InitRouter() *gin.Engine {
 	datasources.PUT("/:id", mw.RequireAdmin(), datasourceH.Update)
 	datasources.DELETE("/:id", mw.RequireAdmin(), datasourceH.Delete)
 	datasources.POST("/:id/test", datasourceH.Test)
+
+	// V2-T7 Collections CMS（对齐 Java CollectionController）。
+	// 读 RequireUser；写 RequireAdmin（admin-only 写，站点级隔离由 siteId query guard）。
+	collections := api.Group("/collections", mw.RequireUser())
+	collections.GET("", collectionH.List)
+	collections.POST("", mw.RequireAdmin(), collectionH.Create)
+	collections.GET("/:id", collectionH.Get)
+	collections.PUT("/:id", mw.RequireAdmin(), collectionH.Update)
+	collections.DELETE("/:id", mw.RequireAdmin(), collectionH.Delete)
+	// CollectionItem 嵌套在 /collections/:collectionId/items 下
+	collections.GET("/:collectionId/items", collectionH.ListItems)
+	collections.POST("/:collectionId/items", mw.RequireAdmin(), collectionH.CreateItem)
+	collections.GET("/:collectionId/items/:itemId", collectionH.GetItem)
+	collections.PUT("/:collectionId/items/:itemId", mw.RequireAdmin(), collectionH.UpdateItem)
+	collections.DELETE("/:collectionId/items/:itemId", mw.RequireAdmin(), collectionH.DeleteItem)
 
 	return r
 }

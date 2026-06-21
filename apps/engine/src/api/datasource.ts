@@ -18,13 +18,29 @@ import { request } from './request'
  * is the source of truth; this is a TS hint for editor forms. */
 export type DatasourceType = 'static' | 'api'
 
+/** Config for an api datasource. The BFF query route reads url/method/headers. */
+export interface ApiDatasourceConfig {
+  url: string
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'HEAD'
+  headers?: Record<string, string>
+}
+
+/** Config for a static datasource (inline rows, no remote). */
+export interface StaticDatasourceConfig {
+  rows?: unknown[]
+}
+
+/** Discriminated config union — replaces the previous Record<string, unknown>,
+ * which let callers pass arbitrary shapes the backend would reject. */
+export type DatasourceConfig = ApiDatasourceConfig | StaticDatasourceConfig
+
 export interface DatasourceMeta {
   id: string
   siteId: string
   name: string
   type: DatasourceType
-  /** Free-form config object. For api: {url, method?, headers?}; for static: {rows?}. */
-  config?: Record<string, unknown>
+  /** Type-narrowed config. For api: {url, method?, headers?}; for static: {rows?}. */
+  config?: DatasourceConfig
   createdAt?: string
   updatedAt?: string
 }
@@ -33,13 +49,45 @@ export interface SaveDatasourcePayload {
   siteId: string
   name: string
   type: DatasourceType
-  config?: Record<string, unknown>
+  config?: DatasourceConfig
 }
 
 export interface DatasourceTestResult {
   ok: boolean
   message?: string
   latencyMs?: number
+}
+
+/** BFF query route returns {data, status} (the upstream response + HTTP status). */
+export interface DatasourceQueryResult {
+  data: unknown
+  status: number
+}
+
+/**
+ * Normalize a datasource API error into a human-readable message mapped from the
+ * backend status code (plan §9.2). Without this the editor silently swallowed
+ * axios errors (PageEditor.vue `catch {}` → empty list, no user feedback).
+ */
+export function normalizeDatasourceError(e: unknown): Error {
+  const status =
+    e && typeof e === 'object' && 'response' in e
+      ? (e as { response?: { status?: number } }).response?.status
+      : undefined
+  switch (status) {
+    case 409:
+      return new Error('数据源名称已存在')
+    case 404:
+      return new Error('数据源不存在')
+    case 400:
+      return new Error('请求参数无效')
+    case 503:
+      return new Error('数据源连通性测试失败')
+    default:
+      return new Error(
+        e instanceof Error ? e.message : '数据源请求失败',
+      )
+  }
 }
 
 /** GET /api/datasources?siteId= → list (filtered by site, multi-tenant isolated). */
@@ -81,7 +129,16 @@ export function testDatasource(id: string) {
   return request.post<DatasourceTestResult>(`/datasources/${id}/test`)
 }
 
-/** POST /api/datasources/:id/query → 拉取数据源数据（运行时注入表达式上下文） */
-export function queryDatasource(id: string) {
-  return request.post<unknown>(`/datasources/${id}/query`)
+/**
+ * POST /api/datasources/:id/query → 拉取数据源数据（运行时注入表达式上下文）。
+ * Optional params are forwarded to the BFF (node.datasource.params).
+ */
+export function queryDatasource(
+  id: string,
+  params?: Record<string, unknown>,
+) {
+  return request.post<DatasourceQueryResult>(
+    `/datasources/${id}/query`,
+    params ?? {},
+  )
 }

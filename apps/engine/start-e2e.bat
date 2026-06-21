@@ -1,4 +1,3 @@
 @echo off
-REM start engine (vite dev, 5173), detached
-set "VITE_API_BASE_URL=/api"
-start "luban-engine" /B cmd /c "pnpm run dev > engine-dev.log 2>&1"
+REM 启动 engine（vite dev，4200，proxy /api → bff 3100），detached
+start "luban-engine" /B cmd /c "npx vite --port 4200 > engine-dev.log 2>&1"

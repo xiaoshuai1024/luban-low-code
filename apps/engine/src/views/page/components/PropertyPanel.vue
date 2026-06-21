@@ -31,21 +31,8 @@ import {
   ElRadio,
 } from 'element-plus'
 import type { NodeSchema } from '@/types/schema'
-import type { ComponentMeta, PropSchemaItem, PropSchema } from 'luban-low-code'
-import type { ResponsiveBreakpoint, AnimationType, AnimationTrigger } from 'luban-low-code'
-import { isFeatureEnabled } from '@/config/features'
-
-/** D15-B1 数据源管理/测试连通开关（FeatureGate） */
-const datasourceManageEnabled = isFeatureEnabled('datasourceManage')
-const testConnectEnabled = isFeatureEnabled('testConnect')
-/** D15-A3 样式面板开关（FeatureGate） */
-const styleEnabled = isFeatureEnabled('style')
-/** V2-T4 响应式开关（FeatureGate） */
-const responsiveEnabled = isFeatureEnabled('responsive')
-/** V2-T5 动画开关（FeatureGate） */
-const animationEnabled = isFeatureEnabled('animation')
-/** V2-T7 CMS 绑定开关（FeatureGate） */
-const cmsEnabled = isFeatureEnabled('cms')
+import type { ComponentMeta, PropSchemaItem } from 'luban-low-code'
+import { useFeatureGate } from '@/composables/useFeatureGate'
 
 interface DatasourceOption {
   id: string
@@ -57,8 +44,6 @@ interface Props {
   meta: ComponentMeta | null
   /** 当前 site 可用的数据源列表（PageEditor 加载传入） */
   datasources?: DatasourceOption[]
-  /** V2-T7 当前 site 可用的 collection 列表（CMS 绑定分区用） */
-  collections?: CollectionOption[]
   readonly?: boolean
   /** V2-T4 当前断点：决定样式分区写入 node.style（desktop）还是 node.responsive[bp] */
   breakpoint?: ResponsiveBreakpoint
@@ -68,7 +53,6 @@ const props = withDefaults(defineProps<Props>(), {
   node: null,
   meta: null,
   datasources: () => [],
-  collections: () => [],
   readonly: false,
   breakpoint: 'desktop',
 })
@@ -96,6 +80,11 @@ const emit = defineEmits<{
   /** V2-T7：节点 CMS 绑定更新（整体 cmsBinding 已写回 node） */
   (e: 'update:cms-binding', nodeId: string): void
 }>()
+
+// FeatureGate §6.5: 数据源/事件分区可按开关隐藏（回滚链依赖）。
+const { isEnabled: isFeatureEnabled } = useFeatureGate()
+const featureDatasource = isFeatureEnabled('editor.datasource')
+const featureEvents = isFeatureEnabled('editor.events')
 
 /** 有序的 propSchema 条目，便于稳定渲染。 */
 const schemaEntries = computed<Array<[string, PropSchemaItem]>>(() => {
@@ -651,274 +640,8 @@ function handleVarNameChange(varName: string): void {
         />
       </ElFormItem>
 
-      <!-- D15-A3 样式分区（5 折叠组：尺寸/背景/边框/排版/布局/阴影） -->
-      <ElFormItem v-if="styleEnabled" :label="styleSectionLabel">
-        <ElCollapse class="property-panel__style-collapse">
-          <!-- 尺寸 -->
-          <ElCollapseItem title="尺寸" name="size">
-            <div class="property-panel__style-grid">
-              <ElInput :model-value="getStyleValue('width')" placeholder="width" size="small" @update:model-value="(v: string) => handleStyleInput('width', v)" />
-              <ElInput :model-value="getStyleValue('height')" placeholder="height" size="small" @update:model-value="(v: string) => handleStyleInput('height', v)" />
-              <ElInput :model-value="getStyleValue('marginTop')" placeholder="margin-top" size="small" @update:model-value="(v: string) => handleStyleInput('marginTop', v)" />
-              <ElInput :model-value="getStyleValue('marginBottom')" placeholder="margin-bottom" size="small" @update:model-value="(v: string) => handleStyleInput('marginBottom', v)" />
-              <ElInput :model-value="getStyleValue('paddingTop')" placeholder="padding-top" size="small" @update:model-value="(v: string) => handleStyleInput('paddingTop', v)" />
-              <ElInput :model-value="getStyleValue('paddingBottom')" placeholder="padding-bottom" size="small" @update:model-value="(v: string) => handleStyleInput('paddingBottom', v)" />
-            </div>
-          </ElCollapseItem>
-
-          <!-- 背景 -->
-          <ElCollapseItem title="背景" name="bg">
-            <div class="property-panel__style-row">
-              <span class="property-panel__style-label">背景色</span>
-              <ElColorPicker :model-value="getStyleValue('backgroundColor')" size="small" @update:model-value="(v: string | null) => handleStyleInput('backgroundColor', v || '')" />
-              <ElInput :model-value="getStyleValue('backgroundColor')" placeholder="#fff 或 rgb()" size="small" @update:model-value="(v: string) => handleStyleInput('backgroundColor', v)" />
-            </div>
-            <div class="property-panel__style-row">
-              <span class="property-panel__style-label">背景图</span>
-              <ElInput :model-value="getStyleValue('backgroundImage')" placeholder="url(...)" size="small" @update:model-value="(v: string) => handleStyleInput('backgroundImage', v)" />
-            </div>
-          </ElCollapseItem>
-
-          <!-- 边框 -->
-          <ElCollapseItem title="边框" name="border">
-            <div class="property-panel__style-row">
-              <span class="property-panel__style-label">颜色</span>
-              <ElColorPicker :model-value="getStyleValue('borderColor')" size="small" @update:model-value="(v: string | null) => handleStyleInput('borderColor', v || '')" />
-            </div>
-            <div class="property-panel__style-row">
-              <span class="property-panel__style-label">宽度</span>
-              <ElInput :model-value="getStyleValue('borderWidth')" placeholder="1px" size="small" @update:model-value="(v: string) => handleStyleInput('borderWidth', v)" />
-              <span class="property-panel__style-label">圆角</span>
-              <ElInput :model-value="getStyleValue('borderRadius')" placeholder="4px" size="small" @update:model-value="(v: string) => handleStyleInput('borderRadius', v)" />
-            </div>
-            <div class="property-panel__style-row">
-              <span class="property-panel__style-label">样式</span>
-              <ElSelect :model-value="getStyleValue('borderStyle')" placeholder="solid" size="small" style="width: 100%" @update:model-value="(v: string) => handleStyleInput('borderStyle', v)">
-                <ElOption label="无" value="" />
-                <ElOption label="实线" value="solid" />
-                <ElOption label="虚线" value="dashed" />
-                <ElOption label="点线" value="dotted" />
-              </ElSelect>
-            </div>
-          </ElCollapseItem>
-
-          <!-- 排版 -->
-          <ElCollapseItem title="排版" name="typo">
-            <div class="property-panel__style-row">
-              <span class="property-panel__style-label">字号</span>
-              <ElInput :model-value="getStyleValue('fontSize')" placeholder="14px" size="small" @update:model-value="(v: string) => handleStyleInput('fontSize', v)" />
-              <span class="property-panel__style-label">行高</span>
-              <ElInput :model-value="getStyleValue('lineHeight')" placeholder="1.5" size="small" @update:model-value="(v: string) => handleStyleInput('lineHeight', v)" />
-            </div>
-            <div class="property-panel__style-row">
-              <span class="property-panel__style-label">字重</span>
-              <ElSelect :model-value="getStyleValue('fontWeight')" placeholder="normal" size="small" style="flex: 1" @update:model-value="(v: string) => handleStyleInput('fontWeight', v)">
-                <ElOption label="默认" value="" />
-                <ElOption label="300 细" value="300" />
-                <ElOption label="400 常规" value="400" />
-                <ElOption label="500 中" value="500" />
-                <ElOption label="600 粗" value="600" />
-                <ElOption label="700 加粗" value="700" />
-              </ElSelect>
-              <span class="property-panel__style-label">对齐</span>
-              <ElSelect :model-value="getStyleValue('textAlign')" placeholder="left" size="small" style="flex: 1" @update:model-value="(v: string) => handleStyleInput('textAlign', v)">
-                <ElOption label="左" value="left" />
-                <ElOption label="中" value="center" />
-                <ElOption label="右" value="right" />
-              </ElSelect>
-            </div>
-            <div class="property-panel__style-row">
-              <span class="property-panel__style-label">颜色</span>
-              <ElColorPicker :model-value="getStyleValue('color')" size="small" @update:model-value="(v: string | null) => handleStyleInput('color', v || '')" />
-              <ElInput :model-value="getStyleValue('color')" placeholder="#333" size="small" @update:model-value="(v: string) => handleStyleInput('color', v)" />
-            </div>
-          </ElCollapseItem>
-
-          <!-- 布局（flex） -->
-          <ElCollapseItem title="布局" name="layout">
-            <div class="property-panel__style-row">
-              <span class="property-panel__style-label">display</span>
-              <ElSelect :model-value="getStyleValue('display')" placeholder="block" size="small" style="flex: 1" @update:model-value="(v: string) => handleStyleInput('display', v)">
-                <ElOption label="默认" value="" />
-                <ElOption label="block" value="block" />
-                <ElOption label="flex" value="flex" />
-                <ElOption label="inline-block" value="inline-block" />
-                <ElOption label="none" value="none" />
-              </ElSelect>
-              <span class="property-panel__style-label">gap</span>
-              <ElInput :model-value="getStyleValue('gap')" placeholder="8px" size="small" style="flex: 1" @update:model-value="(v: string) => handleStyleInput('gap', v)" />
-            </div>
-            <template v-if="getStyleValue('display') === 'flex'">
-              <div class="property-panel__style-row">
-                <span class="property-panel__style-label">方向</span>
-                <ElSelect :model-value="getStyleValue('flexDirection')" placeholder="row" size="small" style="flex: 1" @update:model-value="(v: string) => handleStyleInput('flexDirection', v)">
-                  <ElOption label="row" value="row" />
-                  <ElOption label="column" value="column" />
-                </ElSelect>
-                <span class="property-panel__style-label">换行</span>
-                <ElSelect :model-value="getStyleValue('flexWrap')" placeholder="nowrap" size="small" style="flex: 1" @update:model-value="(v: string) => handleStyleInput('flexWrap', v)">
-                  <ElOption label="不换行" value="nowrap" />
-                  <ElOption label="换行" value="wrap" />
-                </ElSelect>
-              </div>
-              <div class="property-panel__style-row">
-                <span class="property-panel__style-label">主轴</span>
-                <ElSelect :model-value="getStyleValue('justifyContent')" placeholder="flex-start" size="small" style="flex: 1" @update:model-value="(v: string) => handleStyleInput('justifyContent', v)">
-                  <ElOption label="起始" value="flex-start" />
-                  <ElOption label="居中" value="center" />
-                  <ElOption label="末尾" value="flex-end" />
-                  <ElOption label="两端" value="space-between" />
-                  <ElOption label="均分" value="space-around" />
-                </ElSelect>
-                <span class="property-panel__style-label">交叉</span>
-                <ElSelect :model-value="getStyleValue('alignItems')" placeholder="stretch" size="small" style="flex: 1" @update:model-value="(v: string) => handleStyleInput('alignItems', v)">
-                  <ElOption label="拉伸" value="stretch" />
-                  <ElOption label="起始" value="flex-start" />
-                  <ElOption label="居中" value="center" />
-                  <ElOption label="末尾" value="flex-end" />
-                </ElSelect>
-              </div>
-            </template>
-          </ElCollapseItem>
-
-          <!-- 阴影 -->
-          <ElCollapseItem title="阴影" name="shadow">
-            <div class="property-panel__style-row">
-              <span class="property-panel__style-label">预设</span>
-              <ElSelect :model-value="getStyleValue('boxShadow')" placeholder="无" size="small" style="flex: 1" @update:model-value="(v: string) => handleStyleInput('boxShadow', v)">
-                <ElOption v-for="s in SHADOW_PRESETS" :key="s.value" :label="s.label" :value="s.value" />
-              </ElSelect>
-            </div>
-            <div class="property-panel__style-row">
-              <span class="property-panel__style-label">自定义</span>
-              <ElInput :model-value="getStyleValue('boxShadow')" placeholder="0 2px 8px rgba(0,0,0,0.1)" size="small" @update:model-value="(v: string) => handleStyleInput('boxShadow', v)" />
-            </div>
-          </ElCollapseItem>
-        </ElCollapse>
-      </ElFormItem>
-
-      <!-- V2-T5 动画分区（FeatureGate 控制） -->
-      <ElFormItem v-if="animationEnabled" label="动画">
-        <div class="property-panel__animation">
-          <div class="property-panel__anim-row">
-            <span class="property-panel__anim-label">类型</span>
-            <ElSelect
-              :model-value="getAnimValue('type') as AnimationType | undefined"
-              placeholder="无动画"
-              size="small"
-              style="flex: 1"
-              clearable
-              @update:model-value="(v: unknown) => v ? handleAnimInput('type', v) : clearAnimation()"
-            >
-              <ElOption v-for="opt in ANIMATION_TYPES" :key="opt.value" :label="opt.label" :value="opt.value" />
-            </ElSelect>
-          </div>
-          <template v-if="getAnimValue('type')">
-            <div class="property-panel__anim-row">
-              <span class="property-panel__anim-label">触发</span>
-              <ElSelect
-                :model-value="(getAnimValue('trigger') as AnimationTrigger | undefined) ?? 'load'"
-                size="small"
-                style="flex: 1"
-                @update:model-value="(v: string) => handleAnimInput('trigger', v)"
-              >
-                <ElOption v-for="opt in availableTriggers" :key="opt.value" :label="opt.label" :value="opt.value" />
-              </ElSelect>
-            </div>
-            <div class="property-panel__anim-row">
-              <span class="property-panel__anim-label">时长(ms)</span>
-              <ElInputNumber
-                :model-value="Number(getAnimValue('duration') ?? 600)"
-                :min="0"
-                :step="100"
-                size="small"
-                controls-position="right"
-                style="flex: 1"
-                @update:model-value="(v?: number) => handleAnimInput('duration', v ?? 600)"
-              />
-            </div>
-            <div class="property-panel__anim-row">
-              <span class="property-panel__anim-label">延迟(ms)</span>
-              <ElInputNumber
-                :model-value="Number(getAnimValue('delay') ?? 0)"
-                :min="0"
-                :step="100"
-                size="small"
-                controls-position="right"
-                style="flex: 1"
-                @update:model-value="(v?: number) => handleAnimInput('delay', v ?? 0)"
-              />
-            </div>
-            <div class="property-panel__anim-row">
-              <span class="property-panel__anim-label">缓动</span>
-              <ElSelect
-                :model-value="(getAnimValue('easing') as string | undefined) ?? 'ease-out'"
-                size="small"
-                style="flex: 1"
-                @update:model-value="(v: string) => handleAnimInput('easing', v)"
-              >
-                <ElOption label="ease-out" value="ease-out" />
-                <ElOption label="ease-in" value="ease-in" />
-                <ElOption label="ease-in-out" value="ease-in-out" />
-                <ElOption label="linear" value="linear" />
-              </ElSelect>
-            </div>
-            <div v-if="getAnimValue('trigger') === 'in-view'" class="property-panel__anim-row">
-              <span class="property-panel__anim-label">重复</span>
-              <ElSwitch
-                :model-value="Boolean(getAnimValue('scrollRepeat'))"
-                @update:model-value="(v: string | number | boolean) => handleAnimInput('scrollRepeat', Boolean(v))"
-              />
-              <span class="property-panel__anim-hint">每次进入视口重播</span>
-            </div>
-          </template>
-        </div>
-      </ElFormItem>
-
       <!-- 事件分区：按 meta.events 配动作表达式（W1-T5） -->
-      <!-- V2-T7 CMS 绑定分区（FeatureGate 控制） -->
-      <ElFormItem v-if="cmsEnabled" label="CMS 内容绑定">
-        <div class="property-panel__cms">
-          <div class="property-panel__cms-row">
-            <span class="property-panel__cms-label">集合</span>
-            <ElSelect
-              v-model="cmsCollectionId"
-              placeholder="选择内容集合"
-              size="small"
-              clearable
-              style="flex: 1"
-              @clear="clearCmsBinding"
-            >
-              <ElOption
-                v-for="c in collections"
-                :key="c.id"
-                :label="c.name"
-                :value="c.id"
-              />
-            </ElSelect>
-          </div>
-          <template v-if="cmsCollectionId">
-            <div class="property-panel__cms-row">
-              <span class="property-panel__cms-label">模式</span>
-              <ElRadioGroup v-model="cmsMode" size="small">
-                <ElRadio value="single">单值（取首条字段）</ElRadio>
-                <ElRadio value="list">列表（全部条目）</ElRadio>
-              </ElRadioGroup>
-            </div>
-            <div v-if="cmsMode === 'single'" class="property-panel__cms-row">
-              <span class="property-panel__cms-label">字段</span>
-              <ElInput v-model="cmsFieldKey" size="small" placeholder="如 title" style="flex: 1" />
-            </div>
-            <ElButton size="small" text type="danger" @click="clearCmsBinding">解绑</ElButton>
-          </template>
-          <div v-else class="property-panel__cms-hint">
-            绑定内容集合后，该节点在发布页自动渲染对应内容（运行态由 website 拉取）。
-          </div>
-        </div>
-      </ElFormItem>
-
-      <!-- 事件分区（保留原位） -->
-      <ElFormItem v-if="eventNames.length" label="事件动作">
+      <ElFormItem v-if="featureEvents && eventNames.length" label="事件动作">
         <div class="property-panel__events">
           <div v-for="ev in eventNames" :key="ev" class="property-panel__event-row">
             <span class="property-panel__event-name">{{ ev }}</span>
@@ -932,8 +655,8 @@ function handleVarNameChange(varName: string): void {
         </div>
       </ElFormItem>
 
-      <!-- 数据源分区：绑 datasource + varName（W1-T5 / D15-B1） -->
-      <ElFormItem v-if="datasources.length || datasourceManageEnabled" label="数据源">
+      <!-- 数据源分区：绑 datasource + varName（W1-T5） -->
+      <ElFormItem v-if="featureDatasource && datasources.length" label="数据源">
         <div class="property-panel__datasource">
           <ElSelect
             :model-value="getCurrentDatasourceId()"
@@ -951,25 +674,6 @@ function handleVarNameChange(varName: string): void {
             size="small"
             @update:model-value="(v: string) => handleVarNameChange(v)"
           />
-          <!-- D15-B1：管理数据源 + 测试连通按钮（FeatureGate 控制） -->
-          <div v-if="datasourceManageEnabled || testConnectEnabled" class="property-panel__ds-actions">
-            <ElButton
-              v-if="datasourceManageEnabled"
-              size="small"
-              link
-              @click="emit('open-datasource')"
-            >
-              管理数据源
-            </ElButton>
-            <ElButton
-              v-if="testConnectEnabled && getCurrentDatasourceId()"
-              size="small"
-              link
-              @click="emit('test-connect', getCurrentDatasourceId())"
-            >
-              测试连通
-            </ElButton>
-          </div>
         </div>
       </ElFormItem>
     </ElForm>
@@ -1022,31 +726,6 @@ function handleVarNameChange(varName: string): void {
     align-items: center;
   }
 
-  // === D15-E0 数组编辑器 ===
-  &__array {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    width: 100%;
-  }
-
-  &__array-row {
-    display: flex;
-    gap: 6px;
-    align-items: flex-start;
-    padding: 6px;
-    border: 1px solid #ebeef5;
-    border-radius: 4px;
-    background: #fafafa;
-  }
-
-  &__array-fields {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    flex: 1;
-  }
-
   &__events {
     display: flex;
     flex-direction: column;
@@ -1070,49 +749,6 @@ function handleVarNameChange(varName: string): void {
     flex-direction: column;
     gap: 6px;
     width: 100%;
-  }
-
-  &__ds-actions {
-    display: flex;
-    gap: 12px;
-    justify-content: flex-start;
-    margin-top: 2px;
-  }
-
-  // === D15-A3 样式分区 ===
-  &__style-collapse {
-    width: 100%;
-
-    :deep(.el-collapse-item__header) {
-      font-size: 13px;
-      height: 32px;
-      line-height: 32px;
-    }
-    :deep(.el-collapse-item__content) {
-      padding-bottom: 8px;
-    }
-  }
-
-  &__style-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-    width: 100%;
-  }
-
-  &__style-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 6px;
-    width: 100%;
-  }
-
-  &__style-label {
-    font-size: 12px;
-    color: #606266;
-    flex-shrink: 0;
-    min-width: 36px;
   }
 
   &__footer {

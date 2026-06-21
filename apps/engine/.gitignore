@@ -4,6 +4,8 @@
 dist
 tmp
 out-tsc
+*.tsbuildinfo
+*.tsbuildinfo.*
 
 # dependencies
 node_modules
@@ -45,9 +47,15 @@ vite.config.*.timestamp*
 vitest.config.*.timestamp*
 test-output
 .pnpm-store
-cypress/videos
-cypress/screenshots
+
+# Playwright E2E 产物（迁移自 cypress，2026-06-19）
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/e2e/.auth/
+.env
 
 # Prod secrets on server (copy from app.env.example)
 deploy/environments/prod/app.env
-deploy/environments/prod/secrets/
+deploy/environments/prod/secrets/"cov.log"  

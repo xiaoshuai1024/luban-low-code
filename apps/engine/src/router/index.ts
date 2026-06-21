@@ -64,6 +64,25 @@ const router = createRouter({
           component: () => import('@/views/lead/LeadDetail.vue'),
           meta: { title: '线索详情' },
         },
+        // === V2-T6 表单管理 ===
+        {
+          path: 'sites/:siteId/forms',
+          name: 'FormList',
+          component: () => import('@/views/form/FormList.vue'),
+          meta: { title: '表单管理' },
+        },
+        {
+          path: 'sites/:siteId/forms/new',
+          name: 'FormNew',
+          component: () => import('@/views/form/FormConfig.vue'),
+          meta: { title: '新建表单' },
+        },
+        {
+          path: 'sites/:siteId/forms/:id',
+          name: 'FormConfig',
+          component: () => import('@/views/form/FormConfig.vue'),
+          meta: { title: '编辑表单' },
+        },
         {
           path: 'users',
           name: 'UserList',
@@ -75,6 +94,26 @@ const router = createRouter({
           name: 'Settings',
           component: () => import('@/views/settings/Settings.vue'),
           meta: { title: '系统设置' },
+        },
+      ],
+    },
+    // 全屏沉浸式设计器（独立路由，不含侧边栏/顶栏）
+    {
+      path: '/designer',
+      component: () => import('@/layouts/DesignerLayout.vue'),
+      meta: { layout: 'designer' },
+      children: [
+        {
+          path: 'sites/:siteId/pages/new',
+          name: 'DesignerNew',
+          component: () => import('@/views/page/PageEditor.vue'),
+          meta: { title: '新建页面', isNew: true, designer: true },
+        },
+        {
+          path: 'sites/:siteId/pages/:pageId',
+          name: 'DesignerEditor',
+          component: () => import('@/views/page/PageEditor.vue'),
+          meta: { title: '页面编辑', designer: true },
         },
       ],
     },

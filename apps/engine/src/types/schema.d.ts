@@ -13,4 +13,10 @@ export type {
   PageSchema,
   NodeLoop,
   NodeDatasource,
+  PageSeo,
+  NodeResponsive,
+  ResponsiveBreakpoint,
+  NodeAnimation,
+  AnimationType,
+  AnimationTrigger,
 } from 'luban-low-code';

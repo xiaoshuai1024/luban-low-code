@@ -7,6 +7,7 @@ import { resolveResponsiveProps } from './responsive';
 import Sortable from 'sortablejs';
 import { onMounted, onBeforeUnmount, ref as vueRef, computed, watch, nextTick } from 'vue';
 import DesignRendererSelf from './DesignRenderer.vue';
+import ResizeHandles from './ResizeHandles.vue';
 
 const FORM_VALUE_TYPES = new Set([
   'LubanInput',
@@ -100,6 +101,47 @@ function onAbsDragStart(e: MouseEvent): void {
   document.addEventListener('mousemove', onMove);
   document.addEventListener('mouseup', onUp);
 }
+
+/**
+ * V2-UX：hover 态高亮（与选中态区分）。
+ */
+const hoveredNodeId = vueRef<string | null>(null);
+function onWrapperEnter(): void {
+  hoveredNodeId.value = props.root.id;
+}
+function onWrapperLeave(): void {
+  hoveredNodeId.value = null;
+}
+
+/**
+ * V2-UX：选中态 emit 操作（hover 工具条按钮 → 通知父组件执行）。
+ */
+const wrapperEl = vueRef<HTMLElement | null>(null);
+
+/**
+ * W1-T2：监听 window 'lb-resize' 事件，把 resize 后的 width/height 回写到 schema。
+ * absolute 节点写 layout.width/height；static 节点写 style.width/height。
+ */
+function onResizeEvent(e: Event): void {
+  const detail = (e as CustomEvent).detail as { nodeId: string; width: number; height: number; isAbsolute: boolean };
+  if (detail.nodeId !== props.root.id) return;
+  if (detail.isAbsolute) {
+    if (!props.root.layout) props.root.layout = {};
+    props.root.layout.width = detail.width;
+    props.root.layout.height = detail.height;
+  } else {
+    if (!props.root.style) props.root.style = {};
+    props.root.style.width = `${detail.width}px`;
+    props.root.style.height = `${detail.height}px`;
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('lb-resize', onResizeEvent as EventListener);
+});
+onBeforeUnmount(() => {
+  window.removeEventListener('lb-resize', onResizeEvent as EventListener);
+});
 
 const isEmptyContainer = (): boolean =>
   isContainerType(props.root.type) &&
@@ -259,12 +301,14 @@ onBeforeUnmount(() => {
 <template>
   <template v-if="root">
     <div
+      ref="wrapperEl"
       class="design-renderer__wrapper"
       :data-node-id="root.id"
       :data-lb-node="root.id"
       :class="[
         {
           'design-renderer__wrapper--selected': selectedNodeId === root.id,
+          'design-renderer__wrapper--hovered': hoveredNodeId === root.id && selectedNodeId !== root.id,
           'design-renderer__wrapper--locked': root.locked,
           'design-renderer__wrapper--hidden': root.hidden,
         },
@@ -273,7 +317,16 @@ onBeforeUnmount(() => {
       :style="resolvedStyle"
       @click="onWrapperClick($event, root.id)"
       @mousedown="onAbsDragStart"
+      @mouseenter="onWrapperEnter"
+      @mouseleave="onWrapperLeave"
     >
+      <!-- W1-T2 Resize 手柄：选中态时叠加 8 向手柄 -->
+      <ResizeHandles
+        v-if="selectedNodeId === root.id && !root.locked"
+        :node-id="root.id"
+        :is-absolute="root.position === 'absolute'"
+        :el="wrapperEl"
+      />
       <template v-if="isEmptyContainer()">
         <div
           class="design-renderer__placeholder"
@@ -380,6 +433,10 @@ onBeforeUnmount(() => {
 }
 .design-renderer__wrapper:hover {
   outline-color: color-mix(in srgb, var(--lb-primary, #1976d2) 35%, transparent);
+}
+.design-renderer__wrapper--hovered {
+  outline: 1px solid color-mix(in srgb, var(--lb-primary, #1976d2) 50%, transparent);
+  outline-offset: 0;
 }
 .design-renderer__wrapper--selected {
   outline: 2px solid var(--lb-primary, #1e88e5);

@@ -29,6 +29,14 @@ export interface NodeSchema {
   /** 节点级自定义 class（空格分隔），与 style 一样由属性面板配置。 */
   className?: string;
   /**
+   * V2-UX 节点定位模式：
+   *  - undefined / 'static'：文档流（默认，响应式友好）
+   *  - 'absolute'：绝对定位，用 layout.x/y 定位（自由画布模式）
+   */
+  position?: 'static' | 'absolute';
+  /** V2-UX 绝对定位坐标 + 尺寸（仅 position='absolute' 时生效） */
+  layout?: NodeLayout;
+  /**
    * V2-T4 响应式：per-breakpoint style 覆盖。
    * desktop 为默认（用 node.style），tablet/mobile 浅合并覆盖 desktop。
    * 渲染时 resolveResponsiveProps 按 desktop→tablet→mobile 折叠，
@@ -102,6 +110,17 @@ export interface NodeResponsive {
 
 /** V2-T4 断点枚举（设计态 + 运行态统一） */
 export type ResponsiveBreakpoint = 'desktop' | 'tablet' | 'mobile';
+
+/**
+ * V2-UX 绝对定位节点的坐标与尺寸。
+ * x/y 为相对父容器的偏移（px）；width/height 可选（不填则由内容撑开）。
+ */
+export interface NodeLayout {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+}
 
 /** 循环渲染配置 */
 export interface NodeLoop {

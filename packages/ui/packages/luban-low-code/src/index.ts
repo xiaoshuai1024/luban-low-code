@@ -1,4 +1,4 @@
-export type { PageSchema, NodeSchema, NodeLoop, NodeDatasource, PageSeo, NodeResponsive, ResponsiveBreakpoint, NodeAnimation, AnimationType, AnimationTrigger, NodeCmsBinding } from './lib/schema';
+export type { PageSchema, NodeSchema, NodeLoop, NodeDatasource, PageSeo, NodeResponsive, ResponsiveBreakpoint, NodeAnimation, AnimationType, AnimationTrigger, NodeCmsBinding, NodeLayout } from './lib/schema';
 export type { ValidationRule } from './lib/validation';
 export { validate } from './lib/validation';
 export { default as LubanDesigner } from './lib/LubanDesigner.vue';

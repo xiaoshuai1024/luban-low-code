@@ -5,7 +5,7 @@ import { isContainerType } from './constants';
 import { validate, type ValidationRule } from './validation';
 import { resolveResponsiveProps } from './responsive';
 import Sortable from 'sortablejs';
-import { onMounted, onBeforeUnmount, ref as vueRef, computed } from 'vue';
+import { onMounted, onBeforeUnmount, ref as vueRef, computed, watch, nextTick } from 'vue';
 import DesignRendererSelf from './DesignRenderer.vue';
 
 const FORM_VALUE_TYPES = new Set([
@@ -52,8 +52,54 @@ function onPlaceholderClick(e: Event): void {
  * V2-T4：按当前断点折叠节点 style。
  * desktop = node.style；tablet/mobile 浅合并覆盖。
  * 设计态直接用内联 :style 渲染对应断点（无需 @media）。
+ *
+ * V2-UX：当 node.position === 'absolute' 时，合并 layout 坐标到 style
+ * （position:absolute + left/top/width/height），实现自由画布定位。
  */
-const resolvedStyle = computed(() => resolveResponsiveProps(props.root, props.breakpoint));
+const resolvedStyle = computed<Record<string, string>>(() => {
+  const base = resolveResponsiveProps(props.root, props.breakpoint);
+  if (props.root.position === 'absolute') {
+    const l = props.root.layout ?? {};
+    return {
+      ...base,
+      position: 'absolute',
+      ...(l.x != null ? { left: `${l.x}px` } : {}),
+      ...(l.y != null ? { top: `${l.y}px` } : {}),
+      ...(l.width != null ? { width: `${l.width}px` } : {}),
+      ...(l.height != null ? { height: `${l.height}px` } : {}),
+    };
+  }
+  return base;
+});
+
+/**
+ * V2-UX：绝对定位节点的拖拽移动。
+ * mousedown 在选中态的 absolute 节点上 → mousemove 实时更新 layout.x/y → mouseup emit。
+ * 仅设计态生效；流式节点不响应（靠 Sortable 重排）。
+ */
+function onAbsDragStart(e: MouseEvent): void {
+  if (props.root.position !== 'absolute') return;
+  // 仅在选中态才允许拖拽移动（避免误触）
+  if (props.selectedNodeId !== props.root.id) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const startX = e.clientX;
+  const startY = e.clientY;
+  const origX = props.root.layout?.x ?? 0;
+  const origY = props.root.layout?.y ?? 0;
+  if (!props.root.layout) props.root.layout = {};
+
+  function onMove(ev: MouseEvent): void {
+    props.root.layout!.x = Math.round(origX + (ev.clientX - startX));
+    props.root.layout!.y = Math.round(origY + (ev.clientY - startY));
+  }
+  function onUp(): void {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+}
 
 const isEmptyContainer = (): boolean =>
   isContainerType(props.root.type) &&
@@ -167,21 +213,43 @@ function handleContainerSortEnd(ev: Sortable.SortableEvent): void {
   emit('move-node', nodeId, fromParent || null, toParent || null, newIndex);
 }
 
-onMounted(() => {
+/**
+ * 初始化/重建容器 Sortable。
+ * 关键修复（W1-T1）：容器最初可能为空（containerDropRef 不渲染），
+ * 当子节点添加后 DOM 才出现 → 必须在 children 变化时重新初始化 Sortable，
+ * 否则拖拽功能失效（"拖动不生效"根因）。
+ */
+function reinitContainerSortable(): void {
+  containerSortable?.destroy();
+  containerSortable = null;
   if (containerDropRef.value) {
     containerDropRef.value.dataset.parentId = props.root.id;
     containerSortable = Sortable.create(containerDropRef.value, {
       animation: 150,
       group: 'luban-nodes',
-      // FINDING-1: reject drag-start on locked nodes (plan §4.2: locked 不可拖/删/改).
-      // The `--locked` class is applied to the wrapper above; Sortable's filter option
-      // makes items matching the selector non-draggable.
       filter: '.design-renderer__wrapper--locked',
       preventOnFilter: false,
       onEnd: handleContainerSortEnd,
     });
   }
+}
+
+onMounted(() => {
+  reinitContainerSortable();
 });
+
+/**
+ * W1-T1 关键修复：监听 children 数量变化，当容器从空→有子节点时
+ * containerDropRef 首次渲染，需 nextTick 后重新初始化 Sortable。
+ * 反之从有→空时销毁旧实例避免泄漏。
+ */
+watch(
+  () => props.root.children?.length ?? 0,
+  () => {
+    nextTick(() => reinitContainerSortable());
+  }
+);
+
 onBeforeUnmount(() => {
   containerSortable?.destroy();
   containerSortable = null;
@@ -204,6 +272,7 @@ onBeforeUnmount(() => {
       ]"
       :style="resolvedStyle"
       @click="onWrapperClick($event, root.id)"
+      @mousedown="onAbsDragStart"
     >
       <template v-if="isEmptyContainer()">
         <div

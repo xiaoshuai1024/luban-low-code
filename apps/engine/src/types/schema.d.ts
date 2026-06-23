@@ -19,4 +19,5 @@ export type {
   NodeAnimation,
   AnimationType,
   AnimationTrigger,
+  NodeLayout,
 } from 'luban-low-code';

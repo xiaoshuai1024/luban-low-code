@@ -59,12 +59,9 @@ class Retriever:
     def _get_client(self) -> Any:
         if self._client is not None:
             return self._client
-        from pymilvus import MilvusClient
-
-        self._client = MilvusClient(
-            uri=f"http://{self._settings.milvus_host}:{self._settings.milvus_port}"
-        )
-        return self._client
+        # TODO(M2): 替换为 Qdrant client 构造（qdrant_client.QdrantClient）。
+        # search/sync 逻辑体保留，注入 fake client 的测试仍可跑；真实 client 构造在 M2 实现。
+        raise NotImplementedError("Qdrant retriever 真实 client 构造待 M2 实现（可注入 fake client 测试）")
 
     def search(self, query: str, *, top_k: int = 5) -> list[RetrievedMaterial]:
         """hybrid 检索：dense + sparse 融合 → top-k 物料。"""

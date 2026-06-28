@@ -89,17 +89,12 @@ class Provider(abc.ABC):
 def _build_openai_chat(
     *, api_key: str, base_url: str, model: str, temperature: float = 0.2
 ) -> BaseChatModel:
-    """三家统一走 OpenAI 兼容协议构造 ChatModel。"""
-    from langchain_openai import ChatOpenAI
+    """三家统一走 OpenAI 兼容协议构造 ChatModel。
 
-    return ChatOpenAI(
-        api_key=api_key,
-        base_url=base_url,
-        model=model,
-        temperature=temperature,
-        # 结构化输出场景关闭随机性以逼近合法
-        streaming=False,
-    )
+    TODO(M1): LiteLLM provider 实现。本方法在 M0 迁移地基阶段打桩，
+    M1 将整个 Provider 层替换为 LiteLLM SDK（去 instructor，用 response_format + Pydantic）。
+    """
+    raise NotImplementedError("LiteLLM provider 待 M1 实现")
 
 
 class _OpenAICompatProvider(Provider):
@@ -142,23 +137,11 @@ class _OpenAICompatProvider(Provider):
         return self._chat
 
     def _instructor_client(self) -> object:
-        """instructor.from_openai(openai client) —— 结构化输出（懒构造，带缓存）。
+        """结构化输出客户端（懒构造，带缓存）。
 
-        instructor 1.x 移除了 from_langchain；三家 provider 均走 OpenAI 兼容协议，
-        故用 openai.OpenAI 客户端 + instructor.from_openai 包装。
+        TODO(M1): 替换为 LiteLLM provider（去 instructor，用 response_format + Pydantic）。
         """
-        if self._instructor is None:
-            import instructor
-            from openai import OpenAI
-
-            with self._lock:
-                if self._instructor is None:
-                    client = OpenAI(
-                        api_key=self._api_key,
-                        base_url=self._base_url,
-                    )
-                    self._instructor = instructor.from_openai(client)
-        return self._instructor
+        raise NotImplementedError("LiteLLM provider 待 M1 实现")
 
     def chat(self, messages: list[BaseMessage], response_model: type[BaseModel]) -> BaseModel:
         client = self._instructor_client()

@@ -89,12 +89,9 @@ class MaterialSyncer:
     def _get_client(self) -> object:
         if self._client is not None:
             return self._client
-        from pymilvus import MilvusClient
-
-        self._client = MilvusClient(
-            uri=f"http://{self._settings.milvus_host}:{self._settings.milvus_port}"
-        )
-        return self._client
+        # TODO(M2): 替换为 Qdrant client 构造（qdrant_client.QdrantClient）。
+        # sync 逻辑体保留，注入 fake client 的测试仍可跑；真实 client 构造在 M2 实现。
+        raise NotImplementedError("Qdrant sync 真实 client 构造待 M2 实现（可注入 fake client 测试）")
 
     def sync(self, materials: list[MaterialDoc], *, purge_missing: bool = False) -> dict[str, int]:
         """同步物料到 collection（幂等）。返回统计。"""

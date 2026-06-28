@@ -12,7 +12,7 @@ from app.guardrails.input import (
     sanitize_pii,
 )
 from app.guardrails.output import check_output
-from app.observability.langfuse import NoopTracer, get_tracer
+from app.observability.tracer import NoopTracer, get_tracer
 from app.schemas.page_schema import NodeSchema, PageSchema
 from app.schemas.validators import MaterialRegistry
 

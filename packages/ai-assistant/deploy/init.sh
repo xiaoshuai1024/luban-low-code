@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
 # luban-ai-assistant 初始化脚本（幂等可重跑）
 #
-# 建库 / 建 Milvus collection / 建 MinIO bucket。已存在则跳过。
+# 建库 / 建 Qdrant collection。已存在则跳过。
 # 在 fastapi 容器或本地 venv 执行：bash deploy/init.sh
 #
+# 迁移说明（M0）：原 Milvus collection + MinIO bucket 段已替换为 Qdrant collection。
 # 幂等性：每个步骤先检查存在性再创建，重复执行无副作用。
 
 set -euo pipefail
 
 echo "[init] luban-ai-assistant 资源初始化（幂等）"
 
-# ===== PostgreSQL：建 ai_sessions 表 + langfuse schema（langfuse 自管，此处仅业务表）=====
+# ===== PostgreSQL：建 ai_sessions 表 =====
 echo "[init] PostgreSQL: ai_sessions 表"
 python - <<'PY'
 import asyncio, os
@@ -41,61 +42,57 @@ async def main():
 asyncio.run(main())
 PY
 
-# ===== Milvus：建 luban_materials collection（hybrid: dense + sparse）=====
-echo "[init] Milvus: ${MILVUS_COLLECTION:-luban_materials} collection"
+# ===== Qdrant：建 luban_materials / luban_docs collection（幂等）=====
+echo "[init] Qdrant: collections"
 python - <<'PY'
 import os
-from pymilvus import (
-    MilvusClient,
-    DataType,
-    utility,
-    connections,
-)
+from qdrant_client import QdrantClient
+from qdrant_client.models import Distance, VectorParams, SparseVectorParams
 
-COLLECTION = os.environ.get("MILVUS_COLLECTION", "luban_materials")
-HOST = os.environ.get("MILVUS_HOST", "milvus")
-PORT = os.environ.get("MILVUS_PORT", "19530")
+HOST = os.environ.get("QDRANT_HOST", "qdrant")
+PORT = int(os.environ.get("QDRANT_PORT", "6333"))
+DENSE_DIM = 1024  # 与 embedding 维度对齐；collection 创建后维度不可改
 
-connections.connect(host=HOST, port=int(PORT))
-if utility.has_collection(COLLECTION):
-    print(f"[init] Milvus collection '{COLLECTION}' 已存在，跳过")
+client = QdrantClient(host=HOST, port=PORT)
+
+
+def collection_exists(name: str) -> bool:
+    """兼容不同 qdrant-client 版本的 collection 存在检查。"""
+    if hasattr(client, "collection_exists"):
+        return client.collection_exists(name)
+    try:
+        client.get_collection(name)
+        return True
+    except Exception:
+        return False
+
+
+# luban_materials：dense + sparse hybrid 检索（物料知识）
+materials = "luban_materials"
+if collection_exists(materials):
+    print(f"[init] Qdrant collection '{materials}' 已存在，跳过")
 else:
-    client = MilvusClient(uri=f"http://{HOST}:{PORT}")
-    schema = client.create_schema(auto_id=False, enable_dynamic_field=True)
-    schema.add_field("pk", DataType.VARCHAR, is_primary=True, max_length=128)
-    schema.add_field("name", DataType.VARCHAR, max_length=128)
-    schema.add_field("category", DataType.VARCHAR, max_length=64)
-    schema.add_field("description", DataType.VARCHAR, max_length=2048)
-    schema.add_field("props_schema_json", DataType.VARCHAR, max_length=8192)
-    schema.add_field("dense_vector", DataType.FLOAT_VECTOR, dim=1024)
-    schema.add_field("sparse_vector", DataType.SPARSE_FLOAT_VECTOR)
-    index_params = client.prepare_index_params()
-    index_params.add_index(field_name="dense_vector", index_type="AUTOINDEX", metric_type="IP")
-    index_params.add_index(field_name="sparse_vector", index_type="SPARSE_INVERTED_INDEX", metric_type="IP")
     client.create_collection(
-        collection_name=COLLECTION, schema=schema, index_params=index_params
+        collection_name=materials,
+        vectors_config={"dense": VectorParams(size=DENSE_DIM, distance=Distance.COSINE)},
+        sparse_vectors_config={"sparse": SparseVectorParams()},
     )
-    print(f"[init] Milvus collection '{COLLECTION}' 已创建")
-PY
+    for field in ("name", "category", "site_id", "version"):
+        client.create_payload_index(materials, field, field_schema="keyword")
+    print(f"[init] Qdrant collection '{materials}' 已创建")
 
-# ===== MinIO：建 ai-assets bucket（P2 图片用，P1 预建）=====
-echo "[init] MinIO: ${MINIO_BUCKET:-ai-assets} bucket"
-python - <<'PY'
-import os
-from minio import Minio
-
-endpoint = os.environ.get("MINIO_ENDPOINT", "minio:9000")
-access_key = os.environ.get("MINIO_ACCESS_KEY", "minioadmin")
-secret_key = os.environ.get("MINIO_SECRET_KEY", "minioadmin")
-secure = os.environ.get("MINIO_SECURE", "false").lower() == "true"
-bucket = os.environ.get("MINIO_BUCKET", "ai-assets")
-
-client = Minio(endpoint, access_key=access_key, secret_key=secret_key, secure=secure)
-if client.bucket_exists(bucket):
-    print(f"[init] MinIO bucket '{bucket}' 已存在，跳过")
+# luban_docs：dense + payload 过滤（产品文档/FAQ）
+docs = "luban_docs"
+if collection_exists(docs):
+    print(f"[init] Qdrant collection '{docs}' 已存在，跳过")
 else:
-    client.make_bucket(bucket)
-    print(f"[init] MinIO bucket '{bucket}' 已创建")
+    client.create_collection(
+        collection_name=docs,
+        vectors_config={"dense": VectorParams(size=DENSE_DIM, distance=Distance.COSINE)},
+    )
+    for field in ("site_id", "type", "source"):
+        client.create_payload_index(docs, field, field_schema="keyword")
+    print(f"[init] Qdrant collection '{docs}' 已创建")
 PY
 
 echo "[init] 完成"

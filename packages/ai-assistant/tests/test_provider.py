@@ -40,8 +40,6 @@ def _make_settings(provider: ModelProvider) -> Settings:
         deepseek_api_key=SecretStr("ds-k"),
         qwen_api_key=SecretStr("qw-k"),
         embedding_api_key=SecretStr("emb-k"),
-        langfuse_public_key=SecretStr("pk"),
-        langfuse_secret_key=SecretStr("sk"),
     )
 
 

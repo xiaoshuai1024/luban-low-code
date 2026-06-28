@@ -167,8 +167,6 @@ def _settings(**over) -> Settings:
     base = dict(
         environment="test",
         auth_jwt_secret=SecretStr("jwt-secret"),
-        langfuse_public_key=SecretStr(""),
-        langfuse_secret_key=SecretStr(""),
     )
     base.update(over)
     return Settings(**base)

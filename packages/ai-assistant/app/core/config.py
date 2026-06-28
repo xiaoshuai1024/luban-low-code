@@ -38,24 +38,7 @@ class Settings(BaseSettings):
     # ===== FeatureGate（与 engine FeatureGate 对齐语义）=====
     ai_generate_enabled: bool = True  # key: ai.generate — 关闭则 /ai/generate 返回 503
     ai_guidance_enabled: bool = True  # key: ai.guidance — 关闭则隐藏引导
-    ai_design_to_page_enabled: bool = (
-        True  # key: ai.design_to_page — 关闭则 /ai/design-to-page 503（plan P2）
-    )
 
-    # ===== 设计稿转页面（plan P2）=====
-    # 图片上传白名单（类型/大小）；超出 → 400 INVALID_IMAGE
-    design_image_max_bytes: int = 10 * 1024 * 1024  # 10MB
-    design_image_allowed_types: list[str] = Field(
-        default_factory=lambda: ["image/jpeg", "image/png", "image/webp"]
-    )
-    # presigned URL 有效期（秒）
-    design_presigned_expiry: int = 3600
-
-    # ===== 视觉模型（三家 VLM，随 MODEL_PROVIDER 切换；plan P2-T1）=====
-    # 多模态模型名（独立于文本 model，用各家 VL 变体）
-    glm_vision_model: str = "glm-4v"
-    deepseek_vision_model: str = "deepseek-vl2"
-    qwen_vision_model: str = "qwen-vl-plus"
 
     # ===== CORS / 前端 =====
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
@@ -86,28 +69,18 @@ class Settings(BaseSettings):
     # ===== PostgreSQL（checkpoint + 会话 + 元数据）=====
     postgres_dsn: str = "postgresql://luban:luban@postgres:5432/luban_ai"
 
-    # ===== Milvus（物料知识 hybrid 检索）=====
-    milvus_host: str = "milvus"
-    milvus_port: int = 19530
-    milvus_collection: str = "luban_materials"
+    # ===== Qdrant（物料知识 hybrid 检索，M2 替换 Milvus）=====
+    qdrant_host: str = "localhost"
+    qdrant_port: int = 6333
+    qdrant_collection: str = "luban_materials"
+    qdrant_docs_collection: str = "luban_docs"
+    qdrant_api_key: SecretStr = SecretStr("")  # 生产可能启用;本地无 key
 
     # ===== 云端 embedding（与 LLM 解耦，可独立配置）=====
     embedding_provider: Literal["glm", "openai"] = "glm"
     embedding_api_key: SecretStr = SecretStr("")
     embedding_base_url: str = "https://open.bigmodel.cn/api/paas/v4/"
     embedding_model: str = "embedding-3"
-
-    # ===== MinIO（OSS；P2 图片用，P1 预建 bucket）=====
-    minio_endpoint: str = "minio:9000"
-    minio_access_key: str = "minioadmin"
-    minio_secret_key: SecretStr = SecretStr("minioadmin")
-    minio_bucket: str = "ai-assets"
-    minio_secure: bool = False
-
-    # ===== Langfuse（自托管可观测）=====
-    langfuse_host: str = "http://langfuse:3000"
-    langfuse_public_key: SecretStr = SecretStr("")
-    langfuse_secret_key: SecretStr = SecretStr("")
 
     @property
     def is_prod(self) -> bool:

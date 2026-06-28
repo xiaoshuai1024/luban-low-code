@@ -28,8 +28,6 @@ def _settings(**over: Any) -> Settings:
         deepseek_api_key=SecretStr("k"),
         qwen_api_key=SecretStr("k"),
         embedding_api_key=SecretStr("k"),
-        langfuse_public_key=SecretStr("k"),
-        langfuse_secret_key=SecretStr("k"),
     )
     base.update(over)
     return Settings(**base)

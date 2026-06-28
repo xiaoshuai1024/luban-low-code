@@ -1,179 +1,175 @@
-"""LLM provider 适配层（运行期单一，仅改 MODEL_PROVIDER 切换）。
+"""LLM provider 适配层(LiteLLM 实现,运行期单一,改 MODEL_PROVIDER 切换)。
 
-设计：
+设计(M1 迁移):
 - Provider 抽象基类定义统一接口 chat(结构化)/stream(流式)。
-- 三家适配器（智谱 GLM / DeepSeek / 通义 Qwen）均走 OpenAI 兼容协议
-  （langchain_openai.ChatOpenAI + base_url/api_key），避免厂商专有 SDK 耦合。
-- get_provider(settings) 按 MODEL_PROVIDER 返回单例（运行期不切换，防协同）。
+- LiteLLM 用 provider/model 前缀路由(deepseek/deepseek-chat 等),统一 100+ 厂商接口。
+- 结构化输出:LiteLLM 原生 response_format(JSON schema) + 应用层重试逼近合法(去 instructor)。
+- chat() 返回 Pydantic 对象(供 agent nodes.py 直接用,接口与旧版兼容)。
 
-测试：单测用 mock（respx / monkeypatch），不依赖真实 API；冒烟测试才用真实 key。
+测试:单测 mock litellm.completion/acompletion;冒烟测试才用真实 key。
 """
 
 from __future__ import annotations
 
 import abc
+import json
+import logging
 from collections.abc import AsyncIterator
-from threading import Lock
+from typing import Any
 
-from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import BaseMessage, HumanMessage
-from pydantic import BaseModel
+from langchain_core.messages import BaseMessage
+from litellm import acompletion, completion
+from pydantic import BaseModel, ValidationError
+
+logger = logging.getLogger(__name__)
+
+# 结构化输出重试上限(LLM 偶尔产出非法 JSON,应用层逼近合法)
+_STRUCTURED_MAX_RETRIES = 2
+
+
+def _messages_to_openai(messages: list[BaseMessage]) -> list[dict[str, str]]:
+    """langchain BaseMessage → OpenAI messages 格式(role/content dict)。
+
+    保留 system/human/ai 角色顺序,供 LiteLLM 直接消费。
+    """
+    role_map: dict[str, str] = {
+        "system": "system",
+        "human": "user",
+        "ai": "assistant",
+        "user": "user",
+        "assistant": "assistant",
+    }
+    out: list[dict[str, str]] = []
+    for m in messages:
+        # langchain BaseMessage.type / role 属性
+        raw_role: str = getattr(m, "type", None) or getattr(m, "role", "user") or "user"
+        role = role_map.get(raw_role, raw_role)
+        content = m.content if isinstance(m.content, str) else str(m.content)
+        out.append({"role": role, "content": content})
+    return out
+
+
+def _response_format_for(model: type[BaseModel]) -> dict[str, Any]:
+    """生成 LiteLLM/OpenAI 兼容的 response_format(JSON schema 模式)。"""
+    schema = model.model_json_schema()
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": model.__name__,
+            "schema": schema,
+            # strict 模式:要求 LLM 严格按 schema 输出(支持的厂商会强制)
+            "strict": False,
+        },
+    }
 
 
 class Provider(abc.ABC):
     """LLM provider 抽象。
 
-    chat(): 结构化输出（instructor + Pydantic），用于生成须符合 schema 的对象。
-    stream(): 原始 token 流，用于对话式流式回显。
+    chat(): 结构化输出(LiteLLM response_format + Pydantic),返回 Pydantic 对象。
+    stream(): 原始 token 流(yield str),对话式流式回显。
     """
 
     @property
     @abc.abstractmethod
     def name(self) -> str:
-        """展示名（如 glm-4 / deepseek-chat / qwen-plus）。"""
+        """展示名(如 glm-4 / deepseek-chat / qwen-plus)。"""
 
     @property
     @abc.abstractmethod
     def provider_key(self) -> str:
-        """provider 标识（glm/deepseek/tongyi）。"""
+        """provider 标识(glm/deepseek/tongyi)。"""
+
+    @property
+    @abc.abstractmethod
+    def litellm_model(self) -> str:
+        """LiteLLM 路由 model 名(provider/model 前缀格式)。"""
 
     @abc.abstractmethod
+    def _api_key(self) -> str:
+        """厂商 API key(供 LiteLLM 调用)。"""
+
     def chat(self, messages: list[BaseMessage], response_model: type[BaseModel]) -> BaseModel:
-        """结构化输出：强制 LLM 返回符合 response_model 的对象。
+        """结构化输出:强制 LLM 返回符合 response_model 的 Pydantic 对象。
 
-        经 instructor 包装 ChatModel，应用层逼近合法（放弃 token 级约束解码）。
+        经 LiteLLM response_format(JSON schema) + 应用层重试逼近合法。
+        LLM 偶尔产出非法 JSON 时重试(上限 _STRUCTURED_MAX_RETRIES)。
         """
+        openai_msgs = _messages_to_openai(messages)
+        last_err: Exception | None = None
+        for attempt in range(_STRUCTURED_MAX_RETRIES + 1):
+            try:
+                resp = completion(
+                    model=self.litellm_model,
+                    api_key=self._api_key(),
+                    messages=openai_msgs,
+                    response_format=_response_format_for(response_model),
+                    temperature=0.2,
+                )
+                content = resp.choices[0].message.content
+                data = json.loads(content)
+                return response_model.model_validate(data)
+            except (json.JSONDecodeError, ValidationError) as e:
+                last_err = e
+                logger.warning(
+                    "chat 结构化输出第 %d 次非法,重试: %s", attempt + 1, e
+                )
+                continue
+        # 重试耗尽:抛出最后一次错误(供 agent 节点降级处理)
+        assert last_err is not None
+        raise last_err
 
-    @abc.abstractmethod
-    def stream(self, messages: list[BaseMessage]) -> AsyncIterator[str]:
-        """流式输出原始 token 片段（yield str）。"""
-
-    @abc.abstractmethod
-    def raw_model(self) -> BaseChatModel:
-        """底层 ChatModel（供 LangGraph/agent 直接编排）。"""
-
-    def chat_with_image(
-        self,
-        messages: list[BaseMessage],
-        image_bytes: bytes,
-        image_mime: str,
-        response_model: type[BaseModel],
-    ) -> BaseModel:
-        """多模态结构化输出（plan P2-T1）：带图片的 chat。
-
-        默认实现走 langchain HumanMessage 的多模态 content（image_url base64），
-        三家视觉模型（GLM-V/DeepSeek-VL/Qwen-VL）均支持 OpenAI 兼容的多模态消息格式。
-        子类可覆盖以适配厂商差异。
-
-        经 instructor 包装，应用层逼近合法（同 chat 语义）。
-        """
-        import base64
-
-        b64 = base64.b64encode(image_bytes).decode("ascii")
-        data_url = f"data:{image_mime};base64,{b64}"
-        # 把图片附到最后一条 HumanMessage（多模态 content 格式）
-        multimodal_messages = list(messages)
-        if multimodal_messages and isinstance(multimodal_messages[-1], HumanMessage):
-            last = multimodal_messages[-1]
-            last.content = [
-                {"type": "text", "text": str(last.content)},
-                {"type": "image_url", "image_url": {"url": data_url}},
-            ]
-        else:
-            multimodal_messages.append(
-                HumanMessage(content=[{"type": "image_url", "image_url": {"url": data_url}}])
-            )
-        return self.chat(multimodal_messages, response_model)
+    async def stream(self, messages: list[BaseMessage]) -> AsyncIterator[str]:
+        """流式输出原始 token 片段(yield str)。"""
+        openai_msgs = _messages_to_openai(messages)
+        # litellm.acompletion(stream=True) 直接返回 async generator,无需 await
+        response = acompletion(
+            model=self.litellm_model,
+            api_key=self._api_key(),
+            messages=openai_msgs,
+            stream=True,
+            temperature=0.7,
+        )
+        async for chunk in response:
+            delta = chunk.choices[0].delta.content
+            if delta:  # 跳过 None(首个 chunk 通常只有 role)
+                yield delta
 
 
-def _build_openai_chat(
-    *, api_key: str, base_url: str, model: str, temperature: float = 0.2
-) -> BaseChatModel:
-    """三家统一走 OpenAI 兼容协议构造 ChatModel。
-
-    TODO(M1): LiteLLM provider 实现。本方法在 M0 迁移地基阶段打桩，
-    M1 将整个 Provider 层替换为 LiteLLM SDK（去 instructor，用 response_format + Pydantic）。
-    """
-    raise NotImplementedError("LiteLLM provider 待 M1 实现")
-
-
-class _OpenAICompatProvider(Provider):
-    """三家共用：OpenAI 兼容协议 + instructor 结构化输出 + 流式。"""
+class _LiteLLMCompatProvider(Provider):
+    """LiteLLM OpenAI 兼容厂商基类(DeepSeek/GLM/通义 均走此路)。"""
 
     def __init__(
         self,
         *,
         provider_key: str,
         api_key: str,
-        base_url: str,
         model: str,
+        litellm_prefix: str,
     ) -> None:
         self._provider_key = provider_key
-        self._model_name = model
-        self._api_key = api_key
-        self._base_url = base_url
-        self._chat: BaseChatModel | None = None
-        self._instructor: object | None = None
-        self._lock = Lock()
+        self._api_key_value = api_key
+        self._model = model
+        self._litellm_prefix = litellm_prefix
 
     @property
     def name(self) -> str:
-        return self._model_name
+        return self._model
 
     @property
     def provider_key(self) -> str:
         return self._provider_key
 
-    def raw_model(self) -> BaseChatModel:
-        """懒构造底层 ChatModel（避免 import 期建连）。"""
-        if self._chat is None:
-            with self._lock:
-                if self._chat is None:
-                    self._chat = _build_openai_chat(
-                        api_key=self._api_key,
-                        base_url=self._base_url,
-                        model=self._model_name,
-                    )
-        return self._chat
+    @property
+    def litellm_model(self) -> str:
+        return f"{self._litellm_prefix}/{self._model}"
 
-    def _instructor_client(self) -> object:
-        """结构化输出客户端（懒构造，带缓存）。
-
-        TODO(M1): 替换为 LiteLLM provider（去 instructor，用 response_format + Pydantic）。
-        """
-        raise NotImplementedError("LiteLLM provider 待 M1 实现")
-
-    def chat(self, messages: list[BaseMessage], response_model: type[BaseModel]) -> BaseModel:
-        client = self._instructor_client()
-        # langchain BaseMessage → OpenAI chat 格式（role/content）。
-        openai_messages = [_to_openai_message(m) for m in messages]
-        # instructor.from_openai(...).chat.completions.create_partial → Pydantic（重试逼近合法）
-        result = client.chat.completions.create(  # type: ignore[attr-defined]
-            model=self._model_name,
-            response_model=response_model,
-            messages=openai_messages,
-            max_retries=2,
-        )
-        return result  # type: ignore[no-any-return]
-
-    async def stream(self, messages: list[BaseMessage]) -> AsyncIterator[str]:
-        model = self.raw_model()
-        async for chunk in model.astream(messages):
-            # ChatModel chunk 是 AIMessageChunk，content 即文本片段
-            content = chunk.content
-            if isinstance(content, str) and content:
-                yield content
+    def _api_key(self) -> str:
+        return self._api_key_value
 
 
-def _to_openai_message(msg: BaseMessage) -> dict[str, object]:
-    """langchain BaseMessage → OpenAI chat message dict（role/content）。"""
-    role_map = {
-        "system": "system",
-        "human": "user",
-        "ai": "assistant",
-        "tool": "tool",
-    }
-    role = role_map.get(msg.type, "user")
-    content = msg.content
-    # 多模态 content（chat_with_image 注入的 list 形式）原样透传
-    return {"role": role, "content": content}
+__all__ = [
+    "Provider",
+    "_LiteLLMCompatProvider",
+    "_messages_to_openai",
+]

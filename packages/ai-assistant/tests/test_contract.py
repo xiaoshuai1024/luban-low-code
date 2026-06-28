@@ -24,11 +24,17 @@ def _settings() -> Settings:
     return Settings(
         environment="test",
         auth_jwt_secret=SecretStr("test-jwt-secret-min-32-bytes-long!!"),
+        ai_service_token=SecretStr("test-internal-token"),
         glm_api_key=SecretStr("k"),
         deepseek_api_key=SecretStr("k"),
         qwen_api_key=SecretStr("k"),
         embedding_api_key=SecretStr("k"),
     )
+
+
+def _bff_headers(user_id: str = "user1", role: str = "admin") -> dict[str, str]:
+    """M3 BFF 服务间信任 header。"""
+    return {"X-Internal-Token": "test-internal-token", "X-User-Id": user_id, "X-User-Role": role}
 
 
 class _MockRunner:
@@ -110,7 +116,7 @@ def test_sse_progress_event_contract() -> None:
     resp = c.post(
         "/ai/chat",
         json={"message": "x"},
-        headers={"Authorization": f"Bearer {_token(_settings())}"},
+        headers=_bff_headers(),
     )
     events = _parse_sse(resp.text)
     progress = [e for e in events if e["event"] == "progress"]
@@ -132,7 +138,7 @@ def test_sse_confirm_event_contract() -> None:
     resp = c.post(
         "/ai/chat",
         json={"message": "x"},
-        headers={"Authorization": f"Bearer {_token(_settings())}"},
+        headers=_bff_headers(),
     )
     events = _parse_sse(resp.text)
     confirms = [e for e in events if e["event"] == "confirm"]
@@ -161,7 +167,7 @@ def test_sse_error_event_contract() -> None:
     resp = c.post(
         "/ai/chat",
         json={"message": "x"},
-        headers={"Authorization": f"Bearer {_token(_settings())}"},
+        headers=_bff_headers(),
     )
     events = _parse_sse(resp.text)
     errors = [e for e in events if e["event"] == "error"]
@@ -180,7 +186,7 @@ def test_contract_requires_valid_jwt() -> None:
     assert c.post("/ai/chat", json={"message": "x"}).status_code == 401
     # 无效 token
     resp = c.post(
-        "/ai/chat", json={"message": "x"}, headers={"Authorization": "Bearer bad.token.here"}
+        "/ai/chat", json={"message": "x"}, headers={"X-User-Id": "u"}
     )
     assert resp.status_code == 401
 
@@ -206,7 +212,7 @@ def test_schema_field_names_align_engine() -> None:
     resp = c.post(
         "/ai/chat",
         json={"message": "x"},
-        headers={"Authorization": f"Bearer {_token(_settings())}"},
+        headers=_bff_headers(),
     )
     events = _parse_sse(resp.text)
     confirm = next(e for e in events if e["event"] == "confirm")

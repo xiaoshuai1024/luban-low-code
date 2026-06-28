@@ -1,7 +1,7 @@
 """SSE 流式端点：POST /ai/chat + POST /ai/generate。
 
 事件类型（§9.2 契约）：progress | tool | patch | confirm | done | error
-鉴权：Authorization: Bearer <luban JWT>（get_current_user 验签）。
+鉴权（M3 后）：BFF 服务间信任(get_bff_user 校验 X-Internal-Token + 读 X-User-Id/Role)。
 
 流式实现：驱动 AgentRunner.run，边跑边把 state.progress 的新增事件 yield 出去。
 生成完成 → confirm/done/error 事件。
@@ -23,7 +23,7 @@ from app.agent.graph import AgentRunner
 from app.agent.state import AgentState, SessionStatus
 from app.api.ai_deps import get_agent_runner
 from app.api.errors import FeatureDisabledError
-from app.auth.jwt import AuthUser, get_current_user
+from app.auth.bff_user import AuthUser, get_bff_user
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -95,7 +95,7 @@ async def _stream_agent(runner: AgentRunner, state: AgentState) -> EventSourceRe
 @router.post("/chat")
 async def chat(
     req: ChatRequest,
-    user: AuthUser = Depends(get_current_user),
+    user: AuthUser = Depends(get_bff_user),
     runner: AgentRunner = Depends(get_agent_runner),
 ) -> EventSourceResponse:
     """自然语言对话生成/编辑页面（SSE 流式）。"""
@@ -113,7 +113,7 @@ async def chat(
 async def generate(
     request: Request,
     req: GenerateRequest,
-    user: AuthUser = Depends(get_current_user),
+    user: AuthUser = Depends(get_bff_user),
     runner: AgentRunner = Depends(get_agent_runner),
 ) -> EventSourceResponse:
     """生成页面（SSE 流式）。ai.generate FeatureGate 关 → 503。"""

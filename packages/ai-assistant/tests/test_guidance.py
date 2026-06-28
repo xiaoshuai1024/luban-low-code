@@ -142,6 +142,10 @@ def _settings(**over) -> Settings:
     return Settings(**base)
 
 
+def _bff_headers(user_id="user1", role="admin"):
+    return {"X-Internal-Token": "test-internal-token", "X-User-Id": user_id, "X-User-Role": role}
+
+
 def _token(settings: Settings) -> str:
     import jwt
 
@@ -161,7 +165,7 @@ def test_guidance_endpoint_returns_tips() -> None:
     app = create_app(settings=settings)
     with TestClient(app) as c:
         resp = c.get(
-            "/ai/guidance?empty=true", headers={"Authorization": f"Bearer {_token(settings)}"}
+            "/ai/guidance?empty=true", headers=_bff_headers()
         )
     assert resp.status_code == 200
     body = resp.json()
@@ -177,7 +181,7 @@ def test_guidance_endpoint_503_when_disabled() -> None:
     settings = _settings(ai_guidance_enabled=False)
     app = create_app(settings=settings)
     with TestClient(app) as c:
-        resp = c.get("/ai/guidance", headers={"Authorization": f"Bearer {_token(settings)}"})
+        resp = c.get("/ai/guidance", headers=_bff_headers())
     assert resp.status_code == 503
     assert resp.json()["code"] == "AI_FEATURE_DISABLED"
 

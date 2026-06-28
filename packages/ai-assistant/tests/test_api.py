@@ -24,6 +24,7 @@ def _settings(**over: Any) -> Settings:
         environment="test",
         model_provider=ModelProvider.GLM,
         auth_jwt_secret=SecretStr("test-jwt-secret"),
+        ai_service_token=SecretStr("test-internal-token"),
         glm_api_key=SecretStr("k"),
         deepseek_api_key=SecretStr("k"),
         qwen_api_key=SecretStr("k"),
@@ -31,6 +32,11 @@ def _settings(**over: Any) -> Settings:
     )
     base.update(over)
     return Settings(**base)
+
+
+def _bff_headers(user_id: str = "user1", role: str = "admin") -> dict[str, str]:
+    """M3 BFF 服务间信任 header(X-Internal-Token + X-User-Id/Role)。"""
+    return {"X-Internal-Token": "test-internal-token", "X-User-Id": user_id, "X-User-Role": role}
 
 
 def _token(settings: Settings, *, sub: str = "user1", expired: bool = False) -> str:
@@ -94,6 +100,7 @@ def _good_schema() -> PageSchema:
 
 
 def test_chat_without_token_returns_401() -> None:
+    """M3:无任何 header → 401(缺 X-Internal-Token + X-User-Id)。"""
     settings = _settings()
     with _client(settings) as c:
         resp = c.post("/ai/chat", json={"message": "做一个页面"})
@@ -101,30 +108,32 @@ def test_chat_without_token_returns_401() -> None:
     assert resp.json()["code"] == "UNAUTHENTICATED"
 
 
-def test_chat_with_invalid_token_returns_401() -> None:
+def test_chat_with_invalid_internal_token_returns_401() -> None:
+    """M3:X-Internal-Token 错 → 401。"""
     settings = _settings()
     with _client(settings) as c:
         resp = c.post(
             "/ai/chat",
             json={"message": "x"},
-            headers={"Authorization": "Bearer not.a.valid.token"},
+            headers={"X-Internal-Token": "wrong", "X-User-Id": "u"},
         )
     assert resp.status_code == 401
     assert resp.json()["code"] == "UNAUTHENTICATED"
 
 
-def test_chat_with_expired_token_returns_401() -> None:
+def test_chat_missing_user_id_returns_401() -> None:
+    """M3:有 internal_token 但缺 X-User-Id → 401。"""
     settings = _settings()
     with _client(settings) as c:
         resp = c.post(
             "/ai/chat",
             json={"message": "x"},
-            headers={"Authorization": f"Bearer {_token(settings, expired=True)}"},
+            headers={"X-Internal-Token": "test-internal-token"},
         )
     assert resp.status_code == 401
     body = resp.json()
     assert body["code"] == "UNAUTHENTICATED"
-    assert body["details"]["reason"] == "expired"
+    assert body["details"]["reason"] == "missing_user_id"
 
 
 # ===== SSE 流式（chat）=====
@@ -137,7 +146,7 @@ def test_chat_streams_confirm_event() -> None:
         resp = c.post(
             "/ai/chat",
             json={"message": "做一个提交按钮页", "siteId": "s1", "pageId": "p1"},
-            headers={"Authorization": f"Bearer {_token(settings)}"},
+            headers=_bff_headers(),
         )
     assert resp.status_code == 200
     text = resp.text
@@ -157,7 +166,7 @@ def test_chat_streams_error_on_failed() -> None:
         resp = c.post(
             "/ai/chat",
             json={"message": "x"},
-            headers={"Authorization": f"Bearer {_token(settings)}"},
+            headers=_bff_headers(),
         )
     assert resp.status_code == 200
     assert "event: error" in resp.text
@@ -174,7 +183,7 @@ def test_generate_returns_503_when_disabled() -> None:
         resp = c.post(
             "/ai/generate",
             json={"prompt": "x"},
-            headers={"Authorization": f"Bearer {_token(settings)}"},
+            headers=_bff_headers(),
         )
     assert resp.status_code == 503
     assert resp.json()["code"] == "AI_FEATURE_DISABLED"
@@ -187,7 +196,7 @@ def test_generate_streams_when_enabled() -> None:
         resp = c.post(
             "/ai/generate",
             json={"prompt": "做一个表格页"},
-            headers={"Authorization": f"Bearer {_token(settings)}"},
+            headers=_bff_headers(),
         )
     assert resp.status_code == 200
     assert "event: confirm" in resp.text

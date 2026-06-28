@@ -43,7 +43,10 @@ class Settings(BaseSettings):
     # ===== CORS / 前端 =====
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
 
-    # ===== JWT（复用 luban AUTH_JWT_SECRET 自验）=====
+    # ===== BFF 服务间信任(M3)=====
+    ai_service_token: SecretStr = SecretStr("")  # BFF 与 AI 服务共享密钥,环境变量注入
+
+    # ===== JWT（M3 后 BFF 服务间信任为主，JWT 自验降级可选）=====
     auth_jwt_secret: SecretStr = SecretStr("change-me")
     auth_jwt_algorithm: str = "HS256"
 

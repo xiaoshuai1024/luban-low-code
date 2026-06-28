@@ -32,6 +32,13 @@ class UnauthenticatedError(ApiError):
     status_code = 401
 
 
+class ForbiddenError(ApiError):
+    """角色/权限不足(M3: visitor 禁工具调用用)。"""
+
+    code = "AI_FORBIDDEN"
+    status_code = 403
+
+
 class FeatureDisabledError(ApiError):
     code = "AI_FEATURE_DISABLED"
     status_code = 503

@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 from typing import Any
 
-import jwt
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
@@ -21,6 +20,7 @@ def _settings(**over: Any) -> Settings:
     base = dict(
         environment="test",
         auth_jwt_secret=SecretStr("test-jwt-secret-min-32-bytes-long!!"),
+        ai_service_token=SecretStr("test-internal-token"),
         glm_api_key=SecretStr("k"),
         deepseek_api_key=SecretStr("k"),
         qwen_api_key=SecretStr("k"),
@@ -30,12 +30,9 @@ def _settings(**over: Any) -> Settings:
     return Settings(**base)
 
 
-def _token(settings: Settings, sub: str = "user1") -> str:
-    return jwt.encode(
-        {"sub": sub, "username": "t", "role": "admin"},
-        settings.auth_jwt_secret.get_secret_value(),
-        algorithm="HS256",
-    )
+def _ws_qs(user_id: str = "user1") -> str:
+    """M3:WS 鉴权 query params(BFF 透传 internal_token + user_id)。"""
+    return "internal_token=test-internal-token&user_id=" + user_id
 
 
 class MockRunner:
@@ -74,7 +71,7 @@ def test_ws_rejects_without_token() -> None:
 def test_ws_rejects_invalid_token() -> None:
     app = _client(_settings())
     with pytest.raises(WebSocketDisconnect) as exc:
-        TestClient(app).websocket_connect("/ai/agent?token=invalid").__enter__()
+        TestClient(app).websocket_connect("/ai/agent?user_id=u").__enter__()
     assert exc.value.code == 4401
 
 
@@ -86,7 +83,7 @@ def test_ws_handles_message_and_streams() -> None:
     schema = PageSchema(root=NodeSchema(id="r", type="LubanPage"))
     runner = MockRunner(SessionStatus.AWAITING_CONFIRM, schema=schema)
     app = _client(settings, runner)
-    with TestClient(app).websocket_connect(f"/ai/agent?token={_token(settings)}") as ws:
+    with TestClient(app).websocket_connect(f"/ai/agent?{_ws_qs()}") as ws:
         ws.send_text(json.dumps({"type": "message", "message": "做一个按钮页"}))
         received = []
         for _ in range(10):
@@ -106,7 +103,7 @@ def test_ws_unknown_message_type_rejected() -> None:
     settings = _settings()
     runner = MockRunner(SessionStatus.AWAITING_CONFIRM)
     app = _client(settings, runner)
-    with TestClient(app).websocket_connect(f"/ai/agent?token={_token(settings)}") as ws:
+    with TestClient(app).websocket_connect(f"/ai/agent?{_ws_qs()}") as ws:
         ws.send_text(json.dumps({"type": "garbage"}))
         msg = json.loads(ws.receive_text())
         assert msg["type"] == "error"
@@ -116,7 +113,7 @@ def test_ws_invalid_json_rejected() -> None:
     settings = _settings()
     runner = MockRunner(SessionStatus.AWAITING_CONFIRM)
     app = _client(settings, runner)
-    with TestClient(app).websocket_connect(f"/ai/agent?token={_token(settings)}") as ws:
+    with TestClient(app).websocket_connect(f"/ai/agent?{_ws_qs()}") as ws:
         ws.send_text("not json")
         msg = json.loads(ws.receive_text())
         assert msg["type"] == "error"
@@ -126,7 +123,7 @@ def test_ws_pong_acknowledged() -> None:
     settings = _settings()
     runner = MockRunner(SessionStatus.AWAITING_CONFIRM)
     app = _client(settings, runner)
-    with TestClient(app).websocket_connect(f"/ai/agent?token={_token(settings)}") as ws:
+    with TestClient(app).websocket_connect(f"/ai/agent?{_ws_qs()}") as ws:
         ws.send_text(json.dumps({"type": "message", "message": "x"}))
         # 消费到 confirm 后再发 pong（不报错即通过）
         for _ in range(10):
@@ -141,7 +138,7 @@ def test_ws_confirm_acknowledged() -> None:
     settings = _settings()
     runner = MockRunner(SessionStatus.AWAITING_CONFIRM)
     app = _client(settings, runner)
-    with TestClient(app).websocket_connect(f"/ai/agent?token={_token(settings)}") as ws:
+    with TestClient(app).websocket_connect(f"/ai/agent?{_ws_qs()}") as ws:
         ws.send_text(json.dumps({"type": "confirm", "confirmed": True}))
         msg = json.loads(ws.receive_text())
         assert msg["type"] == "ack"

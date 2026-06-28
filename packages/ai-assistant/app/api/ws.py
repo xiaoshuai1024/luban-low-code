@@ -23,7 +23,6 @@ from app.agent.graph import AgentRunner
 from app.agent.state import AgentState, SessionStatus
 from app.api.ai_deps import get_agent_runner
 from app.api.errors import UnauthenticatedError
-from app.auth.jwt import decode_token
 from app.core.config import Settings
 
 router = APIRouter(prefix="/ai", tags=["ai"])
@@ -31,10 +30,19 @@ router = APIRouter(prefix="/ai", tags=["ai"])
 HEARTBEAT_SECONDS = 15
 
 
-def _auth_ws(token: str, settings: Settings) -> str:
-    """WS 鉴权：验 JWT → user_id。失败抛 UnauthenticatedError（WS 关闭码 4401）。"""
-    user = decode_token(token, settings)
-    return user.user_id
+def _auth_ws(
+    internal_token: str | None, user_id: str | None, settings: Settings
+) -> str:
+    """WS 鉴权(M3 后):BFF 透传 internal_token + user_id 作为 query param。
+
+    校验 internal_token(服务间信任)+ 必须有 user_id。失败抛 UnauthenticatedError(WS 关闭码 4401)。
+    """
+    expected = settings.ai_service_token.get_secret_value() if settings.ai_service_token else ""
+    if expected and (not internal_token or internal_token != expected):
+        raise UnauthenticatedError("无效 internal_token", details={"reason": "invalid"})
+    if not user_id:
+        raise UnauthenticatedError("缺少 user_id")
+    return user_id
 
 
 async def _send_json(ws: WebSocket, payload: dict[str, Any]) -> None:
@@ -44,13 +52,14 @@ async def _send_json(ws: WebSocket, payload: dict[str, Any]) -> None:
 @router.websocket("/agent")
 async def agent_ws(
     ws: WebSocket,
-    token: str = Query(...),
+    internal_token: str | None = Query(default=None, description="BFF 服务间 token"),
+    user_id: str | None = Query(default=None, description="BFF 透传用户 id"),
     runner: AgentRunner = Depends(get_agent_runner),
 ) -> None:
     """多步 agent WebSocket。"""
     settings: Settings = ws.app.state.settings
     try:
-        user_id = _auth_ws(token, settings)
+        resolved_user_id = _auth_ws(internal_token, user_id, settings)
     except UnauthenticatedError:
         await ws.close(code=4401)
         return
@@ -88,7 +97,7 @@ async def agent_ws(
             # 处理用户消息：跑 agent，流式回传 progress
             state = AgentState(
                 session_id=new_session_id(),
-                user_id=user_id,
+                user_id=resolved_user_id,
                 site_id=msg.get("siteId"),
                 page_id=msg.get("pageId"),
                 user_message=msg.get("message", ""),

@@ -22,7 +22,16 @@ import logging
 from collections.abc import Awaitable, Callable
 
 from app.agent.checkpoint import CheckpointStore
-from app.agent.nodes import AgentDeps, feedback, generate, hitl, retrieve, understand, validate
+from app.agent.nodes import (
+    AgentDeps,
+    feedback,
+    generate,
+    hitl,
+    retrieve,
+    tool_call,
+    understand,
+    validate,
+)
 from app.agent.state import AgentState, SessionStatus
 
 logger = logging.getLogger(__name__)
@@ -44,6 +53,7 @@ class AgentRunner:
         # 节点注册表（可被测试替换）
         self.nodes: dict[str, NodeFn] = {
             "understand": understand,
+            "tool_call": tool_call,
             "retrieve": retrieve,
             "generate": generate,
             "validate": validate,
@@ -56,6 +66,7 @@ class AgentRunner:
         from app.agent.nodes import route_after_validate
 
         state = await self.nodes["understand"](state, self.deps)
+        state = await self.nodes["tool_call"](state, self.deps)
         state = await self.nodes["retrieve"](state, self.deps)
 
         # 生成→校验→(回环) 循环，受 max_retries 限制

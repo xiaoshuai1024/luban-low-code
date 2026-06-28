@@ -45,6 +45,7 @@ class Settings(BaseSettings):
 
     # ===== BFF 服务间信任(M3)=====
     ai_service_token: SecretStr = SecretStr("")  # BFF 与 AI 服务共享密钥,环境变量注入
+    bff_base_url: str = "http://localhost:3100"  # M4 工具回环目标 BFF 地址
 
     # ===== JWT（M3 后 BFF 服务间信任为主，JWT 自验降级可选）=====
     auth_jwt_secret: SecretStr = SecretStr("change-me")

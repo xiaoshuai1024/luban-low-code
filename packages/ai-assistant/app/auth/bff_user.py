@@ -20,7 +20,7 @@ from app.api.errors import ForbiddenError, UnauthenticatedError
 from app.auth.jwt import AuthUser
 from app.core.config import Settings
 
-__all__ = ["AuthUser", "get_bff_user", "require_role", "AuthDep"]
+__all__ = ["AuthDep", "AuthUser", "get_bff_user", "require_role"]
 
 
 def _verify_internal_token(request: Request, settings: Settings) -> None:
@@ -73,7 +73,6 @@ def require_role(*allowed: str) -> Any:
     用法: Depends(require_role("admin"))
     visitor 尝试访问 → 403 ForbiddenError。
     """
-    from collections.abc import Callable
     from fastapi import Depends
 
     async def _guard(user: AuthUser = Depends(get_bff_user)) -> AuthUser:

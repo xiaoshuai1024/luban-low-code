@@ -12,7 +12,7 @@ from app.main import create_app
 
 @pytest.fixture
 def settings() -> Settings:
-    return Settings(
+    return Settings(_env_file=None, 
         environment="test",
         model_provider=ModelProvider.GLM,
         auth_jwt_secret=SecretStr("test-jwt-secret"),

@@ -139,7 +139,7 @@ def _settings(**over) -> Settings:
         embedding_api_key=SecretStr("k"),
     )
     base.update(over)
-    return Settings(**base)
+    return Settings(_env_file=None, **base)
 
 
 def _bff_headers(user_id="user1", role="admin"):

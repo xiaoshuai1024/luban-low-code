@@ -20,9 +20,19 @@ from app.schemas.validators import MaterialRegistry
 
 
 def _build_registry(settings: Settings) -> MaterialRegistry:
-    """物料注册表：生产从 Milvus 读，测试注入 mock。P1 用空注册表 + RAG 兜底。"""
-    # P1-T6：暂用空注册表（物料由 RAG 检索提供上下文，校验闸对未知物料占位不崩）
-    return MaterialRegistry()
+    """物料注册表:P0-5 修复,用内置物料清单填充(61 个,从 luban-low-code 抽取)。
+
+    generate 节点据此拿到真实物料名,不再瞎编。
+    校验闸对未注册物料占位不崩(validate_page_schema 缺物料不阻断),
+    但有清单后 LLM 生成命中率大幅提升。
+    """
+    from app.rag.builtin_materials import BUILTIN_MATERIALS
+
+    registry = MaterialRegistry()
+    for m in BUILTIN_MATERIALS:
+        # name → 空 propsSchema(校验闸对未知 props 占位放行;真实 propsSchema 后续从物料定义补)
+        registry.materials[m.name] = {}
+    return registry
 
 
 @lru_cache(maxsize=1)
@@ -39,7 +49,10 @@ def get_checkpoint_store(settings: Settings | None = None) -> CheckpointStore:
 
 
 def get_agent_deps(settings: Settings | None = None) -> AgentDeps:
-    """构造 agent 依赖(provider/retriever/registry,tool_client 由端点按用户身份注入)。"""
+    """构造 agent 依赖(provider/retriever/registry,tool_client 由端点按用户身份注入)。
+
+    registry 由内置物料清单填充(P0-5);RAG retriever 从 Qdrant 检索(M2)。
+    """
     s = settings or get_settings()
     embedder = get_embedder(s)
     return AgentDeps(

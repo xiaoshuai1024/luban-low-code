@@ -169,7 +169,7 @@ def _settings(**over) -> Settings:
         auth_jwt_secret=SecretStr("jwt-secret"),
     )
     base.update(over)
-    return Settings(**base)
+    return Settings(_env_file=None, **base)
 
 
 def test_get_tracer_returns_noop_when_unconfigured() -> None:

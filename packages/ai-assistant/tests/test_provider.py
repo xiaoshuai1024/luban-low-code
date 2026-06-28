@@ -32,7 +32,7 @@ class _Out(BaseModel):
 
 
 def _make_settings(provider: ModelProvider) -> Settings:
-    return Settings(
+    return Settings(_env_file=None, 
         environment="test",
         model_provider=provider,
         auth_jwt_secret=SecretStr("jwt"),

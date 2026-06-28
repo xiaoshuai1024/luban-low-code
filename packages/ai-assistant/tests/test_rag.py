@@ -97,7 +97,7 @@ class FakeQdrantClient:
 
 
 def _settings() -> Settings:
-    return Settings(
+    return Settings(_env_file=None, 
         environment="test",
         auth_jwt_secret=SecretStr("jwt"),
         glm_api_key=SecretStr("k"),

@@ -27,7 +27,7 @@ def _settings(**over: Any) -> Settings:
         embedding_api_key=SecretStr("k"),
     )
     base.update(over)
-    return Settings(**base)
+    return Settings(_env_file=None, **base)
 
 
 def _ws_qs(user_id: str = "user1") -> str:

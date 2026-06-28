@@ -24,7 +24,25 @@ from app.core.config import Settings, get_settings
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-    # P1-T1：无启动期重连接（lazy）；各模块在首次调用时建连。
+    # P0-5:启动时同步内置物料到 Qdrant(供 RAG 检索)。
+    # 受 ENABLE_STARTUP_SYNC 控制(test/dev 默认关,生产开);失败不阻断启动。
+    import logging
+    import os
+
+    logger = logging.getLogger(__name__)
+    if os.environ.get("ENABLE_STARTUP_SYNC", "0") == "1":
+        try:
+            from app.core.config import get_settings
+            from app.rag.builtin_materials import BUILTIN_MATERIALS
+            from app.rag.embedding import get_embedder
+            from app.rag.sync_materials import MaterialSyncer
+
+            s = get_settings()
+            syncer = MaterialSyncer(s, get_embedder(s))
+            stat = syncer.sync(BUILTIN_MATERIALS, purge_missing=True)
+            logger.info("启动物料同步: %s", stat)
+        except Exception as e:
+            logger.warning("启动物料同步失败(降级用内置清单): %s", e)
     yield
 
 

@@ -21,7 +21,7 @@ from app.schemas.page_schema import NodeSchema, PageSchema
 
 
 def _settings() -> Settings:
-    return Settings(
+    return Settings(_env_file=None, 
         environment="test",
         auth_jwt_secret=SecretStr("test-jwt-secret-min-32-bytes-long!!"),
         ai_service_token=SecretStr("test-internal-token"),

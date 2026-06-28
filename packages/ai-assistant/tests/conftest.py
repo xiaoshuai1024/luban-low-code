@@ -11,6 +11,24 @@ from collections.abc import Iterator
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _isolate_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """隔离环境变量,防止本地 .env 污染测试(AI_SERVICE_TOKEN/AUTH_JWT_SECRET 等)。
+
+    测试通过 settings fixture 显式注入配置,不依赖运行环境的 .env。
+    """
+    for key in (
+        "AI_SERVICE_TOKEN",
+        "AUTH_JWT_SECRET",
+        "MODEL_PROVIDER",
+        "DEEPSEEK_API_KEY",
+        "GLM_API_KEY",
+        "QWEN_API_KEY",
+        "ENABLE_STARTUP_SYNC",
+    ):
+        monkeypatch.delenv(key, raising=False)
+
+
 @pytest.fixture
 def app_client(request: pytest.FixtureRequest) -> Iterator[object]:
     """FastAPI TestClient（用同会话的 settings fixture 注入）。

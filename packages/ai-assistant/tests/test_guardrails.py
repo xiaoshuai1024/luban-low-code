@@ -12,7 +12,7 @@ from app.guardrails.input import (
     sanitize_pii,
 )
 from app.guardrails.output import check_output
-from app.observability.langfuse import NoopTracer, get_tracer
+from app.observability.tracer import NoopTracer, get_tracer
 from app.schemas.page_schema import NodeSchema, PageSchema
 from app.schemas.validators import MaterialRegistry
 
@@ -167,8 +167,6 @@ def _settings(**over) -> Settings:
     base = dict(
         environment="test",
         auth_jwt_secret=SecretStr("jwt-secret"),
-        langfuse_public_key=SecretStr(""),
-        langfuse_secret_key=SecretStr(""),
     )
     base.update(over)
     return Settings(**base)

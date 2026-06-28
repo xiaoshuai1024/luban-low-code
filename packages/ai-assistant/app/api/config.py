@@ -35,6 +35,5 @@ async def get_config(request: Request) -> dict[str, object]:
         "features": {
             "generate": settings.ai_generate_enabled,
             "guidance": settings.ai_guidance_enabled,
-            "design_to_page": settings.ai_design_to_page_enabled,
         },
     }

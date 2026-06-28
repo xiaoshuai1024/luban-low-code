@@ -18,6 +18,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
 from app.agent.state import AgentState, SessionStatus
+from app.agent.tools import ToolClient
 from app.llm.provider import Provider
 from app.rag.retriever import RetrievedMaterial, Retriever
 from app.schemas.page_schema import PageSchema
@@ -32,7 +33,7 @@ logger = logging.getLogger(__name__)
 class GenerationIntent(BaseModel):
     """understand 节点：意图分类。"""
 
-    kind: str = Field(description="generate_page | edit_property | guidance | unknown")
+    kind: str = Field(description="generate_page | edit_property | query_leads | guidance | unknown")
     summary: str = Field(description="用户意图一句话总结")
 
 
@@ -53,6 +54,7 @@ class AgentDeps:
     provider: Provider
     retriever: Retriever
     registry: MaterialRegistry
+    tool_client: ToolClient | None = None  # M4 工具回环(None = 禁用工具调用,如 visitor)
     system_prompt: str = (
         "你是 luban 低代码平台的页面生成助手。根据用户需求生成符合 PageSchema "
         "规范的页面结构，只能使用已知物料。输出严格 JSON。"
@@ -85,6 +87,49 @@ async def understand(state: AgentState, deps: AgentDeps) -> AgentState:
         state.add_progress("tool", tool="understand", result="generate_page(fallback)")
     # 存意图到 progress（节点间传递用 dict，避免改 AgentState 结构）
     state.add_progress("intent", kind=intent.kind, summary=intent.summary)
+    # M4: 记录最新意图到 state(供 tool_call 节点读,无状态图回环时直接取)
+    state.tool_calls = [t for t in state.tool_calls if t.get("kind") != "intent"]
+    state.tool_calls.append({"kind": "intent", "value": intent.kind, "summary": intent.summary})
+    return state
+
+
+async def tool_call(state: AgentState, deps: AgentDeps) -> AgentState:
+    """M4 工具调用回环:按意图经 httpx 调 BFF 读取业务数据。
+
+    visitor 角色跳过(tool_client 为 None);generate_page/edit_property 按需读页面 schema。
+    工具失败降级返回 None,agent 据此调整,不阻断。
+    """
+    # visitor 无工具权限(M3 require_role 在端点层拦截,这里二次保护)
+    if deps.tool_client is None:
+        return state
+
+    intent = state.tool_calls[-1].get("value", "generate_page") if state.tool_calls else "generate_page"
+
+    # generate_page/edit_property:读当前页面 schema(若 site_id/page_id 已知)
+    if intent in ("generate_page", "edit_property") and state.site_id and state.page_id:
+        state.add_progress("tool_call", tool="get_page_schema", site_id=state.site_id, page_id=state.page_id)
+        existing = await deps.tool_client.get_page_schema(state.site_id, state.page_id)
+        state.tool_calls.append(
+            {"kind": "page_schema", "tool": "get_page_schema", "result": existing}
+        )
+        state.add_progress("tool_result", tool="get_page_schema", success=existing is not None)
+        # 已有 schema 回填 current_schema(供 generate 参考现有结构做增量编辑)
+        if existing and isinstance(existing, dict):
+            try:
+                from app.schemas.page_schema import PageSchema as _PS
+
+                schema_data = existing.get("data", existing)
+                state.current_schema = _PS.model_validate(schema_data)
+            except Exception as e:
+                logger.warning("tool_call 解析 page_schema 失败,忽略: %s", e)
+
+    # 查线索意图:list_leads
+    if intent == "query_leads" and state.site_id:
+        state.add_progress("tool_call", tool="list_leads", site_id=state.site_id)
+        leads = await deps.tool_client.list_leads(state.site_id)
+        state.tool_calls.append({"kind": "leads", "tool": "list_leads", "result": leads})
+        state.add_progress("tool_result", tool="list_leads", count=len(leads))
+
     return state
 
 

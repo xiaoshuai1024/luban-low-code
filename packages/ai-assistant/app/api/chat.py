@@ -1,7 +1,7 @@
 """SSE 流式端点：POST /ai/chat + POST /ai/generate。
 
 事件类型（§9.2 契约）：progress | tool | patch | confirm | done | error
-鉴权：Authorization: Bearer <luban JWT>（get_current_user 验签）。
+鉴权（M3 后）：BFF 服务间信任(get_bff_user 校验 X-Internal-Token + 读 X-User-Id/Role)。
 
 流式实现：驱动 AgentRunner.run，边跑边把 state.progress 的新增事件 yield 出去。
 生成完成 → confirm/done/error 事件。
@@ -21,9 +21,9 @@ from sse_starlette.sse import EventSourceResponse
 from app.agent.checkpoint import new_session_id
 from app.agent.graph import AgentRunner
 from app.agent.state import AgentState, SessionStatus
-from app.api.ai_deps import get_agent_runner
+from app.api.ai_deps import build_tool_client, get_agent_runner, with_tool_client
 from app.api.errors import FeatureDisabledError
-from app.auth.jwt import AuthUser, get_current_user
+from app.auth.bff_user import AuthUser, get_bff_user
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -92,13 +92,27 @@ async def _stream_agent(runner: AgentRunner, state: AgentState) -> EventSourceRe
     return EventSourceResponse(event_gen())
 
 
+def _inject_tool_client(runner: Any, settings: Any, user: AuthUser) -> None:
+    """按用户身份给 runner 注入工具回环 client(原地修改 runner.deps)。
+
+    visitor → tool_client=None(禁工具);测试 MockRunner 无 deps 时跳过。
+    """
+    if not hasattr(runner, "deps"):
+        return  # 测试 mock runner,无需注入
+    tool_client = build_tool_client(settings, user.user_id, user.role or "")
+    runner.deps = with_tool_client(runner.deps, tool_client)
+
+
 @router.post("/chat")
 async def chat(
+    request: Request,
     req: ChatRequest,
-    user: AuthUser = Depends(get_current_user),
+    user: AuthUser = Depends(get_bff_user),
     runner: AgentRunner = Depends(get_agent_runner),
 ) -> EventSourceResponse:
     """自然语言对话生成/编辑页面（SSE 流式）。"""
+    settings = request.app.state.settings
+    _inject_tool_client(runner, settings, user)
     state = AgentState(
         session_id=new_session_id(),
         user_id=user.user_id,
@@ -113,13 +127,14 @@ async def chat(
 async def generate(
     request: Request,
     req: GenerateRequest,
-    user: AuthUser = Depends(get_current_user),
+    user: AuthUser = Depends(get_bff_user),
     runner: AgentRunner = Depends(get_agent_runner),
 ) -> EventSourceResponse:
     """生成页面（SSE 流式）。ai.generate FeatureGate 关 → 503。"""
     settings = request.app.state.settings
     if not settings.ai_generate_enabled:
         raise FeatureDisabledError("ai.generate 未启用")
+    _inject_tool_client(runner, settings, user)
     state = AgentState(
         session_id=new_session_id(),
         user_id=user.user_id,

@@ -50,6 +50,20 @@ class MaterialDoc:
 _TOKEN_RE = re.compile(r"[A-Za-z0-9_\u4e00-\u9fff]+")
 
 
+def _ensure_no_proxy(host: str) -> None:
+    """确保指定 host 不走系统代理(幂等)。
+
+    macOS 系统代理会拦截 localhost/内网请求致 502。httpx/httpx 读 NO_PROXY 环境变量。
+    本函数把 host 追加到 NO_PROXY(已含则跳过)。生产环境无系统代理,此函数为空操作。
+    """
+    import os
+
+    no_proxy = os.environ.get("NO_PROXY", "")
+    if host in no_proxy:
+        return
+    os.environ["NO_PROXY"] = f"{no_proxy},{host}" if no_proxy else host
+
+
 def tokenize(text: str) -> list[str]:
     """轻量分词：英文按词、中文按字（去停用词空）。供稀疏向量。"""
     toks: list[str] = []
@@ -77,7 +91,7 @@ def build_sparse_vector(text: str) -> dict[int, float]:
 
 
 class MaterialSyncer:
-    """物料知识同步器（Milvus client 可注入，便于 mock）。"""
+    """物料知识同步器(Qdrant client 可注入,便于 mock)。"""
 
     def __init__(
         self, settings: Settings, embedder: Embedder, client: object | None = None
@@ -89,17 +103,23 @@ class MaterialSyncer:
     def _get_client(self) -> object:
         if self._client is not None:
             return self._client
-        from pymilvus import MilvusClient
+        # Qdrant client 构造:确保不走系统代理
+        _ensure_no_proxy(self._settings.qdrant_host)
+        from qdrant_client import QdrantClient
 
-        self._client = MilvusClient(
-            uri=f"http://{self._settings.milvus_host}:{self._settings.milvus_port}"
+        client = QdrantClient(
+            host=self._settings.qdrant_host,
+            port=self._settings.qdrant_port,
+            prefer_grpc=False,
+            https=False,
         )
+        self._client = client
         return self._client
 
     def sync(self, materials: list[MaterialDoc], *, purge_missing: bool = False) -> dict[str, int]:
-        """同步物料到 collection（幂等）。返回统计。"""
+        """同步物料到 collection(幂等)。返回统计。"""
         client = self._get_client()
-        collection = self._settings.milvus_collection
+        collection = self._settings.qdrant_collection
 
         if not materials:
             return {"upserted": 0, "purged": 0}
@@ -107,41 +127,72 @@ class MaterialSyncer:
         texts = [m.searchable_text for m in materials]
         dense = self._embedder.embed_documents(texts)
 
-        rows: list[dict[str, object]] = []
+        # Qdrant PointStruct:id 用物料 pk(确定性字符串 hash → uint),payload 存元数据
+        from qdrant_client.models import PointStruct, SparseVector
+
+        points: list[PointStruct] = []
         for m, vec in zip(materials, dense, strict=True):
             sparse = build_sparse_vector(m.searchable_text)
-            rows.append(
-                {
-                    "pk": m.pk,
-                    "name": m.name,
-                    "category": m.category,
-                    "description": m.description,
-                    "props_schema_json": m.props_schema_json(),
-                    "dense_vector": vec,
-                    "sparse_vector": sparse,
-                }
+            points.append(
+                PointStruct(
+                    id=self._pk_to_qdrant_id(m.pk),
+                    vector={
+                        "dense": vec,
+                        "sparse": SparseVector(
+                            indices=list(sparse.keys()), values=list(sparse.values())
+                        ),
+                    },
+                    payload={
+                        "pk": m.pk,
+                        "name": m.name,
+                        "category": m.category,
+                        "description": m.description,
+                        "props_schema_json": m.props_schema_json(),
+                    },
+                )
             )
 
-        client.upsert(collection_name=collection, data=rows)  # type: ignore[attr-defined]
+        client.upsert(collection_name=collection, points=points)  # type: ignore[attr-defined]
 
         purged = 0
         if purge_missing:
-            existing = {m.pk for m in materials}
+            existing = {self._pk_to_qdrant_id(m.pk) for m in materials}
             purged = self._delete_missing(collection, client, existing)
 
-        return {"upserted": len(rows), "purged": purged}
+        return {"upserted": len(points), "purged": purged}
 
-    def _delete_missing(self, collection: str, client: object, keep: set[str]) -> int:
-        """删除 collection 中不在 keep 集合的物料（purge_missing=True 时）。"""
-        # 简化实现：查全量 pk 比对。生产可按需增量。
+    @staticmethod
+    def _pk_to_qdrant_id(pk: str) -> int:
+        """物料 pk(字符串)→ Qdrant uint id(稳定 hash)。Qdrant 支持 uuid 但 uint 更省。"""
+        return abs(hash(pk)) % (2**62)
+
+    def _delete_missing(self, collection: str, client: object, keep: set[int]) -> int:
+        """删除 collection 中不在 keep 集合的物料(purge_missing=True 时)。"""
         try:
-            res = client.query(  # type: ignore[attr-defined]
-                collection_name=collection, output_fields=["pk"], limit=16384
-            )
-            to_delete = [r["pk"] for r in (res or []) if r.get("pk") not in keep]
+            # Qdrant scroll 翻全量 id 比对
+            offset = None
+            to_delete: list[int] = []
+            while True:
+                res = client.scroll(  # type: ignore[attr-defined]
+                    collection_name=collection,
+                    limit=256,
+                    offset=offset,
+                    with_payload=False,
+                    with_vectors=False,
+                )
+                points_batch, next_offset = res[0], res[1]
+                for p in points_batch or []:
+                    pid = getattr(p, "id", None)
+                    if pid is not None and pid not in keep:
+                        to_delete.append(pid)
+                if next_offset is None:
+                    break
+                offset = next_offset
+
             if to_delete:
                 client.delete(  # type: ignore[attr-defined]
-                    collection_name=collection, filter=f"pk in {to_delete}"
+                    collection_name=collection,
+                    points_selector=to_delete,
                 )
             return len(to_delete)
         except Exception:

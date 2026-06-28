@@ -1,17 +1,20 @@
-"""P1-T2 provider 适配层单测（全 mock，不依赖真实 LLM API）。
+"""M1 provider 层单测(LiteLLM 实现,全 mock,不依赖真实 API)。
 
-覆盖：
-- 三家 provider 实例化（base_url/key/model 正确映射）
-- get_provider 按 MODEL_PROVIDER 返回对应类型，且单例
-- 切换仅改配置（不同 provider 值 → 不同类）
-- stream() 产出 token 片段（mock ChatModel）
-- chat() 结构化输出（mock instructor 返回 Pydantic）
+覆盖:
+- 三家 provider 实例化(model 名映射 LiteLLM provider 前缀)
+- get_provider 按 MODEL_PROVIDER 返回对应类型 + 单例
+- chat() 结构化输出(mock litellm.completion 返回 JSON)
+- stream() 流式(mock litellm 的 chunk 流)
+- LiteLLM model 名格式正确(deepseek/deepseek-chat 等)
 """
 
 from __future__ import annotations
 
+from typing import Any
+from unittest.mock import MagicMock
+
 import pytest
-from langchain_core.messages import AIMessageChunk, BaseMessage, HumanMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, SecretStr
 
 from app.core.config import ModelProvider, Settings
@@ -37,12 +40,10 @@ def _make_settings(provider: ModelProvider) -> Settings:
         deepseek_api_key=SecretStr("ds-k"),
         qwen_api_key=SecretStr("qw-k"),
         embedding_api_key=SecretStr("emb-k"),
-        langfuse_public_key=SecretStr("pk"),
-        langfuse_secret_key=SecretStr("sk"),
     )
 
 
-# ===== 实例化：三家映射正确 =====
+# ===== 实例化:三家映射正确(model 名 + LiteLLM 前缀) =====
 
 
 @pytest.mark.parametrize(
@@ -57,7 +58,7 @@ def test_adapter_config_mapping(provider: ModelProvider, cls: type) -> None:
     s = _make_settings(provider)
     p = cls(s)
     assert p.provider_key == provider.value
-    # 各家 model 名正确
+    # model 名映射正确
     assert {
         ModelProvider.GLM: s.glm_model,
         ModelProvider.DEEPSEEK: s.deepseek_model,
@@ -65,21 +66,20 @@ def test_adapter_config_mapping(provider: ModelProvider, cls: type) -> None:
     }[provider] == p.name
 
 
-def test_glm_adapter_uses_glm_endpoint() -> None:
+def test_litellm_model_name_has_provider_prefix() -> None:
+    """LiteLLM 用 provider/model 格式路由,三家前缀正确。"""
+    s = _make_settings(ModelProvider.DEEPSEEK)
+    assert DeepSeekProvider(s).litellm_model == "deepseek/deepseek-chat"
+
     s = _make_settings(ModelProvider.GLM)
-    p = ZhipuProvider(s)
-    assert p._base_url == s.glm_base_url
-    assert p._api_key == "glm-k"
+    assert ZhipuProvider(s).litellm_model == "glm/glm-4"
+
+    s = _make_settings(ModelProvider.QWEN)
+    # qwen 走 OpenAI 兼容模式,用 openai/<model> + custom_llm_provider 或 dashscope
+    assert QwenProvider(s).litellm_model.startswith(("qwen/", "dashscope/", "openai/"))
 
 
-# ===== get_provider：按配置切换 + 单例 =====
-
-
-def test_get_provider_returns_glm_by_default() -> None:
-    reset_provider_for_tests()
-    p = get_provider(_make_settings(ModelProvider.GLM))
-    assert isinstance(p, ZhipuProvider)
-    assert p.provider_key == "glm"
+# ===== get_provider:按配置切换 + 单例 =====
 
 
 def test_get_provider_singleton_per_provider_key() -> None:
@@ -92,7 +92,7 @@ def test_get_provider_singleton_per_provider_key() -> None:
 
 
 def test_get_provider_switch_only_needs_config_change() -> None:
-    """切换三家：仅改 MODEL_PROVIDER，不协同。"""
+    """切换三家:仅改 MODEL_PROVIDER,不协同。"""
     reset_provider_for_tests()
     assert isinstance(get_provider(_make_settings(ModelProvider.GLM)), ZhipuProvider)
     reset_provider_for_tests()
@@ -101,79 +101,107 @@ def test_get_provider_switch_only_needs_config_change() -> None:
     assert isinstance(get_provider(_make_settings(ModelProvider.QWEN)), QwenProvider)
 
 
-# ===== stream：mock ChatModel =====
+def test_reset_provider_for_tests_clears_singleton() -> None:
+    reset_provider_for_tests()
+    p = get_provider(_make_settings(ModelProvider.GLM))
+    reset_provider_for_tests()
+    p2 = get_provider(_make_settings(ModelProvider.GLM))
+    assert p is not p2
 
 
-class _FakeChatModel:
-    """假 ChatModel：astream 产出预设片段。"""
-
-    def __init__(self, chunks: list[str]) -> None:
-        self._chunks = chunks
-
-    async def astream(self, messages: list[BaseMessage]):
-        for c in self._chunks:
-            yield AIMessageChunk(content=c)
+# ===== chat:mock litellm.completion 结构化输出 =====
 
 
-@pytest.mark.asyncio
-async def test_stream_yields_token_chunks(monkeypatch: pytest.MonkeyPatch) -> None:
-    s = _make_settings(ModelProvider.GLM)
-    p = ZhipuProvider(s)
-    monkeypatch.setattr(p, "raw_model", lambda: _FakeChatModel(["你", "好", "世界"]))
-    out = [c async for c in p.stream([HumanMessage(content="hi")])]
-    assert out == ["你", "好", "世界"]
-
-
-# ===== chat：mock instructor =====
-
-
-class _FakeInstructor:
-    """假 instructor 客户端：匹配 client.chat.completions.create(...) 接口（instructor 1.x from_openai）。"""
-
-    def __init__(self, payload: object) -> None:
-        self._payload = payload
-        self.captured: dict[str, object] = {}
-        self.chat = self  # client.chat.completions → self.completions → self.create
-
-    @property
-    def completions(self) -> _FakeInstructor:
-        return self
-
-    def create(
-        self, *, model: str, response_model: type, messages: list, max_retries: int
-    ) -> object:
-        self.captured = {
-            "model": model,
-            "response_model": response_model,
-            "messages": messages,
-            "max_retries": max_retries,
-        }
-        return self._payload
+def _fake_completion_response(content: str) -> MagicMock:
+    """构造假的 litellm.completion 返回(choices[0].message.content = content)。"""
+    resp = MagicMock()
+    resp.choices = [MagicMock()]
+    resp.choices[0].message.content = content
+    return resp
 
 
 def test_chat_returns_structured_pydantic(monkeypatch: pytest.MonkeyPatch) -> None:
+    """chat(messages, response_model) 经 LiteLLM + response_format 返回 Pydantic 对象。"""
     s = _make_settings(ModelProvider.DEEPSEEK)
     p = DeepSeekProvider(s)
-    fake = _FakeInstructor(_Out(title="用户列表页"))
-    monkeypatch.setattr(p, "_instructor_client", lambda: fake)
+
+    captured: dict[str, Any] = {}
+
+    def fake_completion(*args: Any, **kwargs: Any) -> Any:
+        captured.update(kwargs)
+        # 返回符合 _Out schema 的 JSON 字符串
+        return _fake_completion_response('{"title": "用户列表页"}')
+
+    monkeypatch.setattr("app.llm.provider.completion", fake_completion)
 
     msgs = [HumanMessage(content="生成标题")]
     result = p.chat(msgs, _Out)
 
     assert isinstance(result, _Out)
     assert result.title == "用户列表页"
-    # instructor 收到正确的结构化参数
-    assert fake.captured["response_model"] is _Out
-    assert fake.captured["max_retries"] == 2
-    # messages 被转成 OpenAI 格式（role/content dict）
-    converted = fake.captured["messages"]
-    assert isinstance(converted, list)
-    assert converted[0]["role"] == "user"
+    # LiteLLM 收到正确参数
+    assert captured["model"] == "deepseek/deepseek-chat"
+    assert captured["api_key"] == "ds-k"
+    # messages 被转成 OpenAI 格式(role/content dict)
+    assert isinstance(captured["messages"], list)
+    assert captured["messages"][0]["role"] == "user"
+    # 结构化模式:response_format 带 schema
+    assert "response_format" in captured
 
 
-def test_reset_provider_for_tests_clears_singleton() -> None:
-    reset_provider_for_tests()
-    p = get_provider(_make_settings(ModelProvider.GLM))
-    reset_provider_for_tests()
-    p2 = get_provider(_make_settings(ModelProvider.GLM))
-    assert p is not p2  # 重置后非同一实例
+def test_chat_handles_llm_invalid_json_with_retry(monkeypatch: pytest.MonkeyPatch) -> None:
+    """LLM 返回非法 JSON 时,chat 重试后成功(应用层逼近合法)。"""
+    s = _make_settings(ModelProvider.GLM)
+    p = ZhipuProvider(s)
+
+    calls = {"n": 0}
+
+    def fake_completion(*args: Any, **kwargs: Any) -> Any:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return _fake_completion_response("not valid json {")
+        return _fake_completion_response('{"title": "重试成功"}')
+
+    monkeypatch.setattr("app.llm.provider.completion", fake_completion)
+    result = p.chat([HumanMessage(content="x")], _Out)
+    assert result.title == "重试成功"
+    assert calls["n"] >= 2  # 至少重试一次
+
+
+# ===== stream:mock litellm chunk 流 =====
+
+
+@pytest.mark.asyncio
+async def test_stream_yields_token_chunks(monkeypatch: pytest.MonkeyPatch) -> None:
+    s = _make_settings(ModelProvider.GLM)
+    p = ZhipuProvider(s)
+
+    async def fake_astream(*args: Any, **kwargs: Any):
+        for chunk_text in ["你", "好", "世界"]:
+            chunk = MagicMock()
+            chunk.choices = [MagicMock()]
+            chunk.choices[0].delta.content = chunk_text
+            yield chunk
+
+    monkeypatch.setattr("app.llm.provider.acompletion", fake_astream)
+    out = [c async for c in p.stream([HumanMessage(content="hi")])]
+    assert out == ["你", "好", "世界"]
+
+
+def test_chat_preserves_system_and_human_roles(monkeypatch: pytest.MonkeyPatch) -> None:
+    """messages 转换保留 system/human 角色顺序。"""
+    s = _make_settings(ModelProvider.DEEPSEEK)
+    p = DeepSeekProvider(s)
+    captured: dict[str, Any] = {}
+
+    def fake_completion(*args: Any, **kwargs: Any) -> Any:
+        captured.update(kwargs)
+        return _fake_completion_response('{"title": "x"}')
+
+    monkeypatch.setattr("app.llm.provider.completion", fake_completion)
+    p.chat(
+        [SystemMessage(content="你是助手"), HumanMessage(content="hi")],
+        _Out,
+    )
+    roles = [m["role"] for m in captured["messages"]]
+    assert roles == ["system", "user"]

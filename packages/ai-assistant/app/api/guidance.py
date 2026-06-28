@@ -13,7 +13,7 @@ from pydantic import BaseModel
 
 from app.agent.guidance import GuidanceTip, generate_guidance
 from app.api.errors import FeatureDisabledError
-from app.auth.jwt import AuthUser, get_current_user
+from app.auth.bff_user import AuthUser, get_bff_user
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -26,7 +26,7 @@ class GuidanceResponse(BaseModel):
 @router.get("/guidance")
 async def guidance(
     request: Request,
-    user: AuthUser = Depends(get_current_user),
+    user: AuthUser = Depends(get_bff_user),
     empty: bool = Query(default=True, description="画布是否为空"),
 ) -> GuidanceResponse:
     """读当前 schema 状态给引导建议。"""

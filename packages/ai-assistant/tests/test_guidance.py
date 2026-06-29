@@ -146,6 +146,10 @@ def _bff_headers(user_id="user1", role="admin"):
     return {"X-Internal-Token": "test-internal-token", "X-User-Id": user_id, "X-User-Role": role}
 
 
+def _bff_headers(user_id="user1", role="admin"):
+    return {"X-Internal-Token": "test-internal-token", "X-User-Id": user_id, "X-User-Role": role}
+
+
 def _token(settings: Settings) -> str:
     import jwt
 

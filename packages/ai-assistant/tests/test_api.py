@@ -39,6 +39,11 @@ def _bff_headers(user_id: str = "user1", role: str = "admin") -> dict[str, str]:
     return {"X-Internal-Token": "test-internal-token", "X-User-Id": user_id, "X-User-Role": role}
 
 
+def _bff_headers(user_id: str = "user1", role: str = "admin") -> dict[str, str]:
+    """M3 BFF 服务间信任 header(X-Internal-Token + X-User-Id/Role)。"""
+    return {"X-Internal-Token": "test-internal-token", "X-User-Id": user_id, "X-User-Role": role}
+
+
 def _token(settings: Settings, *, sub: str = "user1", expired: bool = False) -> str:
     import time
 

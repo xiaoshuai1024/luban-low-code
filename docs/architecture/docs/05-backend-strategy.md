@@ -22,29 +22,9 @@
 
 ## 领域划分（Bounded Context）
 
-```mermaid
-flowchart TB
-    subgraph 内容["内容上下文"]
-        SITE[Site 站点]
-        PAGE[Page 页面]
-    end
-    subgraph 留资["留资上下文"]
-        FORM[Form 表单]
-        LEAD[Lead 线索]
-    end
-    subgraph 营销["营销上下文"]
-        CMP[Campaign 活动]
-        CH[Channel 渠道]
-    end
-    subgraph 数据["数据上下文"]
-        EVT[Event 事件]
-    end
-    subgraph 平台["平台上下文"]
-        USR[User 用户]
-        SET[Settings 设置]
-    end
-    PAGE --> FORM
-    FORM --> LEAD
+![后端领域划分](./diagrams/05-backend-domain.svg)
+
+> 📐 源文件：`diagrams/05-backend-domain.drawio`（可用 [draw.io](https://app.diagrams.net) 打开编辑）
     PAGE --> CH
     CMP --> PAGE & CH
     PAGE & CH --> EVT

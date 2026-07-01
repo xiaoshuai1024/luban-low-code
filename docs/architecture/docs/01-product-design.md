@@ -2,22 +2,9 @@
 
 ## 领域模型总览
 
-```mermaid
-erDiagram
-    SITE ||--o{ PAGE : contains
-    SITE ||--o{ CAMPAIGN : runs
-    PAGE ||--o{ FORM : embeds
-    PAGE ||--o{ LEAD : generates
-    PAGE }o--|| CHANNEL : "distributed via"
-    CAMPAIGN ||--o{ PAGE : includes
-    CAMPAIGN ||--o{ CHANNEL : owns
-    CHANNEL ||--o{ LEAD : attributes
-    FORM ||--o{ LEAD : collects
-    PAGE ||--o{ EVENT : tracks
-    CHANNEL ||--o{ EVENT : attributes
-    LEAD ||--o{ EVENT : "user events"
-    SITE ||--o{ USER : "members"
-```
+![领域模型 ER](./diagrams/07-er-model.svg)
+
+> 📐 源文件：`diagrams/07-er-model.drawio`（可用 [draw.io](https://app.diagrams.net) 打开编辑）
 
 ## 核心实体
 
@@ -41,16 +28,10 @@ erDiagram
 - **关键字段**：`id` · `site_id` · `form_id` · `page_id` · `channel_id` · `contact`（JSON：手机号/邮箱/姓名等）· `utm`（来源参数）· `status`(new/assigned/contacting/converted/invalid/lost) · `assignee_id`（归属人）· `dedup_hash`（去重指纹）· `created_at`
 - **状态机**：
 
-```mermaid
-stateDiagram-v2
-    [*] --> new: 表单提交生成
-    new --> assigned: 认领/分配
-    assigned --> contacting: 开始跟进
-    contacting --> converted: 成交转化
-    contacting --> lost: 流失
-    new --> invalid: 重复/无效
-    assigned --> invalid: 无效
-```
+![Lead 状态机](./diagrams/01-lead-state-machine.svg)
+
+> 📐 源文件：`diagrams/01-lead-state.excalidraw`（手绘风，可用 [excalidraw.com](https://excalidraw.com) 拖入编辑）
+
 - **去重**：按 `form_id + dedup_keys` 计算 `dedup_hash`，时间窗内命中视为重复；策略可配（拒绝/覆盖/合并/标记）。手机号、邮箱为强去重键。
 - **关系**：N → 1 Form/Page/Channel
 

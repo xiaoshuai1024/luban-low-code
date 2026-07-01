@@ -1,0 +1,42 @@
+<mxfile host="app.diagrams.net" modified="2026-06-29T00:00:00.000Z" agent="ZCode" version="30.2.4">
+  <diagram name="后端领域划分" id="backend-domain">
+    <mxGraphModel dx="1200" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="540" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="luban 后端 · 领域划分（Bounded Context · Java 单端权威）" style="text;html=1;align=center;fontSize=16;fontStyle=1;fontColor=#1a1a2e;" vertex="1" parent="1"><mxGeometry x="250" y="15" width="700" height="28" as="geometry"/></mxCell>
+
+        <mxCell id="g_content" value="内容上下文" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;verticalAlign=top;fontStyle=1;fontSize=11;" vertex="1" parent="1"><mxGeometry x="40" y="80" width="250" height="140" as="geometry"/></mxCell>
+        <mxCell id="site" value="Site 站点&#10;id · slug · owner_id" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d79b00;fontSize=9;" vertex="1" parent="1"><mxGeometry x="60" y="120" width="210" height="36" as="geometry"/></mxCell>
+        <mxCell id="page" value="Page 页面&#10;id · site_id · path · status" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d79b00;fontSize=9;" vertex="1" parent="1"><mxGeometry x="60" y="165" width="210" height="36" as="geometry"/></mxCell>
+
+        <mxCell id="g_lead" value="留资上下文（核心）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;verticalAlign=top;fontStyle=1;fontSize=11;" vertex="1" parent="1"><mxGeometry x="330" y="80" width="270" height="140" as="geometry"/></mxCell>
+        <mxCell id="form" value="Form 表单&#10;id · site_id · dedup_strategy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffebee;strokeColor=#b85450;fontSize=9;" vertex="1" parent="1"><mxGeometry x="350" y="120" width="230" height="36" as="geometry"/></mxCell>
+        <mxCell id="lead" value="Lead 线索 ★&#10;id · form_id · contact(加密) · status" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffebee;strokeColor=#b85450;fontSize=9;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="350" y="165" width="230" height="36" as="geometry"/></mxCell>
+
+        <mxCell id="g_mkt" value="营销上下文" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;verticalAlign=top;fontStyle=1;fontSize=11;" vertex="1" parent="1"><mxGeometry x="640" y="80" width="250" height="140" as="geometry"/></mxCell>
+        <mxCell id="cmp" value="Campaign 活动" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eaf6e9;strokeColor=#82b366;fontSize=9;" vertex="1" parent="1"><mxGeometry x="660" y="120" width="210" height="36" as="geometry"/></mxCell>
+        <mxCell id="ch" value="Channel 渠道&#10;id · short_code · utm_template" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eaf6e9;strokeColor=#82b366;fontSize=9;" vertex="1" parent="1"><mxGeometry x="660" y="165" width="210" height="36" as="geometry"/></mxCell>
+
+        <mxCell id="g_data" value="数据上下文" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;verticalAlign=top;fontStyle=1;fontSize=11;" vertex="1" parent="1"><mxGeometry x="930" y="80" width="230" height="140" as="geometry"/></mxCell>
+        <mxCell id="evt" value="Event 事件&#10;analytics_events / _daily" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5e9fa;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="1"><mxGeometry x="950" y="120" width="190" height="40" as="geometry"/></mxCell>
+        <mxCell id="ab" value="A/B 实验" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5e9fa;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="1"><mxGeometry x="950" y="170" width="190" height="36" as="geometry"/></mxCell>
+
+        <mxCell id="g_plat" value="平台上下文" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=top;fontStyle=1;fontSize=11;" vertex="1" parent="1"><mxGeometry x="40" y="280" width="370" height="130" as="geometry"/></mxCell>
+        <mxCell id="usr" value="User 用户&#10;id · email · role" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4e8fb;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="1"><mxGeometry x="60" y="320" width="150" height="36" as="geometry"/></mxCell>
+        <mxCell id="set" value="Settings 设置&#10;system_settings / feature_gates" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4e8fb;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="1"><mxGeometry x="225" y="320" width="170" height="36" as="geometry"/></mxCell>
+
+        <mxCell id="g_saas" value="商业化上下文（SaaS）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;verticalAlign=top;fontStyle=1;fontSize=11;fontColor=#7a1f1c;" vertex="1" parent="1"><mxGeometry x="440" y="280" width="350" height="130" as="geometry"/></mxCell>
+        <mxCell id="plan" value="Plans 计费" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffebee;strokeColor=#b85450;fontSize=9;" vertex="1" parent="1"><mxGeometry x="460" y="320" width="100" height="36" as="geometry"/></mxCell>
+        <mxCell id="sub" value="Subscriptions" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffebee;strokeColor=#b85450;fontSize=9;" vertex="1" parent="1"><mxGeometry x="570" y="320" width="100" height="36" as="geometry"/></mxCell>
+        <mxCell id="uc" value="Usage 配额" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffebee;strokeColor=#b85450;fontSize=9;" vertex="1" parent="1"><mxGeometry x="680" y="320" width="95" height="36" as="geometry"/></mxCell>
+
+        <mxCell id="e1" style="rounded=1;html=1;strokeColor=#b85450;strokeWidth=1.5;endArrow=classic;" edge="1" parent="1" source="page" target="form"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" style="rounded=1;html=1;strokeColor=#b85450;strokeWidth=2;endArrow=classic;" edge="1" parent="1" source="form" target="lead"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e3" style="rounded=1;html=1;strokeColor=#82b366;strokeWidth=1.5;endArrow=classic;" edge="1" parent="1" source="ch" target="lead"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <mxCell id="note" value="💡 后端三层代码划分：operatorside（管理域 18 Controller）/ publicside（公开域 4 Controller）/ shared（auth·crypto·domain·mapper）。Go 双后端已放弃，Java 为唯一实现。" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;fontStyle=2;" vertex="1" parent="1"><mxGeometry x="40" y="440" width="1120" height="34" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

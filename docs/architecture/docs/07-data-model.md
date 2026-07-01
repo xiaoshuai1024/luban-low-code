@@ -4,20 +4,9 @@
 
 ## ER 概览
 
-```mermaid
-erDiagram
-    site ||--o{ page : has
-    site ||--o{ campaign : has
-    site ||--o{ user : has
-    page ||--o{ form : embeds
-    campaign ||--o{ channel : owns
-    channel }o--|| page : targets
-    form ||--o{ lead : collects
-    page ||--o{ lead : from
-    channel ||--o{ lead : attributes
-    page ||--o{ event : tracks
-    channel ||--o{ event : attributes
-```
+![核心数据模型 ER](./diagrams/07-er-model.svg)
+
+> 📐 源文件：`diagrams/07-er-model.drawio`（可用 [draw.io](https://app.diagrams.net) 打开编辑）
 
 ## 表结构
 

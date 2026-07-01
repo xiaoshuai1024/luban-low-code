@@ -41,28 +41,9 @@ luban 是面向市场 / 运营团队的**低代码营销页搭建 + 智能留资
 
 ## 核心业务闭环
 
-```mermaid
-flowchart LR
-    subgraph 编辑["编辑侧（运营）"]
-        A1["Electron 编辑器<br/>拖拽搭建营销页"] --> A2["配置表单组件<br/>设置留资字段"]
-        A2 --> A3["发布页面<br/>status=published"]
-    end
-    subgraph 投放["投放侧"]
-        A3 --> B1["生成渠道短链/二维码<br/>携带 channel + UTM"]
-        B1 --> B2["投放至<br/>广告/社媒/公众号/小程序"]
-    end
-    subgraph 访客["访客侧（终端）"]
-        B2 --> C1["访客打开落地页<br/>web/H5/小程序/App"]
-        C1 --> C2["浏览 → 填写表单"]
-        C2 --> C3["提交留资"]
-    end
-    subgraph 数据["数据侧"]
-        C3 --> D1["生成 Lead<br/>去重入库"]
-        C1 -.埋点.-> D2["事件流 PV/UV/转化"]
-        D1 --> D3["线索中心<br/>认领/分配/导出"]
-        D2 --> D4["转化漏斗 / 看板"]
-    end
-```
+![核心业务闭环](./diagrams/08-core-loop.svg)
+
+> 📐 源文件：`diagrams/08-core-loop.excalidraw`（手绘风，可用 [excalidraw.com](https://excalidraw.com) 拖入编辑）
 
 四条数据流在此闭环中贯穿：
 - **编辑流**：Electron → BFF → 后端（schema 持久化）

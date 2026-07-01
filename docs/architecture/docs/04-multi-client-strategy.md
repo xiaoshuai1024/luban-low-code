@@ -46,15 +46,9 @@ PageSchema (JSON, SSOT)
 
 #### 渲染器组成
 
-```mermaid
-flowchart LR
-    SCHEMA["PageSchema JSON"] --> PARSER["解析器<br/>JSON→Dart 对象树"]
-    PARSER --> RENDERER["渲染器<br/>递归遍历节点"]
-    REG[("物料注册表<br/>type→Widget")] --> RENDERER
-    RENDERER --> WIDGET["Flutter Widget 树"]
-    MATLIB["luban_flutter_materials<br/>Flutter 物料库"] --> REG
-    STYLE["样式映射<br/>样式子集→Flutter"] --> RENDERER
-```
+![多端渲染一致性](./diagrams/04-multi-client.svg)
+
+> 📐 源文件：`diagrams/04-multi.excalidraw`（手绘风，可用 [excalidraw.com](https://excalidraw.com) 拖入编辑）
 
 1. **Schema 模型层（Dart）**：Dart 类镜像 `PageSchema`。**建议从 TS 类型用 codegen 生成**（如 quicktype / 自建脚本），杜绝手工同步漂移。两端类型必须可追溯同一来源。
 2. **解析器**：JSON → Dart schema 对象树（含版本兼容处理）。

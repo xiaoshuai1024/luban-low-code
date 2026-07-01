@@ -2,39 +2,9 @@
 
 ## 总体架构
 
-```mermaid
-flowchart TB
-    subgraph 客户端
-        direction LR
-        ED["Electron<br/>低代码编辑器（PC）"]
-        WB["website<br/>Web/H5 SSR 渲染"]
-        FL["Flutter<br/>App 原生渲染"]
-        UNI["uniapp<br/>多端小程序"]
-    end
-    subgraph BFF层["BFF（Next.js · API-only）"]
-        AUTH["鉴权/会话 JWT"]
-        AGG["接口编排/聚合"]
-        SUB["表单提交/留资"]
-        EVT["埋点接收"]
-        REDIR["短链重定向"]
-    end
-    subgraph 后端["后端"]
-        BJ["backend-java<br/>主后端（全量领域）"]
-        BG["backend-go<br/>暂缓（后续读路径优化）"]
-    end
-    subgraph 存储
-        DB[("MySQL")]
-        RD[("Redis")]
-    end
-    ED --> AUTH & AGG
-    WB --> AUTH & AGG & REDIR
-    FL --> AGG & SUB & EVT & REDIR
-    UNI --> AGG & SUB & EVT & REDIR
-    AUTH & AGG & SUB & EVT & REDIR --> BJ
-    BJ -.未来读路径.-> BG
-    BJ --> DB & RD
-    BG -.-> DB & RD
-```
+![总体架构（设计期）](./diagrams/03-sys-arch-design.svg)
+
+> 📐 源文件：`diagrams/03-sys-arch-design.drawio`（可用 [draw.io](https://app.diagrams.net) 打开编辑）
 
 ## 子项目职责矩阵
 

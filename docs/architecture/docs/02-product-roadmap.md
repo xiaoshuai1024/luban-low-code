@@ -47,13 +47,9 @@
 
 ## 阶段依赖
 
-```mermaid
-flowchart TD
-    P0["P0 留资闭环<br/>表单+线索+去重+防刷"] --> P1["P1 营销化<br/>渠道+活动+埋点+看板"]
-    P1 --> P2a["P2 增长<br/>A/B+流转+触达+打分"]
-    P0 --> P2b["P2 多端<br/>Flutter原生+uniapp小程序"]
-    P1 -.数据基线.-> P2b
-```
+![产品路线图](./diagrams/02-roadmap.svg)
+
+> 📐 源文件：`diagrams/02-roadmap.excalidraw`（手绘风，可用 [excalidraw.com](https://excalidraw.com) 拖入编辑）
 
 多端（Flutter/uniapp）依赖 P0/P1 的 schema 与留资契约稳定后再做，避免返工。
 

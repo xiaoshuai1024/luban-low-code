@@ -13,18 +13,19 @@
 
 BRANCH ?= main
 PKG_DIRS := packages/engine/luban packages/bff/luban-bff packages/ui/luban-ui packages/web/luban-website \
-            packages/backend/luban-backend packages/backend/luban-backend-go
+            packages/backend/luban-backend
 
 .PHONY: clone-all pull-all push-all pr-all sync-submodules \
-        test test-coverage lint \
-        dev-engine dev-bff dev-website dev-java dev-go dev-apps dev-check \
+        test test-coverage journey-coverage verify-plan lint \
+        dev-engine dev-bff dev-website dev-java dev-apps dev-check \
         install-deps clean \
-        e2e-up e2e-down e2e e2e-cross e2e-install e2e-report
+        e2e-up e2e-down e2e e2e-cross e2e-install e2e-report \
+        sprint-mcp sprint-up sprint-open sprint-status sprint-build sprint-test
 
 # --- E2E 服务编排 + 跨项目流程性 E2E ---
 COMPOSE_E2E := docker-compose.e2e.yml
 
-# 起 E2E 服务编排（MySQL/Redis/双后端/bff/engine/website）
+# 起 E2E 服务编排（MySQL/Redis/后端/bff/engine/website）
 e2e-up:
 	@bash scripts/e2e/up-all.sh
 
@@ -72,6 +73,14 @@ pr-all:
 test-coverage:
 	@bash scripts/coverage/coverage-summary.sh
 
+# 旅程覆盖率门禁（E2E 链路维度：聚合 journeys SSOT + 扫 @J-xxx 标签；P0 阻断）
+journey-coverage:
+	@bash scripts/coverage/journey-coverage.sh
+
+# 校验单个 taskGraph JSON schema（含 journeys 字段）
+verify-plan:
+	@node scripts/verify-plan-ssot.mjs validate $(JSON)
+
 # 各包测试（按技术栈）
 test:
 	@bash scripts/git/run-per-pkg.sh test
@@ -96,10 +105,6 @@ install-deps:
 # 启动慢（~30-60s），健康检查：http://localhost:8080/backend/actuator/health
 dev-java:
 	cd packages/backend/luban-backend && cmd //c start-mvn.bat
-
-# Go 后端（可选；双后端契约测试场景用。端口 8081）
-dev-go:
-	cd packages/backend/luban-backend-go && APP_PORT=8081 go run .
 
 # BFF（Next.js；显式 -p 3100，避免与 website 默认 3000 冲突）
 dev-bff:
@@ -139,3 +144,36 @@ dev-check:
 
 clean:
 	@for d in $(PKG_DIRS); do [ -d "$$d" ] && rm -rf $$d/dist $$d/build $$d/target $$d/coverage 2>/dev/null; done; true
+
+# ============================================================
+# Sprint MCP — 敏捷开发全流程（Sprint/Epic/Story/Release/Retro）
+# 详见 packages/sprint-mcp/README.md
+# 数据：docs/superpowers/sprints/*.json + tasks/*.json 的 task.sprintId 反向指针
+# 看板：http://127.0.0.1:7777
+# ============================================================
+
+# 构建 Sprint MCP（tsc，首次或改码后执行）
+sprint-build:
+	cd packages/sprint-mcp && pnpm install && pnpm run build
+
+# 后台启动 Sprint MCP（stdio + HTTP 看板 :7777）
+sprint-up:
+	@SPRINT_MCP_ROOT=$(CURDIR) nohup node packages/sprint-mcp/dist/index.js > /tmp/sprint-mcp.log 2>&1 &
+	@sleep 1.5
+	@curl -s localhost:7777/healthz && echo "" || (echo "启动失败，见 /tmp/sprint-mcp.log" && tail -5 /tmp/sprint-mcp.log)
+
+# 前台启动（阻塞，看日志）
+sprint-mcp:
+	@SPRINT_MCP_ROOT=$(CURDIR) node packages/sprint-mcp/dist/index.js
+
+# 打开看板浏览器
+sprint-open:
+	@open http://127.0.0.1:7777 2>/dev/null || xdg-open http://127.0.0.1:7777 2>/dev/null || echo "看板: http://127.0.0.1:7777"
+
+# 输出当前迭代状态表（供会话/终端快速查看）
+sprint-status:
+	@node scripts/session/sprint-summary.mjs
+
+# Sprint MCP 测试
+sprint-test:
+	cd packages/sprint-mcp && pnpm test

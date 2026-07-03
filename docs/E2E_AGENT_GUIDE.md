@@ -16,7 +16,6 @@
 | **client Electron/Flutter E2E** | 🔴 **子项目不存在**（空目录，非 submodule） | 待 client 子项目落地后另立 plan | — |
 | **BFF E2E** | 🔴 无 e2e（仅 Vitest unit）；契约由跨项目流程间接覆盖 | 不建独立浏览器 e2e | `cd packages/bff/luban-bff && pnpm run test`（unit） |
 | **后端 Java 集成测** | JUnit+H2 `src/test/java/**/{*Test,*IT}.java` | 同现状 | `cd packages/backend/luban-backend && mvn -q verify` |
-| **后端 Go 测试** | go test `**/*_test.go`（全单测） | 同现状 | `cd packages/backend/luban-backend-go && go test ./...` |
 | **跨项目流程性 E2E（主项目）** | 🔴 无 | Playwright `e2e/`（workspace 根，独立 npm 包） | `make e2e-cross`（见 §1.4） |
 
 ### 1.3 engine 现有 Cypress 假绿警告（MUST 知晓）
@@ -93,6 +92,8 @@
 
 宣称 E2E/合入门禁通过时须列出：**实际完整命令**、**退出码**、**失败数（须为 0）**；若有 skip 须列 **条数与原因**（且须符合本文档与 `luban-testing-coverage` 对 skip 的约定）。若本轮**曾修改测试文件**（非 §2.5.3），须写明 **用户授权依据** 或 **单独 PR 链接**。
 
+**旅程覆盖率（MUST，涉及 journeys 的 plan）**：凡 plan 含 `journeys[]`（§7.0），收口汇报须额外列一行「**旅程覆盖率：P0=X/X (100%)**」，并附 `make journey-coverage` 的退出码。P0 未达 100% → 视同未过合入门禁，禁止宣称完成。P1/P2 缺口须在汇报中列出但不阻断。
+
 ---
 
 ## 3. 失败时信息收集顺序（MUST）
@@ -133,7 +134,6 @@
 
 - 后端 API 须健康（Java 后端 `http://127.0.0.1:8080`，Go 后端按其配置）。**Agent 执行引擎 E2E 前**：若健康检查失败，**须尝试**启动后端：
   - Java：`cd packages/backend/luban-backend && mvn spring-boot:run`
-  - Go：`cd packages/backend/luban-backend-go && go run`
 - BFF 须健康（`cd packages/bff/luban-bff && pnpm run dev`）
 - 引擎调试页或 website 须可访问
 - 本机已安装 Google Chrome；首次跑前执行 `pnpm run install:e2e`
@@ -297,3 +297,62 @@ Element Plus 用 CSS transition + 条件渲染控制可见性；Cypress 的可�
 ### 预防
 - E2E 断言聚焦核心业务价值（CRUD 写入/列表刷新/发布成功），UI 关闭动画等非核心用 API 兜底
 - Element Plus 动画/transition 相关交互，优先用 `cy.contains(...).should('be.visible')` 显式等动画完成
+
+---
+
+## 经验：本机无 Docker 手动起服务栈跑通 E2E
+
+### 场景
+本机未装 Docker（`docker not found`），无法用 `make e2e-up` 一键起服务栈；同时默认端口 8080 被其他项目（kangdou）占用，luban backend 起不来。`make e2e-up` / docker-compose 路径完全不可用。
+
+### 根因
+- Docker Desktop 未安装（非"未启动"，是未安装）
+- 8080 端口被另一项目 java 进程占用，不能擅停
+- E2E 默认 `LUBAN_E2E_JAVA_API=http://127.0.0.1:8080`，连到错误后端
+
+### 解决方案
+手动用备用端口起完整链路（本机已有 MySQL/Redis）：
+```bash
+# backend 用 8090（避开 8080 冲突）
+APP_PORT=8090 MYSQL_DB=luban mvn spring-boot:run \
+  -Dspring-boot.run.jvmArguments="-Dspring.profiles.active=local -DAPP_PORT=8090"
+
+# BFF 3100 指向 backend 8090
+BACKEND_BASE_URL=http://127.0.0.1:8090/backend PORT=3100 pnpm dev
+
+# engine/website 用默认端口（5173/3000）
+```
+e2e/.env 配置非标准端口：
+```bash
+LUBAN_E2E_JAVA_API=http://127.0.0.1:8090/backend
+LUBAN_E2E_BFF_URL=http://127.0.0.1:3100   # spec 默认 3000 是错的，website 无 /api route
+LUBAN_E2E_WEBSITE_URL=http://localhost:3000  # 须用 localhost，见下条经验
+```
+
+### 预防
+- E2E 诊断先查「端口被谁占用」：`lsof -iTCP:PORT -sTCP:LISTEN` + `ps -p PID -o command`
+- 8080 等常用端口可能被其他项目占用，E2E 服务地址全部走环境变量，不硬编码
+- backend 起不来先看日志：`grep "Caused by" /tmp/luban-backend.log`（Flyway/构造器/端口冲突三类高频）
+
+---
+
+## 经验：Nuxt dev server 对非 localhost 的 Host 返回 426
+
+### 场景
+website（Nuxt 3.21.x dev）所有请求返回 `426 Upgrade Required`，curl/Playwright 访问 `http://127.0.0.1:3000/` 一律 426；但 `http://localhost:3000/` 返回正常的 200/302。
+
+### 根因
+Nuxt/Nitro dev server 对 **非 localhost 的 Host header 返回 426**（HMR/allowedHosts 机制）。`127.0.0.1` 与 `localhost` 在此机制下被区别对待。
+
+### 解决方案
+E2E 配置与诊断脚本中，website 地址**必须用 `localhost` 而非 `127.0.0.1`**：
+```bash
+# e2e/.env
+LUBAN_E2E_WEBSITE_URL=http://localhost:3000   # ✓
+# LUBAN_E2E_WEBSITE_URL=http://127.0.0.1:3000 # ✗ 会 426
+```
+
+### 预防
+- 诊断"服务起但请求失败"时，对比 `localhost` vs `127.0.0.1` 两种 Host
+- 426 "Upgrade Required" + 响应体仅 16 字节 + 无框架 header = 多半是 host 校验，非应用错误
+- prod build 无此问题（已预编译，无 dev middleware）

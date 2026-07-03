@@ -41,6 +41,8 @@ class AgentState(BaseModel):
     # agent 执行轨迹（供前端流式显示）
     progress: list[dict[str, Any]] = Field(default_factory=list)
     retrieved_materials: list[str] = Field(default_factory=list)  # 物料名清单
+    # M4 工具调用回环结果(供 generate 节点参考现有结构/数据)
+    tool_calls: list[dict[str, Any]] = Field(default_factory=list)
 
     # 生成产物
     generated_schema: PageSchema | None = None

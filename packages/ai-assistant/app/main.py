@@ -1,9 +1,7 @@
 """luban-ai-assistant FastAPI 入口。
 
-路由前缀 /ai。鉴权：全 Authorization: Bearer <luban JWT>（AI 服务自验）。
+路由前缀 /ai。鉴权（迁移后）：BFF 反代附加 X-Internal-Token + X-User-Id/X-User-Role（M3 实现）。
 错误体对齐 luban 风格 {code, message, details?}。
-
-P1-T1 仅挂健康检查 + 模型配置只读端点；流式/agent 端点在 P1-T6 接入。
 """
 
 from __future__ import annotations
@@ -17,9 +15,7 @@ from fastapi.responses import JSONResponse
 
 from app.api import config as config_api
 from app.api import health as health_api
-from app.api.assets import router as assets_router
 from app.api.chat import router as chat_router
-from app.api.design import router as design_router
 from app.api.errors import ApiError
 from app.api.guidance import router as guidance_router
 from app.api.ws import router as ws_router
@@ -28,7 +24,25 @@ from app.core.config import Settings, get_settings
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-    # P1-T1：无启动期重连接（lazy）；各模块在首次调用时建连。
+    # P0-5:启动时同步内置物料到 Qdrant(供 RAG 检索)。
+    # 受 ENABLE_STARTUP_SYNC 控制(test/dev 默认关,生产开);失败不阻断启动。
+    import logging
+    import os
+
+    logger = logging.getLogger(__name__)
+    if os.environ.get("ENABLE_STARTUP_SYNC", "0") == "1":
+        try:
+            from app.core.config import get_settings
+            from app.rag.builtin_materials import BUILTIN_MATERIALS
+            from app.rag.embedding import get_embedder
+            from app.rag.sync_materials import MaterialSyncer
+
+            s = get_settings()
+            syncer = MaterialSyncer(s, get_embedder(s))
+            stat = syncer.sync(BUILTIN_MATERIALS, purge_missing=True)
+            logger.info("启动物料同步: %s", stat)
+        except Exception as e:
+            logger.warning("启动物料同步失败(降级用内置清单): %s", e)
     yield
 
 
@@ -62,8 +76,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(chat_router)  # 已带 /ai 前缀
     app.include_router(ws_router)  # WS /ai/agent
     app.include_router(guidance_router)  # GET /ai/guidance
-    app.include_router(design_router)  # POST /ai/design-to-page（plan P2）
-    app.include_router(assets_router)  # GET /ai/assets/{key}（plan P2）
 
     return app
 

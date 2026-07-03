@@ -99,6 +99,7 @@ def _deps(**kw) -> AgentDeps:
         provider=kw.get("provider", MockProvider()),
         retriever=kw.get("retriever", MockRetriever()),
         registry=kw.get("registry", _registry()),
+        tool_client=kw.get("tool_client"),
     )
 
 
@@ -298,3 +299,126 @@ async def test_retrieve_fallback_on_error() -> None:
     state = await retrieve(state, _deps(retriever=BrokenRetriever()))
     # 降级为全量物料
     assert set(state.retrieved_materials) == {"LubanPage", "LubanButton"}
+
+
+# ===== M4 工具调用回环 =====
+
+
+class MockToolClient:
+    """M4 工具回环 fake:记录调用 + 可控返回。"""
+
+    def __init__(
+        self,
+        page_schema: dict | None = None,
+        leads: list | None = None,
+    ) -> None:
+        self.page_schema = page_schema
+        self.leads = leads or []
+        self.get_page_calls: list[tuple[str, str]] = []
+        self.list_leads_calls: list[str] = []
+
+    async def get_page_schema(self, site_id: str, page_id: str) -> dict | None:
+        self.get_page_calls.append((site_id, page_id))
+        return self.page_schema
+
+    async def list_leads(self, site_id: str, limit: int = 20) -> list:
+        self.list_leads_calls.append(site_id)
+        return self.leads
+
+    async def close(self) -> None:
+        pass
+
+
+@pytest.mark.asyncio
+async def test_tool_call_node_skipped_when_no_client() -> None:
+    """tool_client 为 None(visitor/未配置)→ tool_call 节点直接返回,不调工具。"""
+    from app.agent.nodes import tool_call
+
+    state = _state()
+    state = await tool_call(state, _deps(tool_client=None))
+    # 无工具调用记录(仅 intent 那条)
+    assert all(t.get("kind") == "intent" for t in state.tool_calls)
+
+
+@pytest.mark.asyncio
+async def test_tool_call_reads_page_schema_for_generate_page() -> None:
+    """generate_page 意图 + 有 site/page → 调 get_page_schema 回填 current_schema。"""
+    from app.agent.nodes import tool_call
+
+    schema = {
+        "root": {"id": "p1", "type": "LubanPage", "children": []}
+    }
+    mock_client = MockToolClient(page_schema=schema)
+    state = _state()
+    state.site_id = "site1"
+    state.page_id = "page1"
+    # 模拟 understand 已写入 intent
+    state.tool_calls = [{"kind": "intent", "value": "generate_page", "summary": "test"}]
+
+    state = await tool_call(state, _deps(tool_client=mock_client))
+
+    assert mock_client.get_page_calls == [("site1", "page1")]
+    # schema 回填到 current_schema
+    assert state.current_schema is not None
+    assert state.current_schema.root.type == "LubanPage"
+    # tool_calls 记录了 page_schema 调用
+    assert any(t["kind"] == "page_schema" for t in state.tool_calls)
+
+
+@pytest.mark.asyncio
+async def test_tool_call_queries_leads_for_query_leads_intent() -> None:
+    """query_leads 意图 → 调 list_leads。"""
+    from app.agent.nodes import tool_call
+
+    mock_client = MockToolClient(leads=[{"id": "l1"}, {"id": "l2"}])
+    state = _state()
+    state.site_id = "site1"
+    state.tool_calls = [{"kind": "intent", "value": "query_leads", "summary": "查线索"}]
+
+    state = await tool_call(state, _deps(tool_client=mock_client))
+
+    assert mock_client.list_leads_calls == ["site1"]
+    leads_record = [t for t in state.tool_calls if t["kind"] == "leads"]
+    assert len(leads_record) == 1
+    assert len(leads_record[0]["result"]) == 2
+
+
+@pytest.mark.asyncio
+async def test_tool_call_sse_events_emitted() -> None:
+    """tool_call 节点发 tool_call/tool_result 进度事件(前端流式消费)。"""
+    from app.agent.nodes import tool_call
+
+    mock_client = MockToolClient(page_schema={"root": {"id": "p", "type": "LubanPage"}})
+    state = _state()
+    state.site_id = "s1"
+    state.page_id = "p1"
+    state.tool_calls = [{"kind": "intent", "value": "edit_property"}]
+
+    state = await tool_call(state, _deps(tool_client=mock_client))
+
+    event_types = [e["type"] for e in state.progress]
+    assert "tool_call" in event_types
+    assert "tool_result" in event_types
+
+
+@pytest.mark.asyncio
+async def test_tool_call_failure_degrades_gracefully() -> None:
+    """工具回环失败 → ToolClient 内部降级返回 None,agent 继续。"""
+
+    class FailingClient(MockToolClient):
+        async def get_page_schema(self, site_id, page_id):
+            return None  # 模拟 ToolClient 内部 catch 后返回 None
+
+    from app.agent.nodes import tool_call
+
+    state = _state()
+    state.site_id = "s1"
+    state.page_id = "p1"
+    state.tool_calls = [{"kind": "intent", "value": "generate_page"}]
+
+    state = await tool_call(state, _deps(tool_client=FailingClient()))
+    # page_schema 记录了但 result=None, current_schema 不回填
+    page_records = [t for t in state.tool_calls if t["kind"] == "page_schema"]
+    assert len(page_records) == 1
+    assert page_records[0]["result"] is None
+    assert state.current_schema is None

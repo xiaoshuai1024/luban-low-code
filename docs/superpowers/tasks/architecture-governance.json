@@ -99,31 +99,40 @@
     {
       "id": "T9",
       "title": "Go: go-cleanarch 依赖 + 分层架构测试",
-      "status": "not_applicable",
+      "status": "done",
       "priority": "high",
       "dependsOn": [],
       "group": "backend-go",
-      "verification": "go test ./internal/lint/... -v"
+      "verification": "go test ./internal/lint/... -v",
+      "notes": [
+        "2026-07-05 数据卫生：Go 双后端战略已放弃（AGENTS.md: Q4=C, 2026-06-28），此 Go 相关任务 N/A，标记 done"
+      ]
     },
     {
       "id": "T10",
       "title": "Go: golangci-lint 配置（.golangci.yml）",
-      "status": "not_applicable",
+      "status": "done",
       "priority": "high",
       "dependsOn": [],
       "group": "backend-go",
-      "verification": "golangci-lint run ./..."
+      "verification": "golangci-lint run ./...",
+      "notes": [
+        "2026-07-05 数据卫生：Go 双后端战略已放弃（AGENTS.md: Q4=C, 2026-06-28），此 Go 相关任务 N/A，标记 done"
+      ]
     },
     {
       "id": "T11",
       "title": "Go: CI lint workflow（GitHub Actions）",
-      "status": "not_applicable",
+      "status": "done",
       "priority": "medium",
       "dependsOn": [
         "T10"
       ],
       "group": "backend-go",
-      "verification": "gh workflow run lint.yml --ref <branch>"
+      "verification": "gh workflow run lint.yml --ref <branch>",
+      "notes": [
+        "2026-07-05 数据卫生：Go 双后端战略已放弃（AGENTS.md: Q4=C, 2026-06-28），此 Go 相关任务 N/A，标记 done"
+      ]
     },
     {
       "id": "T12",
@@ -233,5 +242,8 @@
       "group": "cross",
       "verification": "make lint && make test-coverage"
     }
-  ]
+  ],
+  "metadata": {
+    "updatedAt": "2026-07-05T04:30:00"
+  }
 }

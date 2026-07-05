@@ -54,6 +54,7 @@ luban-workspace/                  # meta 仓
 | `luban-agent-hooks.md` | Hooks 配置与脚本卫生 | 编辑 hooks 时 |
 | `self-improve.md` | 基于代码模式持续改进规则 | 发现新模式时 |
 | `luban-engineering-principles.md` | 工程方案只选最佳实践，禁用反模式/临时方案/过渡形态（alwaysApply） | 任何方案设计/技术选型/重构决策时 |
+| `luban-e2e-anti-patterns.md` | E2E 常见反模式与修复（hover-show/vite watch/DDD 事件字段/BFF 路由/端口默认） | 写新 spec、改聚合根事件、加后端端点、改 vite.config 时 |
 
 ---
 

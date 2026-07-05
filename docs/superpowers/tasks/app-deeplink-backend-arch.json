@@ -236,57 +236,72 @@
     {
       "id": "T18",
       "title": "Client(Flutter): 工程骨架 pubspec.yaml + main.dart + 路由壳 + 环境配置",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T15"
       ],
       "group": "D",
       "subsystem": "client",
-      "journey": "J-deeplink"
+      "journey": "J-deeplink",
+      "notes": [
+        "2026-07-06 Flutter SDK 验证：go_router 声明式路由 + redirect 钩子已实现（lib/router/app_router.dart）；flutter analyze 无 issue"
+      ]
     },
     {
       "id": "T19",
       "title": "Client(Flutter): app_links 接收 Universal Link + uni_links 接收 scheme，解析出 shortCode/siteSlug/path",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T18"
       ],
       "group": "D",
       "subsystem": "client",
-      "journey": "J-deeplink"
+      "journey": "J-deeplink",
+      "notes": [
+        "2026-07-06 Flutter SDK 验证：app_links 接收 Universal Link/App Link 已实现（lib/deeplink/deeplink_handler.dart）"
+      ]
     },
     {
       "id": "T20",
       "title": "Client(Flutter): 深链解析服务 — shortCode→调 BFF /:shortCode 或直调后端 /public/short/:code 取 page schema",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T19",
         "T15"
       ],
       "group": "D",
       "subsystem": "client",
-      "journey": "J-deeplink"
+      "journey": "J-deeplink",
+      "notes": [
+        "2026-07-06 Flutter SDK 验证：dio HTTP 拉取 page schema + 短链解析已实现（lib/deeplink/deeplink_resolver.dart）"
+      ]
     },
     {
       "id": "T21",
       "title": "Client(Flutter): 兜底页（直接打开 App 无深链参数时展示，不展示任何站点列表）",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T18"
       ],
       "group": "D",
       "subsystem": "client",
-      "journey": "J-deeplink"
+      "journey": "J-deeplink",
+      "notes": [
+        "2026-07-06 Flutter SDK 验证：node_renderer 文本渲染（Heading/Text/递归 children）已实现（lib/render/node_renderer.dart）"
+      ]
     },
     {
       "id": "T22",
       "title": "Client(Flutter): page schema JSON 拉取 + 文本渲染器 TextRenderer（真实渲染 Heading/Text 节点为可读文本，未知类型诚实降级提示；完整物料渲染器延后独立 plan）",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [
         "T20"
       ],
       "group": "D",
-      "subsystem": "client"
+      "subsystem": "client",
+      "notes": [
+        "2026-07-06 Flutter SDK 验证：Flutter 40 tests all passed + analyze 无 issue（page_schema/fallback/text_renderer/deeplink handler+resolver）"
+      ]
     },
     {
       "id": "T23",
@@ -362,6 +377,6 @@
     }
   ],
   "metadata": {
-    "updatedAt": "2026-07-05T07:00:00"
+    "updatedAt": "2026-07-06T00:10:00"
   }
 }

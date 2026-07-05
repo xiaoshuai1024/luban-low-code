@@ -119,13 +119,16 @@
     {
       "id": "T4",
       "title": "diag-leads.spec.ts 清理：删零断言诊断脚本或转正为真实断言",
-      "status": "pending",
+      "status": "done",
       "group": "cleanup",
       "subsystem": "cross",
       "dependsOn": [
         "T1"
       ],
-      "verification": "grep -c 'expect' e2e/flows/diag-leads.spec.ts > 0 或文件已删"
+      "verification": "grep -c 'expect' e2e/flows/diag-leads.spec.ts > 0 或文件已删",
+      "notes": [
+        "2026-07-05: diag-leads.spec.ts 不存在（从未创建或已删），T4 目标达成"
+      ]
     },
     {
       "id": "T5",
@@ -255,14 +258,17 @@
     {
       "id": "T14a",
       "title": "新增 datasource-api.spec.ts（J-datasource API 层：CRUD+test+query）",
-      "status": "pending",
+      "status": "done",
       "group": "engine",
       "subsystem": "engine",
       "dependsOn": [
         "T1"
       ],
       "verification": "cd e2e && pnpm test -- --grep datasource 绿",
-      "journey": "J-datasource"
+      "journey": "J-datasource",
+      "notes": [
+        "2026-07-05: datasource-api.spec.ts 已写（3 tests: GET list / POST+GET+DELETE CRUD / test 连接）真机验证 3/3 绿"
+      ]
     },
     {
       "id": "T14b",
@@ -279,14 +285,17 @@
     {
       "id": "T15a",
       "title": "新增 form-api.spec.ts（J-form-crud API 层：CRUD+dedup/antiSpam 配置）",
-      "status": "pending",
+      "status": "done",
       "group": "engine",
       "subsystem": "engine",
       "dependsOn": [
         "T1"
       ],
       "verification": "cd e2e && pnpm test -- --grep form 绿",
-      "journey": "J-form-crud"
+      "journey": "J-form-crud",
+      "notes": [
+        "2026-07-05: form-api.spec.ts 已写（3 tests: GET list / POST+PATCH+DELETE CRUD / 409 FORM_HAS_LEADS）真机验证 2 passed + 1 skip(无 seed)"
+      ]
     },
     {
       "id": "T15b",
@@ -349,11 +358,14 @@
     {
       "id": "T20",
       "title": "journey-registry.json 补登记 J-collab/J-quota-enforcement/J-datasource/J-form-crud/J-contract-parity",
-      "status": "pending",
+      "status": "done",
       "group": "docs",
       "subsystem": "cross",
       "dependsOn": [],
-      "verification": "node scripts/verify-plan-ssot.mjs journey-coverage 显示新 journey"
+      "verification": "node scripts/verify-plan-ssot.mjs journey-coverage 显示新 journey",
+      "notes": [
+        "2026-07-05: journey-registry.json 已含全部 journey 条目（J-collab/J-quota-enforcement/J-datasource/J-form-crud 等），状态均 covered"
+      ]
     },
     {
       "id": "T21",
@@ -428,7 +440,7 @@
     }
   ],
   "metadata": {
-    "updatedAt": "2026-07-05T05:40:00",
+    "updatedAt": "2026-07-05T07:00:00",
     "createdBy": "agent"
   }
 }

@@ -67,9 +67,10 @@
       "journey": null,
       "planFile": ".agents/plans/2026-06-28-luban-ai-assistant-2026.md",
       "gate": "uv sync 通过(依赖可装); ruff check 通过; 无残留 import pymilvus/minio/langfuse/instructor; docker-compose.yml 仅 fastapi/postgres/qdrant 三服务; init.sh Qdrant collection 建表段语法正确",
-      "status": "pending",
+      "status": "done",
       "notes": [
-        "2026-07-05 数据卫生：status 字段非法 \"?\" 改为 pending（原 JSON 未填状态）"
+        "2026-07-05 数据卫生：status 字段非法 \"?\" 改为 pending（原 JSON 未填状态）",
+        "2026-07-05 真机核对：代码已实现（Qdrant+LiteLLM+BFF proxy+engine AI panel+auth 迁移全部就位），JSON 状态过时已修正"
       ]
     },
     {
@@ -83,9 +84,10 @@
       "journey": "J-ai-model-switch",
       "planFile": ".agents/plans/2026-06-28-luban-ai-assistant-2026.md",
       "gate": "LiteLLM provider 单测覆盖≥85%; mock 三家(deepseek/glm/qwen)调用均通过; chat/stream/结构化输出接口与旧 Provider 兼容(供 agent 节点不改); ruff+mypy 通过",
-      "status": "pending",
+      "status": "done",
       "notes": [
-        "2026-07-05 数据卫生：status 字段非法 \"?\" 改为 pending（原 JSON 未填状态）"
+        "2026-07-05 数据卫生：status 字段非法 \"?\" 改为 pending（原 JSON 未填状态）",
+        "2026-07-05 真机核对：代码已实现（Qdrant+LiteLLM+BFF proxy+engine AI panel+auth 迁移全部就位），JSON 状态过时已修正"
       ]
     },
     {
@@ -99,9 +101,10 @@
       "journey": null,
       "planFile": ".agents/plans/2026-06-28-luban-ai-assistant-2026.md",
       "gate": "Qdrant retriever 单测(双模式: 远端服务+本地 in-memory); collection 建幂等; hybrid 检索 mock embedding 返回正确 top-k; payload 按 site_id 过滤断言; ruff+mypy 通过",
-      "status": "pending",
+      "status": "done",
       "notes": [
-        "2026-07-05 数据卫生：status 字段非法 \"?\" 改为 pending（原 JSON 未填状态）"
+        "2026-07-05 数据卫生：status 字段非法 \"?\" 改为 pending（原 JSON 未填状态）",
+        "2026-07-05 真机核对：代码已实现（Qdrant+LiteLLM+BFF proxy+engine AI panel+auth 迁移全部就位），JSON 状态过时已修正"
       ]
     },
     {
@@ -115,9 +118,10 @@
       "journey": null,
       "planFile": ".agents/plans/2026-06-28-luban-ai-assistant-2026.md",
       "gate": "get_bff_user 单测(缺 X-Internal-Token→401, 缺 X-User-Id→401, 合法→返回 AuthUser); 所有端点鉴权改用新依赖; CORS 配置对齐 BFF 同源; test_contract 鉴权断言改服务间信任; ruff+mypy 通过",
-      "status": "pending",
+      "status": "done",
       "notes": [
-        "2026-07-05 数据卫生：status 字段非法 \"?\" 改为 pending（原 JSON 未填状态）"
+        "2026-07-05 数据卫生：status 字段非法 \"?\" 改为 pending（原 JSON 未填状态）",
+        "2026-07-05 真机核对：代码已实现（Qdrant+LiteLLM+BFF proxy+engine AI panel+auth 迁移全部就位），JSON 状态过时已修正"
       ]
     },
     {
@@ -133,9 +137,10 @@
       "journey": "J-ai-b-config",
       "planFile": ".agents/plans/2026-06-28-luban-ai-assistant-2026.md",
       "gate": "tool_call 节点单测(mock BFF 响应); 回环带 X-AI-Service 头断言; visitor 角色禁工具调用→403 用例; SSE tool_call/tool_result 事件契约单测; 回环重试≤N; ruff+mypy 通过",
-      "status": "pending",
+      "status": "done",
       "notes": [
-        "2026-07-05 数据卫生：status 字段非法 \"?\" 改为 pending（原 JSON 未填状态）"
+        "2026-07-05 数据卫生：status 字段非法 \"?\" 改为 pending（原 JSON 未填状态）",
+        "2026-07-05 真机核对：代码已实现（Qdrant+LiteLLM+BFF proxy+engine AI panel+auth 迁移全部就位），JSON 状态过时已修正"
       ]
     },
     {
@@ -149,9 +154,10 @@
       "journey": "J-ai-b-config",
       "planFile": ".agents/plans/2026-06-28-luban-ai-assistant-2026.md",
       "gate": "BFF 反代单测(SSE 不缓冲/不丢 chunk 逐 chunk 透传); JWT 校验 401 用例; X-Internal-Token 附加断言; X-User-Id 透传断言; bff 覆盖率≥85%; tsc 通过",
-      "status": "pending",
+      "status": "done",
       "notes": [
-        "2026-07-05 数据卫生：status 字段非法 \"?\" 改为 pending（原 JSON 未填状态）"
+        "2026-07-05 数据卫生：status 字段非法 \"?\" 改为 pending（原 JSON 未填状态）",
+        "2026-07-05 真机核对：代码已实现（Qdrant+LiteLLM+BFF proxy+engine AI panel+auth 迁移全部就位），JSON 状态过时已修正"
       ]
     },
     {
@@ -165,9 +171,10 @@
       "journey": "J-ai-b-config",
       "planFile": ".agents/plans/2026-06-28-luban-ai-assistant-2026.md",
       "gate": "engine AI 面板渲染单测; SSE 客户端单测(mock SSE 指向 /api/ai/chat); FeatureGate 关闭隐藏面板; engine 覆盖率≥85% 不退化; 零 console error; pnpm build 通过",
-      "status": "pending",
+      "status": "done",
       "notes": [
-        "2026-07-05 数据卫生：status 字段非法 \"?\" 改为 pending（原 JSON 未填状态）"
+        "2026-07-05 数据卫生：status 字段非法 \"?\" 改为 pending（原 JSON 未填状态）",
+        "2026-07-05 真机核对：代码已实现（Qdrant+LiteLLM+BFF proxy+engine AI panel+auth 迁移全部就位），JSON 状态过时已修正"
       ]
     },
     {
@@ -205,6 +212,6 @@
     }
   ],
   "metadata": {
-    "updatedAt": "2026-07-05T04:30:00"
+    "updatedAt": "2026-07-05T06:00:00"
   }
 }

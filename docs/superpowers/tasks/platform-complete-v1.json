@@ -358,7 +358,10 @@
         "T-be-3",
         "T-be-5"
       ],
-      "status": "pending"
+      "status": "done",
+      "notes": [
+        "2026-07-05: LeadList 加 empty state + assignee filter；LeadDetail 加 contact 解密查看（调 /api/leads/:id/contact）"
+      ]
     },
     {
       "id": "T-eng-11",
@@ -420,7 +423,10 @@
       "dependsOn": [
         "T-bff-4"
       ],
-      "status": "pending"
+      "status": "done",
+      "notes": [
+        "2026-07-05 真机核对：vitest 已配置（vitest.config.ts 含 coverage 阈值）+ 多个 spec 文件已存在"
+      ]
     },
     {
       "id": "T-bff-6",
@@ -432,7 +438,10 @@
         "T-bff-1",
         "T-bff-5"
       ],
-      "status": "pending"
+      "status": "done",
+      "notes": [
+        "2026-07-05: collab WS 测试已写（src/lib/collab.spec.ts，7 tests covering auth/IDOR/presence）"
+      ]
     },
     {
       "id": "T-web-1",
@@ -523,7 +532,10 @@
         "T-be-9",
         "T-ui-13"
       ],
-      "status": "pending"
+      "status": "done",
+      "notes": [
+        "2026-07-05: docs/API.md 已创建（全后端路由参考）；ui README 更新"
+      ]
     }
   ],
   "waves": {
@@ -609,5 +621,8 @@
     "ui": "90%",
     "client": "N/A (规划态)"
   },
-  "status": "in_progress"
+  "status": "in_progress",
+  "metadata": {
+    "updatedAt": "2026-07-05T07:00:00"
+  }
 }

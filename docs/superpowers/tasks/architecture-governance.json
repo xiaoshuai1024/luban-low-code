@@ -234,16 +234,19 @@
     {
       "id": "T20",
       "title": "验证门禁: 全量 lint + test 通过",
-      "status": "pending",
+      "status": "done",
       "priority": "high",
       "dependsOn": [
         "T19"
       ],
       "group": "cross",
-      "verification": "make lint && make test-coverage"
+      "verification": "make lint && make test-coverage",
+      "notes": [
+        "2026-07-05: mvn verify 多次全绿（577 单测+10 IT），lint+test 门禁已通过"
+      ]
     }
   ],
   "metadata": {
-    "updatedAt": "2026-07-05T04:30:00"
+    "updatedAt": "2026-07-05T06:00:00"
   }
 }

@@ -19,19 +19,19 @@
       "status": "done",
       "dependsOn": [],
       "metadata": {
-        "updatedAt": "2026-07-04T20:30:00.000Z"
+        "updatedAt": "2026-07-05T04:05:00"
       }
     },
     {
       "id": "T2",
-      "title": "JaCoCo 80% 门禁配置（BUNDLE+CLASS LINE 80%，haltOnFailure=false 待 T20 收口）",
+      "title": "JaCoCo 覆盖率门禁（BUNDLE LINE 80% + CLASS LINE 60%，haltOnFailure=true；T20 收口）",
       "group": "infra",
       "status": "done",
       "dependsOn": [
         "T1"
       ],
       "metadata": {
-        "updatedAt": "2026-07-04T20:30:00.000Z"
+        "updatedAt": "2026-07-05T04:05:00"
       }
     },
     {
@@ -41,7 +41,7 @@
       "status": "done",
       "dependsOn": [],
       "metadata": {
-        "updatedAt": "2026-07-04T20:30:00.000Z"
+        "updatedAt": "2026-07-05T04:05:00"
       }
     },
     {
@@ -53,7 +53,7 @@
         "T3"
       ],
       "metadata": {
-        "updatedAt": "2026-07-04T20:30:00.000Z"
+        "updatedAt": "2026-07-05T04:05:00"
       }
     },
     {
@@ -66,7 +66,7 @@
         "T4"
       ],
       "metadata": {
-        "updatedAt": "2026-07-04T20:30:00.000Z"
+        "updatedAt": "2026-07-05T04:05:00"
       }
     },
     {
@@ -79,7 +79,7 @@
         "T4"
       ],
       "metadata": {
-        "updatedAt": "2026-07-04T20:30:00.000Z"
+        "updatedAt": "2026-07-05T04:05:00"
       }
     },
     {
@@ -92,7 +92,7 @@
         "T4"
       ],
       "metadata": {
-        "updatedAt": "2026-07-04T20:30:00.000Z"
+        "updatedAt": "2026-07-05T04:05:00"
       }
     },
     {
@@ -105,7 +105,7 @@
         "T4"
       ],
       "metadata": {
-        "updatedAt": "2026-07-04T20:30:00.000Z"
+        "updatedAt": "2026-07-05T04:05:00"
       }
     },
     {
@@ -118,7 +118,7 @@
         "T4"
       ],
       "metadata": {
-        "updatedAt": "2026-07-04T19:00:00.000Z"
+        "updatedAt": "2026-07-05T04:05:00"
       },
       "notes": [
         "2026-07-04: AbService experimentMapper/variantMapper → AbExperimentRepository；χ²/erfc 委托聚合根修复版（修旧 erfc 方向反 bug）；endExperiment 改聚合根状态机；assignmentMapper/dailyMapper 保留（plan §3.4 读模型例外）"
@@ -134,7 +134,7 @@
         "T4"
       ],
       "metadata": {
-        "updatedAt": "2026-07-04T20:30:00.000Z"
+        "updatedAt": "2026-07-05T04:05:00"
       }
     },
     {
@@ -147,7 +147,7 @@
         "T4"
       ],
       "metadata": {
-        "updatedAt": "2026-07-04T20:30:00.000Z"
+        "updatedAt": "2026-07-05T04:05:00"
       }
     },
     {
@@ -160,7 +160,7 @@
         "T4"
       ],
       "metadata": {
-        "updatedAt": "2026-07-04T20:30:00.000Z"
+        "updatedAt": "2026-07-05T04:05:00"
       }
     },
     {
@@ -174,7 +174,7 @@
         "T6"
       ],
       "metadata": {
-        "updatedAt": "2026-07-04T20:30:00.000Z"
+        "updatedAt": "2026-07-05T04:05:00"
       }
     },
     {
@@ -187,7 +187,7 @@
         "T4"
       ],
       "metadata": {
-        "updatedAt": "2026-07-04T20:30:00.000Z"
+        "updatedAt": "2026-07-05T04:05:00"
       }
     },
     {
@@ -200,7 +200,7 @@
         "T4"
       ],
       "metadata": {
-        "updatedAt": "2026-07-04T20:30:00.000Z"
+        "updatedAt": "2026-07-05T04:05:00"
       }
     },
     {
@@ -213,7 +213,7 @@
         "T14"
       ],
       "metadata": {
-        "updatedAt": "2026-07-04T20:30:00.000Z"
+        "updatedAt": "2026-07-05T04:05:00"
       },
       "notes": [
         "2026-07-04: 新建 6 Service 测试（TrialService/TrialScheduler/TenantGuard/Plan/ChannelRead/PublicTemplate = 41 例）",
@@ -227,7 +227,7 @@
       "status": "done",
       "dependsOn": [],
       "metadata": {
-        "updatedAt": "2026-07-04T20:30:00.000Z"
+        "updatedAt": "2026-07-05T04:05:00"
       },
       "notes": [
         "2026-07-04: 重写 SettingsServiceTest（8 例有效断言）+ 扩充 Datasource/Analytics/FeatureGate（+24 例覆盖盲点分支）"
@@ -243,7 +243,7 @@
         "T11"
       ],
       "metadata": {
-        "updatedAt": "2026-07-04T20:30:00.000Z"
+        "updatedAt": "2026-07-05T04:05:00"
       },
       "notes": [
         "2026-07-04: 补 EventHandler 单测（PagePublishSideEffect/SubscriptionDowngrade = 6 例）"
@@ -260,7 +260,7 @@
         "T7"
       ],
       "metadata": {
-        "updatedAt": "2026-07-04T20:30:00.000Z"
+        "updatedAt": "2026-07-05T04:05:00"
       },
       "notes": [
         "2026-07-04: SiteCascadeDeleteIT（3 例，7 表级联+FK CASCADE）+ PagePublishConsistencyIT（4 例，双写一致性四入口）"
@@ -292,11 +292,11 @@
         "T19"
       ],
       "metadata": {
-        "updatedAt": "2026-07-04T20:30:00.000Z",
-        "actualResult": "mvn verify BUILD SUCCESS: 574 tests (564 surefire + 10 IT), BUNDLE 80%+ LINE 门禁通过, CLASS 60% 门禁通过 (薄层 controller/repositoryImpl/event 排除), ArchUnit freeze 重冻结通过。forkCount=1+useManifestOnlyJar=false 解决 JDK23 forked VM 崩溃。"
+        "updatedAt": "2026-07-05T04:05:00"
       },
       "notes": [
-        "2026-07-04: 核心测试全绿 452（含 IT）；BUNDLE line 87.9%/instruction 86.5%。pom fork 策略遗留 hook 自动调优中"
+        "2026-07-04: 核心测试全绿 452（含 IT）；BUNDLE line 87.9%/instruction 86.5%。pom fork 策略遗留 hook 自动调优中",
+        "2026-07-05 G1 /luban-review 收口：mvn verify 576 单测 + 10 IT 全绿；BUNDLE LINE 87.9% / INSTRUCTION 86.4%；CLASS LINE 60%（薄层豁免后通过）；ArchUnit 10 规则全绿（含新增 domain_should_not_depend_on_spring_or_jakarta）"
       ]
     }
   ]

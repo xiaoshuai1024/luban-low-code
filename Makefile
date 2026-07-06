@@ -1,11 +1,17 @@
 # luban-workspace — 全栈编排入口
 # 用法见 README.md 与 docs/SYSTEM_ARCHITECTURE.md（服务拓扑 SSOT）
 #
+# 🔴 Windows 用户须知：本仓所有 dev/test 命令统一通过 `make`，Windows 需先装 make：
+#   - Chocolatey:  choco install make
+#   - Scoop:       scoop install make
+#   - 或 Git Bash 自带 make（MSYS2: pacman -S make）
+#   装完确认 `make --version` 可用后再执行本仓命令；macOS / Linux 系统自带。
+#
 # 端口约定（本机 dev 裸进程，互不冲突；中间件在远端 dev 服务器）：
 #   engine    :5173   (vite; /api → proxy → bff:3100)
 #   bff       :3100   (next dev -p 3100; 显式 3100 避免与 website 3000 冲突)
 #   website   :3000   (nuxt dev; bffBaseUrl env 修正为 3100)
-#   Java      :8080   (mvn spring-boot:run; ctx /backend)
+#   Java      :8080   (mvn spring-boot:run; actuator health 无 context-path)
 #   Go        :8081   (可选; 双后端契约测试)
 #   MySQL     :13306  (远端 192.168.100.248)
 #   Redis     :16379  (远端 192.168.100.248)
@@ -101,10 +107,11 @@ install-deps:
 
 # --- 单服务启动 ---
 
-# Java 后端（Spring Boot；start-mvn.bat 内置远端中间件 env + Flyway 自动迁移）
-# 启动慢（~30-60s），健康检查：http://localhost:8080/backend/actuator/health
+# Java 后端（Spring Boot；跨平台：macOS/Linux 走 mvn，Windows 委托 start-mvn.bat）
+# env 与中间件配置在 scripts/dev/start-java.sh 与 start-mvn.bat 中（保持对齐）
+# 启动慢（~30-60s），健康检查：http://localhost:8080/actuator/health（actuator 不受 context-path 约束）
 dev-java:
-	cd packages/backend/luban-backend && cmd //c start-mvn.bat
+	@bash scripts/dev/start-java.sh
 
 # BFF（Next.js；显式 -p 3100，避免与 website 默认 3000 冲突）
 dev-bff:
@@ -125,7 +132,7 @@ dev-website:
 dev-apps:
 	@echo "Starting Java + BFF + engine + website (parallel)..."
 	@echo "  middleware: MySQL 192.168.100.248:13306 / Redis :16379 (remote)"
-	@echo "  Java boots ~30-60s (Flyway); wait for http://localhost:8080/backend/actuator/health"
+	@echo "  Java boots ~30-60s (Flyway); wait for http://localhost:8080/actuator/health"
 	@trap 'kill 0' INT TERM EXIT; \
 	$(MAKE) dev-java & \
 	$(MAKE) dev-bff & \
@@ -134,9 +141,10 @@ dev-apps:
 	wait
 
 # --- 健康检查（探测 4 个应用端口；200/302/404 = OK，DOWN/ECONN = 未起）---
+# 注意：Spring actuator 端点不受 server.servlet.context-path=/backend 约束，路径为 /actuator/health
 dev-check:
 	@echo "Probing services..."
-	@for svc in "Java:8080/backend/actuator/health" "BFF:3100" "engine:5173" "website:3000"; do \
+	@for svc in "Java:8080/actuator/health" "BFF:3100" "engine:5173" "website:3000"; do \
 		name=$${svc%%:*}; rest=$${svc#*:}; port=$${rest%%/*}; path=$${rest#*:}; \
 		code=$$(curl -s -o /dev/null -w "%{http_code}" http://localhost:$$port/$$path 2>/dev/null || echo DOWN); \
 		printf "  %-10s :%-5s %s\n" "$$name" "$$port" "$$code"; \

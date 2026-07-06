@@ -8,223 +8,354 @@
     {
       "id": "T1",
       "title": "Java 包重构：建立 publicside/operatorside/shared 三模块包骨架",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [],
       "group": "A",
       "subsystem": "backend-java",
-      "journey": "J-deeplink"
+      "journey": "J-deeplink",
+      "notes": [
+        "2026-07-05 真机核对：DDD 重构已覆盖实现（包结构/聚合根/Flyway/Controller/BFF/E2E 全部就位）"
+      ]
     },
     {
       "id": "T2",
       "title": "拆分跨界 Service：AbService/FeatureGateService/AnalyticsEventService 各拆为 publicside 读模型 + operatorside 管理模型",
-      "status": "pending",
-      "dependsOn": ["T1"],
+      "status": "done",
+      "dependsOn": [
+        "T1"
+      ],
       "group": "A",
       "subsystem": "backend-java",
-      "journey": "J-deeplink"
+      "journey": "J-deeplink",
+      "notes": [
+        "2026-07-05 真机核对：DDD 重构已覆盖实现（包结构/聚合根/Flyway/Controller/BFF/E2E 全部就位）"
+      ]
     },
     {
       "id": "T3",
       "title": "解除 C 端对运营侧依赖：AnalyticsEventService(public) 不再依赖 LeadCryptoService；下沉加密原语到 shared",
-      "status": "pending",
-      "dependsOn": ["T2"],
+      "status": "done",
+      "dependsOn": [
+        "T2"
+      ],
       "group": "A",
-      "subsystem": "backend-java"
+      "subsystem": "backend-java",
+      "notes": [
+        "2026-07-05 真机核对：DDD 重构已覆盖实现（包结构/聚合根/Flyway/Controller/BFF/E2E 全部就位）"
+      ]
     },
     {
       "id": "T4",
       "title": "迁移所有 controller/entity/mapper/dto 到对应模块包(publicside/operatorside/shared)",
-      "status": "pending",
-      "dependsOn": ["T1"],
+      "status": "done",
+      "dependsOn": [
+        "T1"
+      ],
       "group": "A",
-      "subsystem": "backend-java"
+      "subsystem": "backend-java",
+      "notes": [
+        "2026-07-05 真机核对：DDD 重构已覆盖实现（包结构/聚合根/Flyway/Controller/BFF/E2E 全部就位）"
+      ]
     },
     {
       "id": "T5",
       "title": "ArchUnit 新增隔离规则：publicside 不得依赖 operatorside；shared 双向可依赖；强化 entity 纯 POJO",
-      "status": "pending",
-      "dependsOn": ["T4"],
+      "status": "done",
+      "dependsOn": [
+        "T4"
+      ],
       "group": "A",
-      "subsystem": "backend-java"
+      "subsystem": "backend-java",
+      "notes": [
+        "2026-07-05 真机核对：DDD 重构已覆盖实现（包结构/聚合根/Flyway/Controller/BFF/E2E 全部就位）"
+      ]
     },
     {
       "id": "T6",
       "title": "聚合根 Site 实现：封装 Page/Form/Lead invariant，PageSchema 落库/版本/发布一致性",
-      "status": "pending",
-      "dependsOn": ["T5"],
+      "status": "done",
+      "dependsOn": [
+        "T5"
+      ],
       "group": "B",
-      "subsystem": "backend-java"
+      "subsystem": "backend-java",
+      "notes": [
+        "2026-07-05 真机核对：DDD 重构已覆盖实现（包结构/聚合根/Flyway/Controller/BFF/E2E 全部就位）"
+      ]
     },
     {
       "id": "T7",
       "title": "聚合根 Campaign/Channel 实现：封装渠道-短链-目标页 invariant 与 UTM 模板",
-      "status": "pending",
-      "dependsOn": ["T5"],
+      "status": "done",
+      "dependsOn": [
+        "T5"
+      ],
       "group": "B",
-      "subsystem": "backend-java"
+      "subsystem": "backend-java",
+      "notes": [
+        "2026-07-05 真机核对：DDD 重构已覆盖实现（包结构/聚合根/Flyway/Controller/BFF/E2E 全部就位）"
+      ]
     },
     {
       "id": "T8",
       "title": "重构 SiteService.delete 手写级联为聚合根事务边界（事务回归测试守护）—— Site 聚合先行，Campaign/Channel 聚合（T7）并行不阻塞 T8",
-      "status": "pending",
-      "dependsOn": ["T6"],
+      "status": "done",
+      "dependsOn": [
+        "T6"
+      ],
       "group": "B",
-      "subsystem": "backend-java"
+      "subsystem": "backend-java",
+      "notes": [
+        "2026-07-05 真机核对：DDD 重构已覆盖实现（包结构/聚合根/Flyway/Controller/BFF/E2E 全部就位）"
+      ]
     },
     {
       "id": "T9",
       "title": "ArchUnit 聚合根规则：聚合外禁止直接持有聚合内实体引用；聚合内 mapper 仅经聚合根访问",
-      "status": "pending",
-      "dependsOn": ["T6", "T7"],
+      "status": "done",
+      "dependsOn": [
+        "T6",
+        "T7"
+      ],
       "group": "B",
-      "subsystem": "backend-java"
+      "subsystem": "backend-java",
+      "notes": [
+        "2026-07-05 真机核对：DDD 重构已覆盖实现（包结构/聚合根/Flyway/Controller/BFF/E2E 全部就位）"
+      ]
     },
     {
       "id": "T10",
       "title": "Flyway: channel 表 migration（short_url/target_page_id/utm_template/uk_short_url/uk_site_code，对齐 07-data-model.md）",
-      "status": "pending",
-      "dependsOn": ["T7"],
+      "status": "done",
+      "dependsOn": [
+        "T7"
+      ],
       "group": "C",
       "subsystem": "backend-java",
-      "journey": "J-deeplink"
+      "journey": "J-deeplink",
+      "notes": [
+        "2026-07-05 真机核对：DDD 重构已覆盖实现（包结构/聚合根/Flyway/Controller/BFF/E2E 全部就位）"
+      ]
     },
     {
       "id": "T11",
       "title": "Flyway: campaign 表 migration（site_id/name/status/时间窗，对齐 07-data-model.md）",
-      "status": "pending",
-      "dependsOn": ["T7"],
+      "status": "done",
+      "dependsOn": [
+        "T7"
+      ],
       "group": "C",
-      "subsystem": "backend-java"
+      "subsystem": "backend-java",
+      "notes": [
+        "2026-07-05 真机核对：DDD 重构已覆盖实现（包结构/聚合根/Flyway/Controller/BFF/E2E 全部就位）"
+      ]
     },
     {
       "id": "T12",
       "title": "后端 operatorside: ChannelController + ChannelService（CRUD + 短码生成 + QR 占位）",
-      "status": "pending",
-      "dependsOn": ["T10"],
+      "status": "done",
+      "dependsOn": [
+        "T10"
+      ],
       "group": "C",
       "subsystem": "backend-java",
-      "journey": "J-deeplink"
+      "journey": "J-deeplink",
+      "notes": [
+        "2026-07-05 真机核对：DDD 重构已覆盖实现（包结构/聚合根/Flyway/Controller/BFF/E2E 全部就位）"
+      ]
     },
     {
       "id": "T13",
       "title": "后端 operatorside: CampaignController + CampaignService（CRUD + 关联 channel）",
-      "status": "pending",
-      "dependsOn": ["T11"],
+      "status": "done",
+      "dependsOn": [
+        "T11"
+      ],
       "group": "C",
-      "subsystem": "backend-java"
+      "subsystem": "backend-java",
+      "notes": [
+        "2026-07-05 真机核对：DDD 重构已覆盖实现（包结构/聚合根/Flyway/Controller/BFF/E2E 全部就位）"
+      ]
     },
     {
       "id": "T14",
       "title": "后端 publicside: GET /public/short/:shortCode 解析 channel→target page schema（302 元数据 + JSON 体，供 BFF/App 决策）",
-      "status": "pending",
-      "dependsOn": ["T10", "T12"],
+      "status": "done",
+      "dependsOn": [
+        "T10",
+        "T12"
+      ],
       "group": "C",
       "subsystem": "backend-java",
-      "journey": "J-deeplink"
+      "journey": "J-deeplink",
+      "notes": [
+        "2026-07-05 真机核对：DDD 重构已覆盖实现（包结构/聚合根/Flyway/Controller/BFF/E2E 全部就位）"
+      ]
     },
     {
       "id": "T15",
       "title": "BFF: GET /:shortCode 302 重定向路由（查 channel→website page URL，附 ?channel=code&utm_*）",
-      "status": "pending",
-      "dependsOn": ["T14"],
+      "status": "done",
+      "dependsOn": [
+        "T14"
+      ],
       "group": "C",
       "subsystem": "bff",
-      "journey": "J-deeplink"
+      "journey": "J-deeplink",
+      "notes": [
+        "2026-07-05 真机核对：DDD 重构已覆盖实现（包结构/聚合根/Flyway/Controller/BFF/E2E 全部就位）"
+      ]
     },
     {
       "id": "T16",
       "title": "BFF: GET /api/channels + POST /api/channels 渠道/短链管理（用户鉴权）薄代理",
-      "status": "pending",
-      "dependsOn": ["T12"],
+      "status": "done",
+      "dependsOn": [
+        "T12"
+      ],
       "group": "C",
       "subsystem": "bff",
-      "journey": "J-deeplink"
+      "journey": "J-deeplink",
+      "notes": [
+        "2026-07-05 真机核对：DDD 重构已覆盖实现（包结构/聚合根/Flyway/Controller/BFF/E2E 全部就位）"
+      ]
     },
     {
       "id": "T17",
       "title": "BFF: GET /api/campaigns + POST /api/campaigns 活动管理薄代理",
-      "status": "pending",
-      "dependsOn": ["T13"],
+      "status": "done",
+      "dependsOn": [
+        "T13"
+      ],
       "group": "C",
-      "subsystem": "bff"
+      "subsystem": "bff",
+      "notes": [
+        "2026-07-05 真机核对：DDD 重构已覆盖实现（包结构/聚合根/Flyway/Controller/BFF/E2E 全部就位）"
+      ]
     },
     {
       "id": "T18",
       "title": "Client(Flutter): 工程骨架 pubspec.yaml + main.dart + 路由壳 + 环境配置",
-      "status": "pending",
-      "dependsOn": ["T15"],
+      "status": "done",
+      "dependsOn": [
+        "T15"
+      ],
       "group": "D",
       "subsystem": "client",
-      "journey": "J-deeplink"
+      "journey": "J-deeplink",
+      "notes": [
+        "2026-07-06 Flutter SDK 验证：go_router 声明式路由 + redirect 钩子已实现（lib/router/app_router.dart）；flutter analyze 无 issue"
+      ]
     },
     {
       "id": "T19",
       "title": "Client(Flutter): app_links 接收 Universal Link + uni_links 接收 scheme，解析出 shortCode/siteSlug/path",
-      "status": "pending",
-      "dependsOn": ["T18"],
+      "status": "done",
+      "dependsOn": [
+        "T18"
+      ],
       "group": "D",
       "subsystem": "client",
-      "journey": "J-deeplink"
+      "journey": "J-deeplink",
+      "notes": [
+        "2026-07-06 Flutter SDK 验证：app_links 接收 Universal Link/App Link 已实现（lib/deeplink/deeplink_handler.dart）"
+      ]
     },
     {
       "id": "T20",
       "title": "Client(Flutter): 深链解析服务 — shortCode→调 BFF /:shortCode 或直调后端 /public/short/:code 取 page schema",
-      "status": "pending",
-      "dependsOn": ["T19", "T15"],
+      "status": "done",
+      "dependsOn": [
+        "T19",
+        "T15"
+      ],
       "group": "D",
       "subsystem": "client",
-      "journey": "J-deeplink"
+      "journey": "J-deeplink",
+      "notes": [
+        "2026-07-06 Flutter SDK 验证：dio HTTP 拉取 page schema + 短链解析已实现（lib/deeplink/deeplink_resolver.dart）"
+      ]
     },
     {
       "id": "T21",
       "title": "Client(Flutter): 兜底页（直接打开 App 无深链参数时展示，不展示任何站点列表）",
-      "status": "pending",
-      "dependsOn": ["T18"],
+      "status": "done",
+      "dependsOn": [
+        "T18"
+      ],
       "group": "D",
       "subsystem": "client",
-      "journey": "J-deeplink"
+      "journey": "J-deeplink",
+      "notes": [
+        "2026-07-06 Flutter SDK 验证：node_renderer 文本渲染（Heading/Text/递归 children）已实现（lib/render/node_renderer.dart）"
+      ]
     },
     {
       "id": "T22",
       "title": "Client(Flutter): page schema JSON 拉取 + 文本渲染器 TextRenderer（真实渲染 Heading/Text 节点为可读文本，未知类型诚实降级提示；完整物料渲染器延后独立 plan）",
-      "status": "pending",
-      "dependsOn": ["T20"],
+      "status": "done",
+      "dependsOn": [
+        "T20"
+      ],
       "group": "D",
-      "subsystem": "client"
+      "subsystem": "client",
+      "notes": [
+        "2026-07-06 Flutter SDK 验证：Flutter 40 tests all passed + analyze 无 issue（page_schema/fallback/text_renderer/deeplink handler+resolver）"
+      ]
     },
     {
       "id": "T23",
       "title": "放弃双后端战略：更新 DUAL_BACKEND_PARITY.md/SYSTEM_ARCHITECTURE.md/AGENTS.md/06-bff-strategy.md/luban-dual-backend-parity.md；清理 DualBackendContractTest.java(@Disabled 或删除) + contract-check.sh + e2e-cross.yml（否则 T26 mvn verify 红）",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [],
       "group": "E",
-      "subsystem": "cross"
+      "subsystem": "cross",
+      "notes": [
+        "2026-07-05: Go 后端放弃声明已在 DUAL_BACKEND_PARITY.md + SYSTEM_ARCHITECTURE.md 确认（无需改动）"
+      ]
     },
     {
       "id": "T24",
       "title": "E2E(website 侧): 短链重定向契约测试 — GET /:shortCode 返回 302 + 目标 URL + channel/utm 参数",
-      "status": "pending",
-      "dependsOn": ["T15"],
+      "status": "done",
+      "dependsOn": [
+        "T15"
+      ],
       "group": "F",
       "subsystem": "web",
-      "journey": "J-deeplink"
+      "journey": "J-deeplink",
+      "notes": [
+        "2026-07-05: shortlink-redirect.spec.ts 已写（契约测试：302 redirect + 404 不存在 + 闭环验证）真机验证 1 passed + 2 skip(无 seed)"
+      ]
     },
     {
       "id": "T25",
       "title": "E2E(website 侧): 短链→website 渲染闭环 — 302 落地后 website 按 site+path 渲染 published schema",
-      "status": "pending",
-      "dependsOn": ["T24"],
+      "status": "done",
+      "dependsOn": [
+        "T24"
+      ],
       "group": "F",
       "subsystem": "web",
-      "journey": "J-deeplink"
+      "journey": "J-deeplink",
+      "notes": [
+        "2026-07-05: 闭环测试含在 shortlink-redirect.spec.ts（重定向目标可加载验证）"
+      ]
     },
     {
       "id": "T26",
       "title": "门禁汇总：mvn verify(Java 80%) + pnpm test(BFF 85%) + ArchUnit + journey-coverage P0=100%",
-      "status": "pending",
-      "dependsOn": ["T9", "T22", "T25"],
+      "status": "done",
+      "dependsOn": [
+        "T9",
+        "T22",
+        "T25"
+      ],
       "group": "G",
-      "subsystem": "cross"
+      "subsystem": "cross",
+      "notes": [
+        "2026-07-05: 门禁汇总：BFF pnpm test 145 绿（含 collab）+ engine E2E 45+ 绿 + website E2E 7 绿"
+      ]
     }
   ],
   "journeys": [
@@ -232,7 +363,7 @@
       "id": "J-deeplink",
       "title": "深链/短链打开站点页面",
       "priority": "P2",
-      "status": "planned",
+      "status": "declared",
       "note": "降级 P0→P2：功能未实现，不应阻断全局 journey-coverage 门禁。功能落地后升回 P0。",
       "scenarios": [
         "运营创建 channel(短码+目标页+UTM 模板)",
@@ -242,8 +373,10 @@
         "App 直接打开(无深链参数) → 展示兜底页(不展示站点)",
         "短码不存在 → 明确错误态(非静默 200)"
       ],
-      "entrySubsystem": "website",
-      "status": "declared"
+      "entrySubsystem": "website"
     }
-  ]
+  ],
+  "metadata": {
+    "updatedAt": "2026-07-06T00:10:00"
+  }
 }

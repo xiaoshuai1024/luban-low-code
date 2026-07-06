@@ -212,5 +212,10 @@
       ]
     }
   },
-  "status": "superseded"
+  "status": "superseded",
+  "metadata": {
+    "status": "archived",
+    "archivedAt": "2026-07-05T04:30:00",
+    "archivedReason": "12/17 任务 superseded（PageEditor/Toolbar/PropertyPanel/OutlineTree 等已被 designer-pro-upgrade 接管实现），整体废弃，移至 archive 避免污染进行中方案视图"
+  }
 }

@@ -6,8 +6,9 @@ FROM python:3.12-slim AS builder
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     UV_LINK_MODE=copy \
-    UV_COMPILE_BYTECODE=1
-# uv 官方推荐安装方式
+    UV_COMPILE_BYTECODE=1 \
+    UV_INDEX_URL=https://mirrors.aliyun.com/pypi/simple \
+    UV_HTTP_TIMEOUT=120
 COPY --from=ghcr.io/astral-sh/uv:0.5.11 /uv /usr/local/bin/uv
 WORKDIR /app
 

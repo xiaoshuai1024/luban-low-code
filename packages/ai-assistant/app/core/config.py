@@ -80,11 +80,15 @@ class Settings(BaseSettings):
     qdrant_docs_collection: str = "luban_docs"
     qdrant_api_key: SecretStr = SecretStr("")  # 生产可能启用;本地无 key
 
-    # ===== 云端 embedding（与 LLM 解耦，可独立配置）=====
-    embedding_provider: Literal["glm", "openai"] = "glm"
+    # ===== embedding（与 LLM 解耦，可独立配置）=====
+    # local: 本地 sentence-transformers（bge-small-zh-v1.5，512 维，免外网）
+    # glm/openai: 云端 LiteLLM API（需 API key）
+    embedding_provider: Literal["local", "glm", "openai"] = "local"
     embedding_api_key: SecretStr = SecretStr("")
     embedding_base_url: str = "https://open.bigmodel.cn/api/paas/v4/"
-    embedding_model: str = "embedding-3"
+    embedding_model: str = "/data"  # local 模式: 模型路径; 云端模式: 模型名
+    # 向量维度（须与 Qdrant collection schema 对齐；bge-small-zh=512, GLM embedding-3=2048）
+    embedding_dim: int = 512
 
     @property
     def is_prod(self) -> bool:

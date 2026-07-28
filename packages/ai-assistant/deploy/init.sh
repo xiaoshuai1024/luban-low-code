@@ -51,7 +51,8 @@ from qdrant_client.models import Distance, VectorParams, SparseVectorParams
 
 HOST = os.environ.get("QDRANT_HOST", "qdrant")
 PORT = int(os.environ.get("QDRANT_PORT", "6333"))
-DENSE_DIM = 1024  # 与 embedding 维度对齐；collection 创建后维度不可改
+DENSE_DIM = int(os.environ.get("EMBEDDING_DIM", "2048"))  # 与 embedding 维度对齐；collection 创建后维度不可改
+FORCE_RECREATE = os.environ.get("QDRANT_FORCE_RECREATE", "") == "1"  # 维度变更时强制重建
 
 client = QdrantClient(host=HOST, port=PORT)
 
@@ -67,32 +68,37 @@ def collection_exists(name: str) -> bool:
         return False
 
 
+def ensure_collection(name: str, sparse: bool, payload_index_fields: list[str]) -> None:
+    """幂等建 collection（FORCE_RECREATE=1 时先删后建，用于维度变更）。"""
+    if FORCE_RECREATE and collection_exists(name):
+        client.delete_collection(collection_name=name)
+        print(f"[init] Qdrant collection '{name}' 已删除（FORCE_RECREATE=1）")
+    if collection_exists(name):
+        print(f"[init] Qdrant collection '{name}' 已存在，跳过")
+        return
+    vectors_config = {"dense": VectorParams(size=DENSE_DIM, distance=Distance.COSINE)}
+    kwargs = {}
+    if sparse:
+        kwargs["sparse_vectors_config"] = {"sparse": SparseVectorParams()}
+    client.create_collection(collection_name=name, vectors_config=vectors_config, **kwargs)
+    for field in payload_index_fields:
+        client.create_payload_index(name, field, field_schema="keyword")
+    print(f"[init] Qdrant collection '{name}' 已创建 (dim={DENSE_DIM})")
+
+
 # luban_materials：dense + sparse hybrid 检索（物料知识）
-materials = "luban_materials"
-if collection_exists(materials):
-    print(f"[init] Qdrant collection '{materials}' 已存在，跳过")
-else:
-    client.create_collection(
-        collection_name=materials,
-        vectors_config={"dense": VectorParams(size=DENSE_DIM, distance=Distance.COSINE)},
-        sparse_vectors_config={"sparse": SparseVectorParams()},
-    )
-    for field in ("name", "category", "site_id", "version"):
-        client.create_payload_index(materials, field, field_schema="keyword")
-    print(f"[init] Qdrant collection '{materials}' 已创建")
+ensure_collection(
+    "luban_materials",
+    sparse=True,
+    payload_index_fields=["name", "category", "site_id", "version"],
+)
 
 # luban_docs：dense + payload 过滤（产品文档/FAQ）
-docs = "luban_docs"
-if collection_exists(docs):
-    print(f"[init] Qdrant collection '{docs}' 已存在，跳过")
-else:
-    client.create_collection(
-        collection_name=docs,
-        vectors_config={"dense": VectorParams(size=DENSE_DIM, distance=Distance.COSINE)},
-    )
-    for field in ("site_id", "type", "source"):
-        client.create_payload_index(docs, field, field_schema="keyword")
-    print(f"[init] Qdrant collection '{docs}' 已创建")
+ensure_collection(
+    "luban_docs",
+    sparse=False,
+    payload_index_fields=["site_id", "type", "source"],
+)
 PY
 
 echo "[init] 完成"

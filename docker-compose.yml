@@ -127,6 +127,13 @@ services:
       POSTGRES_DSN: postgresql://luban:luban@ai-postgres:5432/luban_ai
       QDRANT_HOST: ai-qdrant
       QDRANT_PORT: "6333"
+      # 本地 sentence-transformers（bge-small-zh-v1.5,512 维,免外网）
+      EMBEDDING_PROVIDER: local
+      BFF_BASE_URL: http://bff:3100
+      EMBEDDING_MODEL: /data
+      EMBEDDING_DIM: "512"
+    volumes:
+      - ai-embedding-cache:/data:ro  # 预下载的 bge 模型（只读挂载）
     ports:
       - "8002:8000"
     depends_on:
@@ -170,3 +177,4 @@ volumes:
   luban-mysql:
   ai-pgdata:
   ai-qdrantdata:
+  ai-embedding-cache:

@@ -1,7 +1,8 @@
-"""云端 embedding 客户端(LiteLLM 实现,与 LLM 解耦,可独立配置 provider/model)。
+"""embedding 客户端(支持云端 LiteLLM 或本地 sentence-transformers,与 LLM 解耦)。
 
 M2 迁移:从 openai SDK 改为 LiteLLM embedding(统一 provider 前缀路由)。
-支持 GLM/OpenAI/通义 embedding。单测用 mock,不依赖真实 API。
+支持 GLM/OpenAI/通义 embedding 及本地 sentence-transformers 加载。
+单测用 mock,不依赖真实 API。
 """
 
 from __future__ import annotations
@@ -72,20 +73,66 @@ class _LiteLLMEmbedder:
         return [list(d["embedding"]) for d in resp.data]
 
 
-def get_embedder(settings: Settings) -> Embedder:
-    """按配置构造 embedder(LiteLLM,默认 GLM provider 前缀,云端可配)。
+class _SentenceTransformersEmbedder:
+    """本地 sentence-transformers embedding(bge-small-zh-v1.5,免外网)。
 
-    provider_prefix 按 embedding_provider 映射到 LiteLLM 路由前缀。
+    模型文件经 volume 挂载,首次加载 15-30s(CPU 推理)。
     """
+
+    def __init__(self, model_path: str) -> None:
+        self._model_path = model_path
+        self._model: object
+        self._dim: int
+
+    @property
+    def dim(self) -> int:
+        return self._dim
+
+    def _ensure_loaded(self) -> None:
+        if hasattr(self, "_model"):
+            return
+        from sentence_transformers import SentenceTransformer
+
+        self._model = SentenceTransformer(self._model_path)
+        self._dim = self._model.get_sentence_embedding_dimension()
+
+    def embed_query(self, text: str) -> list[float]:
+        self._ensure_loaded()
+        model: object = self._model
+        vec = model.encode(text, normalize_embeddings=True)  # type: ignore[union-attr]
+        return list(vec)
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
+        self._ensure_loaded()
+        model: object = self._model
+        vecs = model.encode(texts, normalize_embeddings=True)  # type: ignore[union-attr]
+        return [list(v) for v in vecs]
+
+
+def get_embedder(settings: Settings) -> Embedder:
+    """按配置构造 embedder。
+
+    路由:
+      - embedding_provider=local: sentence-transformers 本地模型(bge-small-zh,512 维)
+      - embedding_provider=openai/glm: LiteLLM 云端 API
+
+    dim 由配置决定(须与 Qdrant collection 维度对齐):
+      - bge-small-zh-v1.5(本地): 512
+      - GLM embedding-3(云端): 2048
+    """
+    if settings.embedding_provider == "local":
+        # 本地 sentence-transformers,模型路径由 EMBEDDING_MODEL 指定
+        return _SentenceTransformersEmbedder(model_path=settings.embedding_model)
+
     prefix_map = {"glm": "openai", "openai": "openai"}  # GLM 走 OpenAI 兼容协议
     prefix = prefix_map.get(settings.embedding_provider, "openai")
     key = settings.embedding_api_key.get_secret_value()
-    emb: Embedder = _LiteLLMEmbedder(
+    return _LiteLLMEmbedder(
         api_key=key,
         base_url=settings.embedding_base_url,
         model=settings.embedding_model,
-        # GLM embedding-3 = 2048 维;此处用配置约定的 1024(与 init.sh collection schema 对齐)
-        dim=1024,
+        dim=settings.embedding_dim,
         provider_prefix=prefix,
     )
-    return emb

@@ -1,17 +1,17 @@
 ---
-description: 低代码引擎渲染端到端（packages/engine/luban，Playwright，依赖 BFF/后端；含环境预检与 TDD）
+description: 低代码引擎渲染端到端（apps/engine，Playwright，依赖 BFF/后端；含环境预检与 TDD）
 ---
 
-**说明：** `/engine-e2e` 跑的是 **`packages/engine/luban` 低代码引擎渲染** 自动化（Playwright），**不是**后端的集成测。若需要 **Java/Go 后端接口集成测**，在对应后端包执行 `mvn -q verify` / `go test ./...`。
+**说明：** `/engine-e2e` 跑的是 **`apps/engine` 低代码引擎渲染** 自动化（Playwright），**不是**后端的集成测。若需要 **Java/Go 后端接口集成测**，在对应后端包执行 `mvn -q verify` / `go test ./...`。
 
 ### 1. 环境初始化（Agent 须协助用户完成）
 
-在 **`packages/engine/luban`** 下：
+在 **`apps/engine`** 下：
 
 1. `pnpm install`
 2. 安装/配置 **Playwright**（首次：`pnpm exec playwright install`，按需浏览器）
 3. 启动引擎渲染 dev server（按包内 `pnpm dev` 或文档约定端口）
-4. 按需启动 **BFF**（`packages/bff/luban-bff`）与 **后端**（Java `mvn spring-boot:run` 或 Go `go run`），引擎渲染依赖的数据来源
+4. 按需启动 **BFF**（`apps/bff`）与 **后端**（Java `mvn spring-boot:run` 或 Go `go run`），引擎渲染依赖的数据来源
 5. 国内网络：为终端设置 `HTTPS_PROXY` / `HTTP_PROXY`，并 `NO_PROXY=localhost,127.0.0.1,::1`
 
 **预检（推荐先跑）** — 在主仓库根或引擎包：
@@ -19,23 +19,23 @@ description: 低代码引擎渲染端到端（packages/engine/luban，Playwright
 ```bash
 bash scripts/e2e/engine-render-preflight.sh
 # 或
-cd packages/engine/luban && pnpm run e2e:preflight
+cd apps/engine && pnpm run e2e:preflight
 ```
 
 通过后再跑 E2E。
 
 ### 2. 执行引擎渲染 E2E
 
-在主仓库根或 `packages/engine/luban`：
+在主仓库根或 `apps/engine`：
 
 ```bash
-cd packages/engine/luban && pnpm run test:e2e
+cd apps/engine && pnpm run test:e2e
 ```
 
 可见窗口排障（可选）：
 
 ```bash
-cd packages/engine/luban && pnpm run test:e2e:headed
+cd apps/engine && pnpm run test:e2e:headed
 ```
 
 ### 引擎渲染门槛（MUST）

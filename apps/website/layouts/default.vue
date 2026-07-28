@@ -9,7 +9,7 @@
  * SSR 预取公开 site config（含 analytics 配置），用 useHead 注入第三方 SDK 脚本。
  * 配置为空时不注入（零开销）。
  */
-import { useAnalytics } from '~/composables/useAnalytics'
+import { buildAnalyticsScripts } from '~/composables/useAnalytics'
 import type { SiteAnalytics } from '~/utils/analytics'
 
 const config = useRuntimeConfig()
@@ -31,7 +31,7 @@ const analytics = computed<SiteAnalytics | null>(() => siteConfig.value?.analyti
 
 // 注入 SDK 脚本（无配置时为空数组，不注入）
 useHead(() => {
-  const { script } = useAnalytics(analytics.value)
+  const { script } = buildAnalyticsScripts(analytics.value)
   return {
     script: script.length ? script : undefined,
   }

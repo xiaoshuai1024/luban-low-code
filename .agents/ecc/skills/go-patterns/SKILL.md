@@ -6,11 +6,11 @@ origin: luban
 
 # Go Development Patterns
 
-Patterns for `luban-backend-go` (`packages/backend/luban-backend-go`, go mod). The Go backend is the second implementation of the luban backend contract; the Java backend (`luban-backend`) is the other. Both MUST behave identically — see `docs/DUAL_BACKEND_PARITY.md`.
+Patterns for `luban-backend-go` (`apps/backend-go`, go mod). The Go backend is the second implementation of the luban backend contract; the Java backend (`luban-backend`) is the other. Both MUST behave identically — see `docs/DUAL_BACKEND_PARITY.md`.
 
 ## When to Activate
 
-- Writing or modifying any `.go` file under `packages/backend/luban-backend-go`.
+- Writing or modifying any `.go` file under `apps/backend-go`.
 - Adding an HTTP handler, service, repository, or migration in Go.
 - Touching anything that has a Java counterpart — verify parity.
 - Writing Go tests.
@@ -20,7 +20,7 @@ Patterns for `luban-backend-go` (`packages/backend/luban-backend-go`, go mod). T
 Follow the standard Go layout. Keep handlers thin, services stateless, repositories the only DB touchpoint.
 
 ```
-packages/backend/luban-backend-go/
+apps/backend-go/
 ├── cmd/
 │   └── server/main.go        # entrypoint: wire deps, start HTTP server
 ├── internal/

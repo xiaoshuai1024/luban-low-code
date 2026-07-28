@@ -9,13 +9,13 @@
 
 ## 涉及的子模块
 
-- <packages/engine/luban | packages/bff/luban-bff | packages/ui/luban-ui | packages/web/luban-website | packages/backend/luban-backend | packages/backend/luban-backend-go | ...>
+- <apps/engine | apps/bff | packages/ui | apps/website | apps/backend-java | apps/backend-go | ...>
 
 ## 最小验证步骤（先列，再执行）
 
-1. <例如：在 packages/ui/luban-ui 新增一个 Button 物料 + 合规 props schema>
-2. <例如：在 packages/engine/luban 写一个最小渲染 demo，消费该物料>
-3. <例如：在 packages/web/luban-website 跑一遍 SSR，截图>
+1. <例如：在 packages/ui 新增一个 Button 物料 + 合规 props schema>
+2. <例如：在 apps/engine 写一个最小渲染 demo，消费该物料>
+3. <例如：在 apps/website 跑一遍 SSR，截图>
 4. <例如：在 Electron 端跑一遍，对比 DOM diff>
 
 ## 硬约束（MUST）

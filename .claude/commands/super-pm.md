@@ -36,7 +36,7 @@ description: 以 UX + 产品专家视角对方案或实现做结构化审查（�
    - **增量**（`--since <commit>` 或 `--fixes <issue-ids>`，首次调用必须全量）：仅审查变更文件或验证指定修复。
    输出必须使用 skill 内 **输出模板（rubric）** 的章节标题。
 6. **视觉／token 细节**：不自行发明规范；疑虑处委派对照 `ui-spec-enforcer` 与 `docs/UI_SPEC.md`（luban 设计 token / 物料规范摘要），在报告中注明即可。物料 props schema 合规见 `.agents/rules/luban-material-schema.md`。
-7. **<!-- LOAD: docs/dev/website-dev-standards.md, 审查对象涉及 packages/web/luban-website 或 SSR 站点路由 -->** website 站点交互规范。读取并对照，在 rubric 中输出对照表。
+7. **<!-- LOAD: docs/dev/website-dev-standards.md, 审查对象涉及 apps/website 或 SSR 站点路由 -->** website 站点交互规范。读取并对照，在 rubric 中输出对照表。
 8. **原型符合性审查**（`<!-- IF: 用户提供了 Figma 链接、截图、或路径含 .fig/.png/.jpg -->` **必须执行**）：
    - 逐页核对实现与原型的布局一致性（组件位置、间距、层级）
    - 逐操作核对用户链路完整性（原型中的每一步操作是否在实现中可走通）

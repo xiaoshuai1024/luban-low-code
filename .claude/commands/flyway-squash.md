@@ -4,7 +4,7 @@ description: Java 后端 Flyway 迁移文件整理（squash）：评估可行性
 
 # Flyway Squash
 
-> 仅适用于 **Java 后端**（`packages/backend/luban-backend`）。Go 后端无 Flyway。
+> 仅适用于 **Java 后端**（`apps/backend-java`）。Go 后端无 Flyway。
 
 ## 快速判断
 
@@ -43,10 +43,10 @@ description: Java 后端 Flyway 迁移文件整理（squash）：评估可行性
 
 # 第 1 步：确认当前状态
 git status                          # 确保无未提交改动
-ls packages/backend/luban-backend/src/main/resources/db/migration/V*.sql | tail -5   # 记下最新版本号（秒级时间戳）
+ls apps/backend-java/src/main/resources/db/migration/V*.sql | tail -5   # 记下最新版本号（秒级时间戳）
 
 # 第 2 步：归档旧 migration 文件
-MIG=packages/backend/luban-backend/src/main/resources/db/migration
+MIG=apps/backend-java/src/main/resources/db/migration
 mkdir -p "${MIG}/archived"
 mv "${MIG}"/V*__*.sql "${MIG}/archived/"
 # （保留 archived/ 目录用于 git 追溯，不在 CI 加载路径中即可）
@@ -68,7 +68,7 @@ cd -
 mysql -u root -p -e "DROP DATABASE IF EXISTS luban_backend; CREATE DATABASE luban_backend;"
 
 # 第 5 步：启动后端，让 Flyway 应用 V1（新建所有表）
-cd packages/backend/luban-backend && mvn spring-boot:run
+cd apps/backend-java && mvn spring-boot:run
 # 观察日志确认 flyway 成功应用 V1
 ```
 
@@ -86,7 +86,7 @@ cd packages/backend/luban-backend && mvn spring-boot:run
 2. **创建 consolidated baseline**（同 §2 第 3 步）
 3. **`flyway repair`** 刷新 checksum：
    ```bash
-   cd packages/backend/luban-backend
+   cd apps/backend-java
    mvn flyway:repair -Dflyway.url=jdbc:mysql://<host>:3306/luban_backend -Dflyway.user=<user> -Dflyway.password=<pass>
    ```
 4. **验证**：启动后端确认无迁移错误

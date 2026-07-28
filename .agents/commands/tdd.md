@@ -24,12 +24,12 @@ description: 以 TDD 模式推进当前任务：红→绿→重构；失败按�
 
 ### 3. 依赖服务：须探测、启动、排障后再测（MUST）
 
-按**本次要跑的测试**列出依赖（示例：本机 **MySQL**、**Redis**（若启用）、Java 后端 **`8080`**、Go 后端（默认端口见各包配置）、引擎渲染 dev server、website SSR dev server、BFF dev server 等），**先探测**（健康请求、`lsof`、读 `terminals` 元数据等），**未就绪则须尝试启动**（典型：`packages/backend/luban-backend` 下 **`mvn spring-boot:run`**；`packages/backend/luban-backend-go` 下 `go run`；TS 包按各包 `pnpm dev`；其它见 [AGENTS.md](AGENTS.md)、各子项目文档）。
+按**本次要跑的测试**列出依赖（示例：本机 **MySQL**、**Redis**（若启用）、Java 后端 **`8080`**、Go 后端（默认端口见各包配置）、引擎渲染 dev server、website SSR dev server、BFF dev server 等），**先探测**（健康请求、`lsof`、读 `terminals` 元数据等），**未就绪则须尝试启动**（典型：`apps/backend-java` 下 **`mvn spring-boot:run`**；`apps/backend-go` 下 `go run`；TS 包按各包 `pnpm dev`；其它见 [AGENTS.md](AGENTS.md)、各子项目文档）。
 
 - **启动失败须排障**：读**启动日志**与终端输出（端口占用、Flyway、数据源、Redis 等），修复或收窄根因后再跑测；**禁止**未读日志就把失败归咎于「环境不行」并结束会话。
 - **禁止**仅以「服务没起」「健康检查失败」为由**跳过合入门禁**、滥用 **`SKIP_*`**（除 `docs/E2E_AGENT_GUIDE.md` §4.1 与流水线文档允许的 **CI 豁免**，且 **PR/流水线说明已写明**）或依赖「全体 skip、退出码 0」冒充通过。
 - **后端启动**：Java/Go 双后端独立配置；TDD 中若修改了任一后端源码或配置，再次跑依赖该后端的联调/E2E 前**须重启对应后端**。
-- **引擎渲染 E2E**（`packages/engine/luban`）：按 `luban-testing-coverage` 与相关脚本；缺 Playwright 等不可在本机自动化补齐时，须写明**已做的预检与阻塞**，**不得**静默跳过冒充绿。
+- **引擎渲染 E2E**（`apps/engine`）：按 `luban-testing-coverage` 与相关脚本；缺 Playwright 等不可在本机自动化补齐时，须写明**已做的预检与阻塞**，**不得**静默跳过冒充绿。
 - 启动前避免重复起多套冲突端口。
 
 ### 4. 持续跑通与收口（MUST）

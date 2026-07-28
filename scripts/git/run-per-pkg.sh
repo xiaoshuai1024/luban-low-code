@@ -16,7 +16,7 @@
 #   make test | make lint | make install-deps
 #
 #   # 仅跑指定包（传子模块相对路径，空格分隔）
-#   bash scripts/git/run-per-pkg.sh test packages/engine/luban packages/ui/luban-ui
+#   bash scripts/git/run-per-pkg.sh test apps/engine packages/ui
 #
 set -euo pipefail
 
@@ -42,7 +42,7 @@ action:
   build    构建（跳过测试）
 
 pkg...  可选；不传则遍历 .gitmodules 中所有子模块。
-        传则只对指定的子模块相对路径执行（如 packages/engine/luban）。
+        传则只对指定的子模块相对路径执行（如 apps/engine）。
 EOF
 }
 
@@ -160,14 +160,16 @@ if [[ ${#EXTRA_PKGS[@]} -gt 0 ]]; then
     esac
     PKG_DIRS+=("$p")
   done
-elif [[ -f "${ROOT}/.gitmodules" ]]; then
-  while IFS= read -r rel; do
-    [[ -n "$rel" ]] && PKG_DIRS+=("$rel")
-  done < <(git config --file "${ROOT}/.gitmodules" --get-regexp '^submodule\..*\.path$' \
-            | awk '{ print $2 }' | sort -u)
 else
-  echo "Error: 无 .gitmodules 且未传包路径。" >&2
-  exit 1
+  # monorepo：显式包清单（apps/* 可部署应用 + packages/ui 物料库 + Java/Go 双后端）
+  PKG_DIRS=(
+    "apps/engine"
+    "apps/bff"
+    "packages/ui"
+    "apps/website"
+    "apps/backend-java"
+    "apps/backend-go"
+  )
 fi
 
 # ── 执行 + 汇总 ───────────────────────────────────────────

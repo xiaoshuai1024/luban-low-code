@@ -8,14 +8,14 @@
  *
  * TODO（待从 luban-ui 提取确认）:
  *   - TOKEN_COLORS_HEX 白名单当前为占位（沿用 kangdou 色值作为示例），
- *     须在 packages/ui/luban-ui 提取真实 token 后回填。
+ *     须在 packages/ui 提取真实 token 后回填。
  *   - TOKEN_PREFIX 当前假设为 "--lb-"，若 luban-ui 使用其他前缀（如 --luban-*）须同步修改。
- *   - FRONTEND_DIR 默认指向 packages/ui/luban-ui，可按需调整。
+ *   - FRONTEND_DIR 默认指向 packages/ui，可按需调整。
  *
  * Usage:
  *   node scripts/check-design-tokens.mjs                          # scan staged .vue/.tsx files
  *   node scripts/check-design-tokens.mjs --all                    # scan all .vue/.tsx files under FRONTEND_DIR
- *   node scripts/check-design-tokens.mjs --path packages/ui/luban-ui/src   # scan specific path
+ *   node scripts/check-design-tokens.mjs --path packages/ui/src   # scan specific path
  *
  * Exit code: 0 = clean, 1 = warnings, 2 = errors
  */
@@ -28,7 +28,7 @@ import { resolve, relative } from "path";
 // TODO（待确认）：Token 白名单 — 从 luban-ui 提取真实 token 后回填
 // ============================================================================
 // 当前为占位（沿用 kangdou 示例色值）。luban-ui token 提取方法：
-//   1. 在 packages/ui/luban-ui 中检索 tokens.css / tokens.scss / design-tokens.ts
+//   1. 在 packages/ui 中检索 tokens.css / tokens.scss / design-tokens.ts
 //   2. 提取所有 :root 或 [data-theme] 下定义的颜色变量值
 //   3. 把 HEX 值（含大小写）填入下方 Set
 const TOKEN_COLORS_HEX = new Set([
@@ -49,7 +49,7 @@ const TOKEN_PREFIX = "--lb-";
 
 const ROOT = process.cwd();
 // 默认扫描 luban-ui 物料库；可通过 --front-end 覆盖
-const FRONTEND_DIR = resolve(ROOT, "packages/ui/luban-ui");
+const FRONTEND_DIR = resolve(ROOT, "packages/ui");
 
 // Colors that are commonly used and acceptable outside tokens
 const ALLOWED_STANDALONE_COLORS = new Set([
@@ -219,7 +219,7 @@ const targetPath = args.includes("--path") ? args[args.indexOf("--path") + 1] : 
 
 console.log("🔍 luban 设计 Token 合规检查");
 console.log("=".repeat(40));
-console.log(`⚠️  Token 白名单为占位，须从 packages/ui/luban-ui 提取真实 token 后回填本脚本`);
+console.log(`⚠️  Token 白名单为占位，须从 packages/ui 提取真实 token 后回填本脚本`);
 console.log("");
 
 let files;
@@ -235,7 +235,7 @@ if (targetPath) {
       files = getTargetFiles(null);
     } else {
       console.log(`默认扫描目录不存在: ${FRONTEND_DIR}`);
-      console.log(`请用 --path <dir> 指定，或先接入 packages/ui/luban-ui submodule`);
+      console.log(`请用 --path <dir> 指定，或先接入 packages/ui submodule`);
       process.exit(0);
     }
   }

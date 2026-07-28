@@ -1,26 +1,26 @@
 # CLAUDE.md
 
-luban-workspace — luban 低代码平台的统一治理 meta 仓。Git superproject 通过 submodule 引入 11 个子项目，统一 AI agent 规则、测试门禁、命令与工作流。
+luban-workspace — luban 低代码平台 monorepo（原 git superproject + 8 submodule 已通过 git filter-repo 合并为单一仓库，历史完整保留）。统一 AI agent 规则、测试门禁、命令与工作流。
 
 本文件为 Claude Code 主入口。所有 agent 通用规范见 `AGENTS.md`。
 
 ## 项目概述
 
-**luban 低代码平台（luban-workspace）** — meta 仓 + 11 子项目：
+**luban 低代码平台（luban-workspace）** — monorepo（apps/ 可部署应用 + packages/ 库 + docs/）：
 
 | 子项目 | 路径 | 技术栈 | 默认分支 |
 |------|------|--------|--------|
-| 低代码引擎 | `packages/engine/luban` | TypeScript | master |
-| BFF | `packages/bff/luban-bff` | TypeScript / Node | master |
-| 组件库/物料 | `packages/ui/luban-ui` | Vue 3 / Vite | master |
-| SSR 站点 | `packages/web/luban-website` | TypeScript / SSR | master |
-| 后端 Java | `packages/backend/luban-backend` | Java / Spring Boot / Maven | master |
-| 后端 Go | `packages/backend/luban-backend-go` | Go | master |
-| AI 助手 | `packages/ai/luban-ai-assistant` | （规划中） | main |
-| 桌面端 | `packages/client/luban-electron` | Electron（规划） | main |
-| 移动端 | `packages/client/luban-flutter` | Flutter（规划） | main |
-| 跨平台 | `packages/client/luban-cross-plateform` | （规划） | main |
-| 架构文档 | `packages/docs/luban-architecture-design` | 文档 | main |
+| 低代码引擎 | `apps/engine` | TypeScript | master |
+| BFF | `apps/bff` | TypeScript / Node | master |
+| 组件库/物料 | `packages/ui` | Vue 3 / Vite | master |
+| SSR 站点 | `apps/website` | TypeScript / SSR | master |
+| 后端 Java | `apps/backend-java` | Java / Spring Boot / Maven | master |
+| 后端 Go | `apps/backend-go` | Go | master |
+| AI 助手 | `packages/ai-assistant` | （规划中） | main |
+| 桌面端 | `apps/electron`（规划） | Electron | main |
+| 移动端 | `apps/flutter`（规划） | Flutter | main |
+| 跨平台 | `apps/cross-platform`（规划） | （规划） | main |
+| 架构文档 | `docs/architecture` | 文档 | main |
 
 非中文用户用英文交互，中文用户用中文。
 
@@ -30,7 +30,7 @@ luban-workspace — luban 低代码平台的统一治理 meta 仓。Git superpro
 所有信息与代码须基于实际代码、官方文档或已验证事实。禁止凭空推测 API/签名/配置；禁止编造报错；不清楚时说"不确定"，先查代码/文档再答。违反者代码审查应被驳回。
 
 ### 2. 低代码引擎交付门槛（替代微信合规）
-凡改动引擎/物料/schema，须满足：本地 `pnpm run build` 成功且渲染器零新增 console error；物料 props schema 合规（见 `.agents/rules/luban-material-schema.md`）；引擎产物在 `packages/web/luban-website`（SSR）及各端渲染一致；不确定行为标注"需验证"。
+凡改动引擎/物料/schema，须满足：本地 `pnpm run build` 成功且渲染器零新增 console error；物料 props schema 合规（见 `.agents/rules/luban-material-schema.md`）；引擎产物在 `apps/website`（SSR）及各端渲染一致；不确定行为标注"需验证"。
 
 ### 3. Java/Go 双后端行为一致
 同一接口契约，Java 与 Go 实现的响应体/错误码/状态机须一致；变更须两端同步或显式标注差异。见 `.agents/rules/luban-dual-backend-parity.md`。
@@ -79,10 +79,10 @@ make test-coverage     # 一键分栈覆盖率汇总 + HTML 报告
 ## 关键约定
 
 ### Git 工作流（GitHub）
-- 分支：各子仓保留现有默认分支（6 master + 5 main）；新提交统一 `feature/*`
-- 禁止直接 push 默认分支；多系统改动用同名 feature 分支
+- 分支：monorepo 单一仓库，默认分支 master；新提交统一 `feature/*`
+- 禁止直接 push 默认分支；跨子系统改动一次 commit 完成（monorepo 优势）
 - 合并冲突：优先分析双方逻辑保留双方；禁止 `--ours/--theirs`；无法确认询问用户
-- 常用：`/pr-all` `/pull-all` `/push-all`
+- 常用：`git pull` / `git push` / `gh pr create`（monorepo 单仓标准操作；原 `/pull-all` `/push-all` `/pr-all` 为 submodule 时代命令，待改写或弃用）
 
 ### 测试门禁
 - 每个子项目改码后在该包根目录执行构建+测试

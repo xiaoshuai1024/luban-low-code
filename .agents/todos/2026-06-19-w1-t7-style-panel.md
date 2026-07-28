@@ -26,9 +26,9 @@ parentTask: W1-T7
 
 ## 入口文件
 
-- `packages/engine/luban/src/views/page/components/PropertyPanel.vue` — 新增样式分区
-- `packages/ui/luban-ui/packages/luban-low-code/src/lib/schema.ts` — NodeSchema style 字段（如需）
-- `packages/engine/luban/src/views/page/PageEditor.vue` — update:style 接线
+- `apps/engine/src/views/page/components/PropertyPanel.vue` — 新增样式分区
+- `packages/ui/packages/luban-low-code/src/lib/schema.ts` — NodeSchema style 字段（如需）
+- `apps/engine/src/views/page/PageEditor.vue` — update:style 接线
 
 ## 验收口径
 

@@ -23,7 +23,7 @@
                    │
                    ▼
 ┌──────────────────────────────────────────────┐
-│  Engine（packages/engine/luban）             │
+│  Engine（apps/engine）             │
 │  - Schema 解析                               │
 │  - 物料调度（manifest）                      │
 │  - Props 校验（propsSchema）                 │
@@ -34,7 +34,7 @@
                    │
                    ▼
 ┌──────────────────────────────────────────────┐
-│  Materials（packages/ui/luban-ui）           │
+│  Materials（packages/ui）           │
 │  - 物料定义（defineMaterial）                │
 │  - Vue 3 组件                                │
 │  - propsSchema / events / slots              │
@@ -162,9 +162,9 @@ export const MyMaterial = defineMaterial({
 
 ### 3.3 物料注册流程
 
-1. 在 `packages/ui/luban-ui/src/materials/<category>/<name>/` 创建物料
+1. 在 `packages/ui/src/materials/<category>/<name>/` 创建物料
 2. 声明物料定义（如上）
-3. 在 `packages/ui/luban-ui/src/materials/index.ts` 注册导出
+3. 在 `packages/ui/src/materials/index.ts` 注册导出
 4. 引擎通过物料清单（manifest）加载
 5. 同步更新物料文档（如有）
 
@@ -301,7 +301,7 @@ schema 引用物料时记录版本：`{ material, version }`
 
 ### 8.1 引擎调试页
 
-- 位于 `packages/engine/luban/debug/`（或 `playground/`）
+- 位于 `apps/engine/debug/`（或 `playground/`）
 - 用于运行时验证 schema 渲染、物料挂载
 - 允许在开发阶段修改（不属于"产品原型目录"）
 - 改动后须在该仓根跑 `pnpm run build` 确认无 console error
@@ -340,14 +340,14 @@ schema 引用物料时记录版本：`{ material, version }`
 ## 11. 经验：engine 构建失败排查（monorepo 子仓未初始化 / dist 未构建）
 
 ### 场景
-在 engine 子仓（`packages/engine/luban`）执行 `pnpm build` / `vue-tsc` / `vite build` 报错：
+在 engine 子仓（`apps/engine`）执行 `pnpm build` / `vue-tsc` / `vite build` 报错：
 - `Failed to resolve entry for package "luban-low-code"`（或 `luban-base`）
 - `Cannot find module 'luban-low-code'`
 - 引擎源码 import 这些包，但解析不到
 
 ### 根因
-engine 通过 `link:` 依赖同 monorepo 的 `packages/ui/luban-ui/packages/luban-low-code`（及 `luban-base`）。三个前提缺一不可：
-1. **ui 子仓未初始化**：worktree/新 clone 里 `packages/ui/luban-ui` 是空目录（submodule 未 init）
+engine 通过 `link:` 依赖同 monorepo 的 `packages/ui/packages/luban-low-code`（及 `luban-base`）。三个前提缺一不可：
+1. **ui 子仓未初始化**：worktree/新 clone 里 `packages/ui` 是空目录（submodule 未 init）
 2. **dist 未构建**：`luban-low-code` 的 `package.json` `main` 指向 `./dist/index.js`，但 dist 目录空（需 nx 构建，dev 环境常未构建）
 3. **跨 monorepo 依赖缺失**：`luban-low-code` 源码依赖 `sortablejs` 等，其 `node_modules` 在 luban-ui 侧（未装），engine 侧解析不到
 
@@ -358,10 +358,10 @@ engine 通过 `link:` 依赖同 monorepo 的 `packages/ui/luban-ui/packages/luba
 resolve: {
   alias: {
     'luban-low-code': fileURLToPath(
-      new URL('../../../packages/ui/luban-ui/packages/luban-low-code/src/index.ts', import.meta.url)
+      new URL('../../../packages/ui/packages/luban-low-code/src/index.ts', import.meta.url)
     ),
     'luban-base': fileURLToPath(
-      new URL('../../../packages/ui/luban-ui/packages/luban-base/src/index.ts', import.meta.url)
+      new URL('../../../packages/ui/packages/luban-base/src/index.ts', import.meta.url)
     ),
     // 源码依赖的第三方，别名到 engine 本地 node_modules 副本
     sortablejs: fileURLToPath(new URL('./node_modules/sortablejs/modular/sortable.esm.js', import.meta.url)),
@@ -369,7 +369,7 @@ resolve: {
 },
 ```
 
-前置：①`git submodule update --init packages/ui/luban-ui` ②`pnpm add sortablejs`（补 engine 侧缺失依赖）
+前置：①`git submodule update --init packages/ui` ②`pnpm add sortablejs`（补 engine 侧缺失依赖）
 
 **typecheck 注意**：`vue-tsc --noEmit` 可能仍报 `Cannot find module 'luban-low-code'`（vue-tsc 不读 vite alias）。这是已知解析限制，以 `vite build` 实际是否通过为准；`PropertyPanel.vue` 等现有文件同样报错，属既有问题，非新引入。
 

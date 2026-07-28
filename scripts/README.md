@@ -71,7 +71,7 @@ luban-workspace 的测试门禁与 Git/GitHub 工作流脚本。全部 POSIX-ish
 
 2. **gh 认证**：`gh auth status` 确认已登录（xiaoshuai1024，https，scope 含 repo/workflow）。`pr-all.sh` / `github/*` 依赖此。
 
-3. **JaCoCo 配置**：`packages/backend/luban-backend/pom.xml` 须配 `jacoco-maven-plugin` 才能产出 `target/site/jacoco/jacoco.xml`；否则该包 WARN（不 FAIL）。
+3. **JaCoCo 配置**：`apps/backend-java/pom.xml` 须配 `jacoco-maven-plugin` 才能产出 `target/site/jacoco/jacoco.xml`；否则该包 WARN（不 FAIL）。
 
 4. **TS 覆盖率 reporter**：engine/bff/ui/website 的 `package.json` 须有 `test:coverage` script 且 reporter 输出 `coverage/coverage-summary.json`（vitest `coverage-v8` 或 `istanbul`）。否则该包 WARN。
 

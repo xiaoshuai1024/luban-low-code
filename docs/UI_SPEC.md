@@ -1,9 +1,9 @@
 # luban 低代码平台 · UI 规范（Agent 摘要）
 
-本文档供 Agent 实现界面（低代码引擎渲染器、SSR 站点、管理端、各端物料）时快速对齐视觉与交互。**详细 token 与组件状态以 luban-ui 物料库（`packages/ui/luban-ui`）为准**。
+本文档供 Agent 实现界面（低代码引擎渲染器、SSR 站点、管理端、各端物料）时快速对齐视觉与交互。**详细 token 与组件状态以 luban-ui 物料库（`packages/ui`）为准**。
 
 > **TODO（待人工确认）**：本规范为骨架版，所有具体色值、token、字号、间距均标注「待从 luban-ui 提取确认」。Agent 在 token 落地前应：
-> 1. 优先在 `packages/ui/luban-ui` 源码中检索实际定义（CSS 变量 / SCSS / design-tokens.ts）；
+> 1. 优先在 `packages/ui` 源码中检索实际定义（CSS 变量 / SCSS / design-tokens.ts）；
 > 2. 找到后回填本文件并把「待确认」标记替换为真实值；
 > 3. 找不到时不得臆造色值，须在 PR 中标注「需 luban-ui 设计 token 维护者确认」。
 
@@ -13,14 +13,14 @@
 
 | 资源 | 路径 | 用途 |
 |------|------|------|
-| **luban-ui 物料库（主参考）** | `packages/ui/luban-ui` | Vue 3 组件 + token 定义源（CSS 变量 / SCSS / design-tokens）；组件级样式以仓库内实现为准 |
+| **luban-ui 物料库（主参考）** | `packages/ui` | Vue 3 组件 + token 定义源（CSS 变量 / SCSS / design-tokens）；组件级样式以仓库内实现为准 |
 | **本规范摘要** | `docs/UI_SPEC.md`（本文档） | Agent 实现时的快速对照 |
 | **低代码引擎渲染契约** | `docs/LOWCODE_ENGINE_SPEC.md` | 引擎渲染物料时的 schema/props/事件契约 |
 | **设计系统主文档** | `design-system/luban/MASTER.md` | 设计 token、色板、字体、组件规范的单一来源（占位 + TODO） |
 | **token 扫描脚本** | `scripts/check-design-tokens.mjs` | 自动扫描 .vue/.ts 中的硬编码颜色与 token 违规 |
 
 **优先级（冲突时）**：
-1. `packages/ui/luban-ui` 实际实现（**可执行单源**）
+1. `packages/ui` 实际实现（**可执行单源**）
 2. `design-system/luban/MASTER.md`（设计意图）
 3. 本文档（Agent 摘要）
 
@@ -48,7 +48,7 @@
 
 ## 3. 设计 Token（骨架，待 luban-ui 回填）
 
-> 所有值为占位。Agent **不得**把占位值当作真实 token 使用；落地前必须从 `packages/ui/luban-ui` 提取并回填本表，同时更新 `scripts/check-design-tokens.mjs` 的 `TOKEN_COLORS_HEX` 白名单。
+> 所有值为占位。Agent **不得**把占位值当作真实 token 使用；落地前必须从 `packages/ui` 提取并回填本表，同时更新 `scripts/check-design-tokens.mjs` 的 `TOKEN_COLORS_HEX` 白名单。
 
 ### 色彩
 
@@ -82,9 +82,9 @@
 | `--lb-line-height-*` | 待确认 | 行高刻度 |
 
 > **TODO 提取指引**：在 luban-ui 中检索以下文件（典型路径，实际以仓库结构为准）：
-> - `packages/ui/luban-ui/src/styles/tokens.css` 或 `tokens.scss` 或 `design-tokens.ts`
-> - `packages/ui/luban-ui/src/styles/variables.scss`
-> - 主题入口 `packages/ui/luban-ui/src/index.ts` 中导出的 design tokens
+> - `packages/ui/src/styles/tokens.css` 或 `tokens.scss` 或 `design-tokens.ts`
+> - `packages/ui/src/styles/variables.scss`
+> - 主题入口 `packages/ui/src/index.ts` 中导出的 design tokens
 >
 > 找到后，把 token 名前缀（`--lb-*` 或其他）与实际值同步到本表与 `scripts/check-design-tokens.mjs`。前缀若 luban-ui 已用其他前缀（如 `--luban-*` / `--lb-ui-*`），本仓统一以 luban-ui 实际前缀为准，本文档 placeholder 中的 `--lb-` 不具约束力。
 
@@ -121,7 +121,7 @@ luban 的渲染目标为 **Web（SSR）+ 低代码引擎运行时 + 多端（ele
 
 ## 7. 与低代码引擎的关系
 
-- 引擎渲染器（`packages/engine/luban`）消费 luban-ui 物料，按 schema 渲染页面。
+- 引擎渲染器（`apps/engine`）消费 luban-ui 物料，按 schema 渲染页面。
 - 物料 props schema 合规见 `.agents/rules/luban-material-schema.md`。
 - 视觉 token 由 luban-ui 统一注入，引擎不得在渲染产物中硬编码颜色覆盖 token（见 `scripts/check-design-tokens.mjs`）。
 

@@ -13,7 +13,7 @@
 ---
 
 > **🔴 TODO（待从 luban-ui 提取确认）**：本文档为骨架版。所有色值、token、字号、间距均为占位或参考值，**不代表 luban 实际设计系统**。Agent 在落地前必须：
-> 1. 在 `packages/ui/luban-ui` 源码中检索实际 token 定义（CSS 变量 / SCSS / design-tokens.ts）；
+> 1. 在 `packages/ui` 源码中检索实际 token 定义（CSS 变量 / SCSS / design-tokens.ts）；
 > 2. 找到后回填本文件，并把「待确认」标记替换为真实值；
 > 3. 同步更新 `docs/UI_SPEC.md` 与 `scripts/check-design-tokens.mjs` 的 `TOKEN_COLORS_HEX` 白名单；
 > 4. 找不到时不得臆造，须在 PR 中标注「需 luban-ui 设计 token 维护者确认」。

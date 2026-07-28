@@ -16,12 +16,12 @@
 
 | 子项目 | 路径 | 工具 | 行覆盖率 | 分支覆盖率 |
 |--------|------|------|---------|-----------|
-| 低代码引擎 | `packages/engine/luban` | Vitest coverage-v8 | **85%** | 75% |
-| BFF | `packages/bff/luban-bff` | Vitest coverage-v8 | **85%** | 75% |
-| UI 物料库 | `packages/ui/luban-ui` | Vitest coverage-v8 | **90%** | 80% |
-| SSR 站点 | `packages/web/luban-website` | Vitest coverage-v8 | **85%** | 75% |
-| 后端 Java | `packages/backend/luban-backend` | JaCoCo | **80%** | 70% |
-| 后端 Go | `packages/backend/luban-backend-go` | `go test -cover` | **75%** | - |
+| 低代码引擎 | `apps/engine` | Vitest coverage-v8 | **85%** | 75% |
+| BFF | `apps/bff` | Vitest coverage-v8 | **85%** | 75% |
+| UI 物料库 | `packages/ui` | Vitest coverage-v8 | **90%** | 80% |
+| SSR 站点 | `apps/website` | Vitest coverage-v8 | **85%** | 75% |
+| 后端 Java | `apps/backend-java` | JaCoCo | **80%** | 70% |
+| 后端 Go | `apps/backend-go` | `go test -cover` | **75%** | - |
 | client（各端） | `packages/client/*` | 各端原生工具 | **85%** | 75% |
 
 一键全栈覆盖率：`make test-coverage`（汇总表格 + HTML 报告）。
@@ -161,17 +161,17 @@ Review 测试代码时逐条检查：
 ### TS 仓（engine / bff / ui / website）— pnpm
 
 ```bash
-cd packages/engine/luban && pnpm install
-cd packages/engine/luban && pnpm test              # Vitest 单测
-cd packages/engine/luban && pnpm run build         # 构建（合并前 MUST）
-cd packages/engine/luban && pnpm run test:e2e      # Playwright E2E
-cd packages/engine/luban && pnpm run test:coverage # 覆盖率报告
+cd apps/engine && pnpm install
+cd apps/engine && pnpm test              # Vitest 单测
+cd apps/engine && pnpm run build         # 构建（合并前 MUST）
+cd apps/engine && pnpm run test:e2e      # Playwright E2E
+cd apps/engine && pnpm run test:coverage # 覆盖率报告
 ```
 
 ### 后端 Java — Maven
 
 ```bash
-cd packages/backend/luban-backend
+cd apps/backend-java
 mvn -q verify                  # 单测 + 集成测 + JaCoCo check
 mvn -q test                    # 仅单测
 mvn spring-boot:run            # 本地启动
@@ -182,7 +182,7 @@ mvn jacoco:report              # 仅生成覆盖率报告
 ### 后端 Go — go mod
 
 ```bash
-cd packages/backend/luban-backend-go
+cd apps/backend-go
 go test ./... -race -cover     # 全部测试 + 竞态检测 + 覆盖率
 go test ./... -run TestXxx     # 单个测试
 go test -coverprofile=cover.out ./... && go tool cover -html=cover.out  # HTML 覆盖率报告

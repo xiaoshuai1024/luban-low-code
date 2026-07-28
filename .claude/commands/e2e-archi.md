@@ -62,8 +62,8 @@ description: 方案阶段架构自检 + E2E TDD 覆盖分析 + 安全合规审�
    - 对每个流程，检查多种测试层次：
      - **Java 后端集成测试**（`*IT.java`）
      - **Go 后端测试**（`go test`，与 Java 同接口须覆盖相同场景）
-     - **引擎渲染 E2E**（`packages/engine/luban`，Playwright）
-     - **website SSR E2E**（`packages/web/luban-website`，Playwright）
+     - **引擎渲染 E2E**（`apps/engine`，Playwright）
+     - **website SSR E2E**（`apps/website`，Playwright）
      - **各 client E2E**（electron/flutter，按规划态）
    - 产出覆盖矩阵表格：
 
@@ -84,8 +84,8 @@ description: 方案阶段架构自检 + E2E TDD 覆盖分析 + 安全合规审�
    - 各 client：按规划态，已有实现的端做交互验证
 
    #### 2.4 验证门禁
-   - Java 后端：`cd packages/backend/luban-backend && mvn -q verify`
-   - Go 后端：`cd packages/backend/luban-backend-go && go test ./... -race -cover`
+   - Java 后端：`cd apps/backend-java && mvn -q verify`
+   - Go 后端：`cd apps/backend-go && go test ./... -race -cover`
    - 引擎/BFF/website：`pnpm test` + `pnpm run build`
    - 引擎渲染 E2E：`pnpm run test:e2e`（见 `/engine-e2e`）
    - website SSR E2E：`pnpm run test:e2e`（见 `/website-e2e`）

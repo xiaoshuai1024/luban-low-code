@@ -1,0 +1,23 @@
+# luban-workspace — pnpm monorepo 根
+#
+# 纳入根 workspace 的 TS 单包应用（engine / bff / website）。
+# packages/ui 保持自身独立 pnpm workspace（nx + 3 npm 发布包），不纳入根（pnpm 不允许嵌套）。
+packages:
+  - 'apps/engine'
+  - 'apps/bff'
+  - 'apps/website'
+allowBuilds:
+  '@parcel/watcher': true
+  esbuild: true
+  sharp: true
+  vue-demi: true
+# pnpm 11 批准 native/postinstall 包的 build script（list 形式）
+onlyBuilds:
+  - esbuild
+  - vue-demi
+  - '@parcel/watcher'
+  - sharp
+# 兜底：未列出的 build script 仅警告不 error（避免多版本 native 包逐个批准阻塞）
+strictDepBuilds: false
+# 关闭 run 前依赖校验
+verifyDepsBeforeRun: false

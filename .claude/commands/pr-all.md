@@ -26,8 +26,8 @@ bash scripts/git/pull-all-default.sh
 2. **逐文件确认** — 每个冲突文件先展示冲突内容（`<<<<<<<` / `=======` / `>>>>>>>`）+ 推荐合并方案，**等待用户确认**后再执行；禁止批量自动合并。
 3. **子模块指针冲突** — 主仓各子模块指针冲突时，先确认对应子模块 PR 是否已合并到默认分支，再 `git add <submodule>` 指向默认分支最新提交。
 4. **合并后构建+测试** — 每个项目冲突解决后跑对应构建测试，失败先修复再继续：
-   - Java 后端 `packages/backend/luban-backend` → `mvn -q verify`
-   - Go 后端 `packages/backend/luban-backend-go` → `go test ./... -race -cover`
+   - Java 后端 `apps/backend-java` → `mvn -q verify`
+   - Go 后端 `apps/backend-go` → `go test ./... -race -cover`
    - 引擎/BFF/UI/website（TS 包）→ `pnpm test && pnpm run build`
 5. **无法确认时停下来询问用户**，给出冲突内容 + 推荐方案，不要猜。
 6. 全部冲突解决并 `git commit` 完成合并后，才进入阶段 ②。

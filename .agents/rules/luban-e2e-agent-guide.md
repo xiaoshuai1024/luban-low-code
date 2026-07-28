@@ -102,10 +102,10 @@ luban 各后端独立配置，引擎与 BFF 已经过充分验证可用。任何
 
 | 借口 | 正确的排查/修复方式 |
 |------|-------------------|
-| "引擎没启动" | 在 `packages/engine/luban` 启动 dev / 渲染调试页 |
-| "BFF 没启动" | `cd packages/bff/luban-bff && pnpm run dev` |
-| "Java 后端没启动" | `cd packages/backend/luban-backend && mvn spring-boot:run` |
-| "Go 后端没启动" | `cd packages/backend/luban-backend-go && go run` |
+| "引擎没启动" | 在 `apps/engine` 启动 dev / 渲染调试页 |
+| "BFF 没启动" | `cd apps/bff && pnpm run dev` |
+| "Java 后端没启动" | `cd apps/backend-java && mvn spring-boot:run` |
+| "Go 后端没启动" | `cd apps/backend-go && go run` |
 | "缺少数据" | 通过 API 创建 / fixture / SQL |
 | "Playwright 没装" | `pnpm exec playwright install chromium` |
 

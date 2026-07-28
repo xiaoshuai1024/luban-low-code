@@ -24,7 +24,7 @@ git diff --name-only --diff-filter=U        # 所有未合并的冲突文件
 git submodule status                         # 子模块指针状态
 
 # 每个子模块（按 .gitmodules 遍历）
-cd packages/engine/luban && git status && git diff --name-only --diff-filter=U
+cd apps/engine && git status && git diff --name-only --diff-filter=U
 # ... 其余子模块
 ```
 
@@ -64,12 +64,12 @@ cd packages/engine/luban && git status && git diff --name-only --diff-filter=U
 | 项目 | 构建+测试命令 |
 |------|--------------|
 | 根仓库(workspace) | 无独立构建，确认 `git diff --cached` 正确即可 |
-| `packages/backend/luban-backend` (Java) | `cd packages/backend/luban-backend && mvn -q verify` |
-| `packages/backend/luban-backend-go` (Go) | `cd packages/backend/luban-backend-go && go test ./... -race -cover` |
-| `packages/engine/luban` | `cd packages/engine/luban && pnpm test && pnpm run build` |
-| `packages/bff/luban-bff` | `cd packages/bff/luban-bff && pnpm test && pnpm run build` |
-| `packages/ui/luban-ui` | `cd packages/ui/luban-ui && pnpm test && pnpm run build` |
-| `packages/web/luban-website` | `cd packages/web/luban-website && pnpm test && pnpm run build` |
+| `apps/backend-java` (Java) | `cd apps/backend-java && mvn -q verify` |
+| `apps/backend-go` (Go) | `cd apps/backend-go && go test ./... -race -cover` |
+| `apps/engine` | `cd apps/engine && pnpm test && pnpm run build` |
+| `apps/bff` | `cd apps/bff && pnpm test && pnpm run build` |
+| `packages/ui` | `cd packages/ui && pnpm test && pnpm run build` |
+| `apps/website` | `cd apps/website && pnpm test && pnpm run build` |
 
 如果构建/测试失败，**修复后再继续下一个项目**。
 

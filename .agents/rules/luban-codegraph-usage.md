@@ -66,7 +66,7 @@ CodeGraph 已配置 `--exclude` 排除 `node_modules` / `.worktrees` / `.e2e-tmp
 **工具调用注意：**
 
 1. **路径基点 = 工作区根**：CodeGraph 以 `D:\codes\luban-workspace` 为 workspace，路径参数用相对或绝对均可。
-2. **子模块独立仓**：每个 submodule（如 `packages/engine/luban/`）是独立 git 仓。跨包改动分析时，`codegraph_analyze_impact` 能跨子模块查，因为它们都在同一 workspace 下被索引。
+2. **子模块独立仓**：每个 submodule（如 `apps/engine/`）是独立 git 仓。跨包改动分析时，`codegraph_analyze_impact` 能跨子模块查，因为它们都在同一 workspace 下被索引。
 3. **双后端对齐**（见 `luban-dual-backend-parity.md`）：查 Java/Go 同接口实现时，先 `codegraph_symbol_search` 同时定位两端，再比对——比 grep 两遍快且准。
 4. **物料 schema 追溯**（见 `luban-material-schema.md`）：用 `codegraph_get_detailed_symbol` 找物料 props 定义来源，区分"引擎定义" vs "物料自带"。
 

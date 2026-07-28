@@ -5,7 +5,7 @@
 #
 # 用法（主仓根目录）:
 #   bash scripts/github/list-prs.sh [--state open|closed|all] [--limit 30] [--mine]
-#   bash scripts/github/list-prs.sh --repo packages/engine/luban
+#   bash scripts/github/list-prs.sh --repo apps/engine
 #
 # 选项:
 #   --state <s>   PR 状态（默认 open）

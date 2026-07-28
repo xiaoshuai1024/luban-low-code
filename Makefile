@@ -1,4 +1,4 @@
-# luban-workspace — 全栈编排入口
+# luban-workspace — monorepo 全栈编排入口
 # 用法见 README.md 与 docs/SYSTEM_ARCHITECTURE.md（服务拓扑 SSOT）
 #
 # 端口约定（本机 dev 裸进程，互不冲突；中间件在远端 dev 服务器）：
@@ -10,15 +10,21 @@
 #   MySQL     :13306  (远端 192.168.100.248)
 #   Redis     :16379  (远端 192.168.100.248)
 # 本机禁起 docker / 中间件。
+#
+# monorepo 结构（原 git submodule 已合并为单一仓库）：
+#   apps/{engine,bff,website,backend-java,backend-go}   可部署应用
+#   packages/{ui,ai-assistant}                           库（ui 含独立 nx workspace）
+#   docs/architecture                                    架构文档
 
-BRANCH ?= main
-PKG_DIRS := packages/engine/luban packages/bff/luban-bff packages/ui/luban-ui packages/web/luban-website \
-            packages/backend/luban-backend packages/backend/luban-backend-go
+# pnpm 11.13 的 runDepsStatusCheck 需此 flag 绕过（pnpm-workspace.yaml verifyDepsBeforeRun 已设）
+PNPM := pnpm --config.verifyDepsBeforeRun=false
 
-.PHONY: clone-all pull-all push-all pr-all sync-submodules \
-        test test-coverage lint \
+PKG_DIRS := apps/engine apps/bff packages/ui apps/website \
+            apps/backend-java apps/backend-go
+
+.PHONY: install ui-build build test test-coverage lint \
         dev-engine dev-bff dev-website dev-java dev-go dev-apps dev-check \
-        install-deps clean \
+        clean \
         e2e-up e2e-down e2e e2e-cross e2e-install e2e-report
 
 # --- E2E 服务编排 + 跨项目流程性 E2E ---
@@ -47,32 +53,28 @@ e2e-cross:
 e2e-report:
 	cd e2e && pnpm report
 
+# ============================================================
+# 依赖安装 / 构建
+# ============================================================
 
-# 首次：初始化所有 submodule
-clone-all:
-	@git submodule update --init --recursive
+# 安装所有 workspace 依赖（root apps/* + packages/ui 独立 workspace）
+install:
+	$(PNPM) install
+	cd packages/ui && $(PNPM) install
 
-# 同步 submodule 指针到各仓远端最新
-sync-submodules:
-	@git submodule update --remote --merge
+# 构建 ui 物料库（luban-base/luban-low-code dist，apps production build 的前置依赖）
+ui-build:
+	cd packages/ui && $(PNPM) nx run-many --projects=luban-base,luban-low-code --target=build
 
-# 各 submodule 同步默认分支（主仓 + 子仓 fetch+merge，不换分支）
-pull-all:
-	@bash scripts/git/pull-all.sh "$(BRANCH)"
+# 构建所有 TS 应用（engine/bff/website；依赖 ui-build 产出 dist）
+build: ui-build
+	$(PNPM) --filter './apps/*' build
 
-# 各 submodule commit + push 当前分支（不建 PR）
-push-all:
-	@bash scripts/git/push-all.sh
+# ============================================================
+# 测试 / lint / 覆盖率
+# ============================================================
 
-# 各 submodule + meta 仓 gh pr create
-pr-all:
-	@bash scripts/git/pr-all.sh "$(BRANCH)"
-
-# 一键全栈覆盖率门禁（汇总表 + HTML 报告）
-test-coverage:
-	@bash scripts/coverage/coverage-summary.sh
-
-# 各包测试（按技术栈）
+# 各包测试（按技术栈，遍历 PKG_DIRS）
 test:
 	@bash scripts/git/run-per-pkg.sh test
 
@@ -80,9 +82,9 @@ test:
 lint:
 	@bash scripts/git/run-per-pkg.sh lint
 
-# 各包装依赖（TS pnpm install / Java mvn / Go go mod download）
-install-deps:
-	@bash scripts/git/run-per-pkg.sh install
+# 一键全栈覆盖率门禁（汇总表 + HTML 报告）
+test-coverage:
+	@bash scripts/coverage/coverage-summary.sh
 
 # ============================================================
 # 本地开发启动（单服务 / 全栈）—— 见 docs/SYSTEM_ARCHITECTURE.md
@@ -95,23 +97,23 @@ install-deps:
 # Java 后端（Spring Boot；start-mvn.bat 内置远端中间件 env + Flyway 自动迁移）
 # 启动慢（~30-60s），健康检查：http://localhost:8080/backend/actuator/health
 dev-java:
-	cd packages/backend/luban-backend && cmd //c start-mvn.bat
+	cd apps/backend-java && cmd //c start-mvn.bat
 
 # Go 后端（可选；双后端契约测试场景用。端口 8081）
 dev-go:
-	cd packages/backend/luban-backend-go && APP_PORT=8081 go run .
+	cd apps/backend-go && APP_PORT=8081 go run .
 
 # BFF（Next.js；显式 -p 3100，避免与 website 默认 3000 冲突）
 dev-bff:
-	cd packages/bff/luban-bff && pnpm exec next dev -p 3100
+	cd apps/bff && $(PNPM) exec next dev -p 3100
 
 # engine（Vue SPA；vite 默认 5173；/api proxy 已指向 bff:3100）
 dev-engine:
-	cd packages/engine/luban && pnpm run dev
+	cd apps/engine && $(PNPM) run dev
 
 # website（Nuxt SSR；nuxt 默认 3000；env 修正 bffBaseUrl 默认值错误→3100）
 dev-website:
-	cd packages/web/luban-website && NUXT_PUBLIC_BFF_BASE_URL=http://127.0.0.1:3100 pnpm exec nuxt dev
+	cd apps/website && NUXT_PUBLIC_BFF_BASE_URL=http://127.0.0.1:3100 $(PNPM) exec nuxt dev
 
 # --- 全栈一键启动 ---
 

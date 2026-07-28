@@ -408,7 +408,7 @@ export type PaletteCategory = '信息' | '布局' | '表单' | '营销' | '导�
 
 ### §9.1 文件变更总览
 
-#### ui 子系统（`packages/ui/luban-ui`）
+#### ui 子系统（`packages/ui`）
 
 | taskID | file | new/modify | summary |
 |--------|------|-----------|---------|
@@ -432,7 +432,7 @@ export type PaletteCategory = '信息' | '布局' | '表单' | '营销' | '导�
 | D15-E4 | `luban-low-code/src/materials/index.ts` | modify | 注册 9 新物料（materials[] L63-90 追加）+9 re-export（mirror L134-137） |
 | **cross** | `luban-low-code/src/materials/material-parity.spec.ts` | **modify（关键隐患）** | L28 `expect(all.length).toBe(20)` → 29（否则新物料注册即测试红） |
 
-#### engine 子系统（`packages/engine/luban`）
+#### engine 子系统（`apps/engine`）
 
 | taskID | file | new/modify | summary |
 |--------|------|-----------|---------|
@@ -456,7 +456,7 @@ export type PaletteCategory = '信息' | '布局' | '表单' | '营销' | '导�
 
 > StyleSection 决策：**inline 进 PropertyPanel**（不单独组件）——现有 options/events/datasource 均为 ElForm 内 inline 子块，共享 handleInput/commit，单独组件需重穿 node/readonly/emit，得不偿失。
 
-#### website 子系统（`packages/web/luban-website`）
+#### website 子系统（`apps/website`）
 
 | taskID | file | new/modify | summary |
 |--------|------|-----------|---------|

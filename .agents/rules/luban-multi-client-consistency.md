@@ -1,6 +1,6 @@
 <!--
 description: electron / flutter / web 三端业务一致
-globs: packages/client/**, packages/web/**, packages/engine/**
+globs: apps/website/**, apps/engine/**
 alwaysApply: false
 -->
 
@@ -8,7 +8,7 @@ alwaysApply: false
 
 luban 通过低代码引擎驱动多端渲染，理论上同一 schema 在各端应产出一致的业务表现。但实际各端运行时差异（Chromium / Flutter WebView / Web）会引入分叉。
 
-本规则约束各端业务一致，适用于 `packages/client/luban-electron`、`packages/client/luban-flutter`、`packages/client/luban-cross-plateform`、`packages/web/luban-website`。
+本规则约束各端业务一致，适用于 `packages/client/luban-electron`、`packages/client/luban-flutter`、`packages/client/luban-cross-plateform`、`apps/website`。
 
 ## 核心要求
 

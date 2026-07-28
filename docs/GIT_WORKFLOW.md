@@ -49,7 +49,7 @@ ssh -T git@github.com
 | 来源 | 作用 |
 |------|------|
 | **`.gitmodules`（提交到仓库）** | 记录团队默认的子模块 URL（本项目为 SSH）。所有人 `git submodule update --init` 时会按该 URL 拉取。 |
-| **本地覆盖（推荐用于个人偏好）** | 不在仓库里改 `.gitmodules`，仅在当前克隆内改用 HTTPS，例如：`git submodule set-url packages/engine/luban <https-url>`，然后执行 `git submodule sync --recursive` 与 `git submodule update --init`。 |
+| **本地覆盖（推荐用于个人偏好）** | 不在仓库里改 `.gitmodules`，仅在当前克隆内改用 HTTPS，例如：`git submodule set-url apps/engine <https-url>`，然后执行 `git submodule sync --recursive` 与 `git submodule update --init`。 |
 
 因此：**可以让不同开发者在本机分别使用 SSH 或 HTTPS**，做法是各自在克隆主仓库后，用上述命令把子模块 URL 改成 HTTPS（或反过来改回 SSH），无需修改主仓库已提交的 `.gitmodules`。
 
@@ -73,7 +73,7 @@ https://github.com/<owner>/<repository>.git
 2. **用户分支优先**：默认留在用户当前工作分支写代码。
 3. **不得自动新切分支**：除非用户在本轮对话中明确要求创建/切换分支，否则 Agent 不得执行 `git checkout -b feature/...`。
 4. **分支不匹配时先问**：若当前分支不是用户指定分支，必须暂停并询问用户希望切到哪个分支或是否继续在当前分支写入。
-5. **子模块**：若修改各子项目（`packages/engine/luban` 等）等独立子模块仓库，应在对应子模块仓库内分别确认分支；多仓任务默认使用用户指定的同名工作分支。
+5. **子模块**：若修改各子项目（`apps/engine` 等）等独立子模块仓库，应在对应子模块仓库内分别确认分支；多仓任务默认使用用户指定的同名工作分支。
 6. **禁止**：在**默认分支**（master / main）上直接开发式提交（热修复也须先取得用户明确指令并按 hotfix 流程）。
 7. **例外**：用户明确要求「新建 feature 分支」「就在当前分支提交」等，按用户指令执行，并在回复中注明分支策略。
 
@@ -273,12 +273,12 @@ luban 11 个子项目默认分支不同，全量 `/pr-all` 可能部分失败。
 
 | 命令 | 作用 |
 |------|------|
-| `/pr-engine` | 仅 `packages/engine/luban` |
-| `/pr-bff` | 仅 `packages/bff/luban-bff` |
-| `/pr-ui` | 仅 `packages/ui/luban-ui` |
-| `/pr-website` | 仅 `packages/web/luban-website` |
-| `/pr-backend-java` | 仅 `packages/backend/luban-backend` |
-| `/pr-backend-go` | 仅 `packages/backend/luban-backend-go` |
+| `/pr-engine` | 仅 `apps/engine` |
+| `/pr-bff` | 仅 `apps/bff` |
+| `/pr-ui` | 仅 `packages/ui` |
+| `/pr-website` | 仅 `apps/website` |
+| `/pr-backend-java` | 仅 `apps/backend-java` |
+| `/pr-backend-go` | 仅 `apps/backend-go` |
 | `/pr-client` | 仅 `packages/client/*` |
 | `/pr-workspace` | 仅 meta 仓 |
 

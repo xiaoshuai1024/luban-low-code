@@ -1,0 +1,13 @@
+{
+  "name": "luban-workspace",
+  "version": "0.0.0",
+  "private": true,
+  "description": "luban 低代码平台 monorepo（engine + bff + website + ui 物料 + Java/Go 双后端）",
+  "scripts": {
+    "build:apps": "pnpm --filter './apps/*' build",
+    "test:apps": "pnpm --filter './apps/*' test",
+    "dev:engine": "pnpm --filter ./apps/engine dev",
+    "dev:bff": "pnpm --filter ./apps/bff dev",
+    "dev:website": "pnpm --filter ./apps/website dev"
+  }
+}

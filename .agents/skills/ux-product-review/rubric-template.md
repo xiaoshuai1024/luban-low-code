@@ -89,7 +89,7 @@
 | | | ✅/❌ | ✅/❌ | ✅/⚠️/❌ | ✅/❌ | |
 
 ## 视觉规范对照（涉及引擎渲染产物/website 样式时）
-- Token 合规扫描结果（运行 `node scripts/check-design-tokens.mjs --path packages/ui/luban-ui/src`，附 exit code 与违规计数）
+- Token 合规扫描结果（运行 `node scripts/check-design-tokens.mjs --path packages/ui/src`，附 exit code 与违规计数）
 - **图标规范（MUST）**：扫描页面中 emoji 和 Unicode 符号图标违规。使用 `grep` 搜索常见 emoji 字符和 Unicode 符号（🔍🧩🏪🔗📋💚🔒📖📱🎁🏠💡📦🎟🎫💳💰🎉🎯✅❌♥♡✕✓☑☐▲▼↗›），发现即 **阻断**。
 - <!-- VERIFY: 须附 ui-spec-enforcer 返回摘要（至少：调用时间 + 发现问题数 + 修复状态）。若未调用，标注「未执行」并说明理由 --> 以 `ui-spec-enforcer`＋`docs/UI_SPEC.md` 逐条核对。
 - **品牌色占位提醒**：若 luban-ui 品牌主色 token 尚未回填，本节须标注「token 待确认，本次审查基于占位值」。

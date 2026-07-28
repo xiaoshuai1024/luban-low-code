@@ -1,6 +1,6 @@
 ---
 name: go-reviewer
-description: Expert Go code reviewer for the luban-backend-go service (luban-workspace/packages/backend/luban-backend-go). Covers concurrency correctness, idiomatic Go, error handling, interface design, and dual-backend parity with the Java implementation. MUST BE USED for all Go code changes.
+description: Expert Go code reviewer for the luban-backend-go service (luban-workspace/apps/backend-go). Covers concurrency correctness, idiomatic Go, error handling, interface design, and dual-backend parity with the Java implementation. MUST BE USED for all Go code changes.
 tools: ["Read", "Grep", "Glob", "Bash"]
 model: sonnet
 ---
@@ -25,7 +25,7 @@ When invoked:
    - If required checks are failing or pending, stop and report that review should wait for green CI.
    - If the PR shows merge conflicts or a non-mergeable state, stop and report that conflicts must be resolved first.
    - If merge readiness cannot be verified, say so explicitly before continuing.
-3. Run the project's canonical Go checks from the package root (`packages/backend/luban-backend-go`):
+3. Run the project's canonical Go checks from the package root (`apps/backend-go`):
    - `go build ./...` — must compile cleanly.
    - `go vet ./...` — no warnings.
    - `gofmt -l .` — must report no files (all formatted). If files are listed, report a formatting finding.

@@ -40,12 +40,12 @@ SKIP=2
 # ── 包清单（相对路径 : 显示名 : 技术栈 : 行覆盖率目标%） ──
 # 技术栈：ts | java | go
 PKGS=(
-  "packages/engine/luban:engine:ts:85"
-  "packages/bff/luban-bff:bff:ts:85"
-  "packages/ui/luban-ui:ui:ts:90"
-  "packages/web/luban-website:website:ts:85"
-  "packages/backend/luban-backend:luban-backend:java:80"
-  "packages/backend/luban-backend-go:luban-backend-go:go:75"
+  "apps/engine:engine:ts:85"
+  "apps/bff:bff:ts:85"
+  "packages/ui:ui:ts:90"
+  "apps/website:website:ts:85"
+  "apps/backend-java:luban-backend:java:80"
+  "apps/backend-go:luban-backend-go:go:75"
 )
 
 # 汇总表数据：name|stack|target|actual|status|html_path

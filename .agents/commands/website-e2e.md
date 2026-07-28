@@ -1,14 +1,14 @@
 ---
-description: SSR 站点端到端（packages/web/luban-website，Playwright，依赖 BFF/后端；默认无头，TDD 与失败先收集再分析）
+description: SSR 站点端到端（apps/website，Playwright，依赖 BFF/后端；默认无头，TDD 与失败先收集再分析）
 ---
 
-在**主仓库根目录**或 **`packages/web/luban-website/`** 执行（需本机 BFF + 后端，或让 Playwright 自动 `webServer` 起 dev）。
+在**主仓库根目录**或 **`apps/website/`** 执行（需本机 BFF + 后端，或让 Playwright 自动 `webServer` 起 dev）。
 
 **后端未监听或健康检查失败时**：`pnpm run test:e2e` 会非零退出（`globalSetup` 抛错），**禁止**依赖「未起后端 → 全体 skip → 退出码 0」。须先启动本地 BFF + 后端（Java `mvn spring-boot:run` 或 Go `go run`），待健康检查可用后再跑。**TDD 中若改过后端**，再次跑 E2E 前 **须重启对应后端**。
 
 ```bash
-cd packages/web/luban-website && pnpm run install:e2e   # 首次：playwright install
-cd packages/web/luban-website && pnpm run test:e2e
+cd apps/website && pnpm run install:e2e   # 首次：playwright install
+cd apps/website && pnpm run test:e2e
 ```
 
 - **浏览器（MUST）**：website E2E **一律本机 Google Chrome**（`channel: "chrome"`），无头/有头相同；详见 `docs/E2E_AGENT_GUIDE.md` §4.0。CI 无 Chrome：`pnpm run test:e2e:ci`。
@@ -29,6 +29,6 @@ cd packages/web/luban-website && pnpm run test:e2e
 1. 先**红**后**绿**：改行为前先补/调测试，再最小实现。任一条红则**先修该条**，单条/单文件重跑**绿**后再跑**完整** `pnpm run test:e2e`。
 2. 失败时**先收集再分析**（与 `AGENTS.md` 一致）：**Console** → **Network** → **后端日志**（Java/Go；**优先 `requestId`**，`ts=` 含义见 `docs/E2E_AGENT_GUIDE.md` §3.1）；禁止未看证据就改断言。
 
-**你必须：** 在 `packages/web/luban-website` 下执行并贴出**完整终端结果**；若红，按上条顺序说明已收集的线索再动代码或配置。
+**你必须：** 在 `apps/website` 下执行并贴出**完整终端结果**；若红，按上条顺序说明已收集的线索再动代码或配置。
 
 策略：GitHub/PR 与本地服务无关；不直接 `gh`。

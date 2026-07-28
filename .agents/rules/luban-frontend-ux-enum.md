@@ -1,6 +1,6 @@
 <!--
 description: 前端交互组件选择决策树 + 枚举/状态值中文显示映射（MUST，基准 luban-ui）
-globs: packages/**/*.vue, packages/**/*.tsx
+globs: apps/**/*.vue, apps/**/*.tsx, packages/ui/**/*.vue, packages/ui/**/*.tsx
 alwaysApply: false
 -->
 
@@ -21,7 +21,7 @@ alwaysApply: false
 | 分页 | `LubanPagination` |
 | 弹窗 | `LubanDialog` / `LubanDrawer` |
 
-> 实际组件名以 `packages/ui/luban-ui` 注册的导出为准；新增物料时优先扩展 luban-ui，而非各端自造。
+> 实际组件名以 `packages/ui` 注册的导出为准；新增物料时优先扩展 luban-ui，而非各端自造。
 
 ## 枚举值中文显示（MUST）
 
@@ -30,7 +30,7 @@ alwaysApply: false
 - **website / client（Vue 或各端）**：须用 computed 或 `formatXxx()` 函数映射为中文，禁止 `{{ rawValue }}` 输出英文
 - **`LubanTable` 列**：须用 `formatter` 或 slot 映射为中文，禁止直接 `prop="status"`
 - **`LubanSelect` 选项**：用 `{ value, label }` 数组，label 为中文
-- 优先复用共享常量文件（`packages/ui/luban-ui/src/constants/` 或 BFF 暴露的枚举映射），而非在每个 view 重复定义
+- 优先复用共享常量文件（`packages/ui/src/constants/` 或 BFF 暴露的枚举映射），而非在每个 view 重复定义
 - **空值/未定义**：显示 `-` 或 `"未知"`，禁止留空白单元格
 
 ## 参考文档
@@ -149,7 +149,7 @@ const STATUS_MAP: Record<string, string> = {
 
 ### 预防
 1. 审查 agent 的 Vue/前端页面 bucket 应检查所有 `{{ x.status }}` 是否有映射表
-2. 统一在 `packages/ui/luban-ui/src/constants/statusLabels.ts` 定义状态映射，各端共享
+2. 统一在 `packages/ui/src/constants/statusLabels.ts` 定义状态映射，各端共享
 3. **所有前后端状态枚举**都必须中文映射
 
 ---

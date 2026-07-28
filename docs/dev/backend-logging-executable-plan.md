@@ -1,8 +1,8 @@
 # 后端日志：可执行方案（自建 / 无付费 / P95 延后）
 
-> **范围**：通用 Spring Boot 后端（luban Java 侧，`packages/backend/luban-backend`）。
+> **范围**：通用 Spring Boot 后端（luban Java 侧，`apps/backend-java`）。
 > **原则**：不搞 P95/P99 指标（后续再接 Prometheus）；**不写死商业日志 SaaS**；**小盘友好**（滚动 + 总上限）；**人工 SSH 可查**（单行 **logfmt** 风格，便于 `grep`）。
-> Go 侧（`packages/backend/luban-backend-go`）参考相同原则，用结构化日志库（如 zap/slog）实现等价字段。
+> Go 侧（`apps/backend-go`）参考相同原则，用结构化日志库（如 zap/slog）实现等价字段。
 
 ---
 
@@ -106,7 +106,7 @@ logging:
 
 ## Go 后端等价实现
 
-Go 侧（`packages/backend/luban-backend-go`）用结构化日志库实现相同字段：
+Go 侧（`apps/backend-go`）用结构化日志库实现相同字段：
 
 - 固定字段：`ts`、`level`、`requestId`、`logger`、`msg`、`durationMs`
 - 单行 logfmt 或 JSON 输出

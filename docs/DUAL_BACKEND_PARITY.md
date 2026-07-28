@@ -2,8 +2,8 @@
 
 luban 后端是**同一业务的双实现**：
 
-- **Java 后端**：`packages/backend/luban-backend`（Spring Boot / Maven）
-- **Go 后端**：`packages/backend/luban-backend-go`（go mod）
+- **Java 后端**：`apps/backend-java`（Spring Boot / Maven）
+- **Go 后端**：`apps/backend-go`（go mod）
 
 两者必须满足**行为一致契约**。本文档定义对齐规范、检查清单、常见陷阱。
 
@@ -50,7 +50,7 @@ luban 选择双后端架构的原因：
 
 ### 检查清单（改后端时 MUST）
 
-改 `packages/backend/luban-backend/` 或 `packages/backend/luban-backend-go/` 任一端时：
+改 `apps/backend-java/` 或 `apps/backend-go/` 任一端时：
 
 - [ ] 接口路径在另一端是否存在？
 - [ ] 请求参数（字段名、类型、必填性）是否一致？
@@ -67,7 +67,7 @@ luban 选择双后端架构的原因：
 
 ## 4. BFF 角色
 
-`packages/bff/luban-bff` 是双后端的统一入口：
+`apps/bff` 是双后端的统一入口：
 
 - BFF 可路由到 Java 或 Go 后端（按配置 / 灰度）
 - BFF **不应**掩盖双后端的差异，而应**抹平**差异（如字段映射、错误码归一）

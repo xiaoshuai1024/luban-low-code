@@ -44,7 +44,7 @@ services:
 
   backend-java:
     build:
-      context: ./packages/backend/luban-backend
+      context: ./apps/backend-java
     environment:
       APP_PORT: "8080"
       MYSQL_HOST: mysql
@@ -64,7 +64,7 @@ services:
 
   backend-go:
     build:
-      context: ./packages/backend/luban-backend-go
+      context: ./apps/backend-go
     environment:
       APP_PORT: "8080"   # 容器内仍 8080，通过宿主端口映射 8081
       MYSQL_HOST: mysql
@@ -84,7 +84,7 @@ services:
 
   bff:
     build:
-      context: ./packages/bff/luban-bff
+      context: ./apps/bff
     environment:
       # 默认指向 Java 后端（/backend context-path）
       BACKEND_BASE_URL: "http://backend-java:8080/backend"
@@ -97,7 +97,7 @@ services:
 
   engine:
     build:
-      context: ./packages/engine/luban
+      context: ./apps/engine
     environment:
       VITE_BFF_BASE_URL: "http://127.0.0.1:3100"
     ports:
@@ -105,7 +105,7 @@ services:
 
   website:
     build:
-      context: ./packages/web/luban-website
+      context: ./apps/website
     environment:
       NUXT_PUBLIC_BFF_BASE_URL: "http://127.0.0.1:3100"
       NUXT_PUBLIC_DEFAULT_SITE_SLUG: "default"

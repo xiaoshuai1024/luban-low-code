@@ -53,13 +53,13 @@ make {clone-all, pull-all, push-all, pr-all, test-coverage, test, dev}
 
 - **4 个空仓 submodule 待接入**：`ai-assistant` / `electron` / `flutter` / `cross-plateform`（GitHub 上为空）。待各仓有初始提交后：
   ```bash
-  bash scripts/git/add-empty-submodule.sh luban-ai-assistant packages/ai/luban-ai-assistant main
+  bash scripts/git/add-empty-submodule.sh luban-ai-assistant packages/ai-assistant main
   bash scripts/git/add-empty-submodule.sh luban-electron packages/client/luban-electron main
   bash scripts/git/add-empty-submodule.sh luban-flutter packages/client/luban-flutter main
   bash scripts/git/add-empty-submodule.sh luban-cross-plateform packages/client/luban-cross-plateform main
   ```
 - **功能 stub 脚本**：`scripts/{contract-check,verify-production}.sh`、`scripts/e2e/engine-render-preflight.sh`、`scripts/feishu/*`、`scripts/verify-plan-ssot.mjs` 等标 TODO，待各子项目落地后实现。
-- **luban-ui 设计 token**：`docs/UI_SPEC.md` / `design-system/luban/MASTER.md` 的品牌色与 token 待从 `packages/ui/luban-ui` 提取。
+- **luban-ui 设计 token**：`docs/UI_SPEC.md` / `design-system/luban/MASTER.md` 的品牌色与 token 待从 `packages/ui` 提取。
 - **MCP token**：`.claude/mcp.json` 的 github/figma token 为占位，需填实际值。
 - **可执行位**：脚本已 chmod，提交时需 `git update-index --chmod=+x scripts/**/*.sh`（见 `scripts/README.md`）。
 

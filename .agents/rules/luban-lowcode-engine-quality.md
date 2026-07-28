@@ -1,6 +1,6 @@
 <!--
 description: 低代码引擎交付门槛：零console error / 物料schema / 各端渲染一致
-globs: packages/engine/**, packages/ui/**
+globs: apps/engine/**, packages/ui/**
 alwaysApply: false
 -->
 
@@ -12,15 +12,15 @@ alwaysApply: false
 
 ## Agent 在收尾前必须做到
 
-1. **构建门禁**：凡改动 `packages/engine/luban/` 或 `packages/ui/luban-ui/` 下可能影响渲染的代码（schema 定义、物料组件、渲染管线、props 类型、依赖），在宣称完成前在该仓根执行
-   `cd packages/engine/luban && pnpm run build`
+1. **构建门禁**：凡改动 `apps/engine/` 或 `packages/ui/` 下可能影响渲染的代码（schema 定义、物料组件、渲染管线、props 类型、依赖），在宣称完成前在该仓根执行
+   `cd apps/engine && pnpm run build`
    并确认 **命令成功退出**（编译失败 = 未完成）。
 
 2. **物料 props schema 子集**：物料 props 须以 JSON Schema（或等价 TS 类型 + 运行时校验）声明，禁止"运行时凭空字段"。schema 不合规的物料禁止注册到引擎。详见 [`luban-material-schema.md`](./luban-material-schema.md)。
 
 3. **渲染验证**：自动化无法完全替代真实渲染。Agent 若无法在本环境启动引擎，须在回复中明确列出 **已执行的构建命令与结果**，并提醒合并前由作者在引擎调试页 **再扫一眼 Console + schema 校验面板**；若 Agent 能执行构建，则不得以「仅单测通过」作为引擎侧完成的唯一依据。
 
-4. **各端渲染一致**：引擎产物在 `packages/web/luban-website`（SSR）以及多端 client（electron / flutter webview / web）渲染须一致；同一 schema + 同一物料在各端表现不可分叉。详见 [`luban-multi-client-consistency.md`](./luban-multi-client-consistency.md)。
+4. **各端渲染一致**：引擎产物在 `apps/website`（SSR）以及多端 client（electron / flutter webview / web）渲染须一致；同一 schema + 同一物料在各端表现不可分叉。详见 [`luban-multi-client-consistency.md`](./luban-multi-client-consistency.md)。
 
 5. **与 `verification-before-completion` 一致**：凡对外声称「已修好 / 已完成」引擎相关项，须具备 **构建成功 + 渲染零 error** 的证据；否则只描述为「已改代码，待你在本地 build + 引擎调试页确认」。
 

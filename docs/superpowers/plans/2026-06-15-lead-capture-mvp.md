@@ -4,7 +4,7 @@ title: P0 留资闭环 MVP
 status: ready
 branch: feature/lead-capture-mvp
 upstream:
-  - docs/02.../architecture: packages/docs/luban-architecture-design/docs/00-platform-overview.md ~ 07-data-model.md
+  - docs/02.../architecture: docs/architecture/docs/00-platform-overview.md ~ 07-data-model.md
 依据声明: |
   本 plan 依据「/plan-template 命令内联契约（§0-§9 + 14 质量禁令 + §9 派发 + 四级门禁）」
   + .agents/skills/writing-plans/SKILL.md + docs/SUPERPOWERS.md 编写。
@@ -363,7 +363,7 @@ LubanPage 渲染 schema（含 LubanForm 节点）
 
 ### 9.1 文件变更总览
 
-#### [backend-java] `packages/backend/luban-backend/`（分支 feature/lead-capture-mvp）
+#### [backend-java] `apps/backend-java/`（分支 feature/lead-capture-mvp）
 | Task | 文件 | 新建/改 | 摘要 |
 |---|---|---|---|
 | T-be-1 | `src/main/resources/schema.sql` | 改 | 增 `forms`/`leads` 表（VARCHAR(36) UUID，IF NOT EXISTS） |
@@ -381,7 +381,7 @@ LubanPage 渲染 schema（含 LubanForm 节点）
 | — | `exception` 领域错误码 | 改 | 增 LEAD_* 错误码 |
 | — | `docs/API.md` | 改 | 增 form/lead 接口契约 |
 
-#### [bff] `packages/bff/luban-bff/`
+#### [bff] `apps/bff/`
 | Task | 文件 | 新建/改 | 摘要 |
 |---|---|---|---|
 | T-bff-1 | `src/app/api/forms/route.ts` | 新建 | GET list / POST create（token，注入 X-User-ID） |
@@ -393,7 +393,7 @@ LubanPage 渲染 schema（含 LubanForm 节点）
 | T-bff-4 | `src/lib/antiSpam.ts` | 新建 | BFF 层前置频控（IP 维度，Redis 可选） |
 | — | `src/lib/backendClient.ts` | 改 | 透传 X-Forwarded-For/X-Visitor-ID/X-Site-ID |
 
-#### [engine] `packages/engine/luban/`
+#### [engine] `apps/engine/`
 | Task | 文件 | 新建/改 | 摘要 |
 |---|---|---|---|
 | T-eng-2 | `src/views/lead/LeadList.vue` | 新建 | 线索中心列表（§4.3 页面1） |
@@ -404,14 +404,14 @@ LubanPage 渲染 schema（含 LubanForm 节点）
 | — | `src/layouts/*` | 改 | 菜单增"线索中心" |
 | T-eng-3 | `src/views/page/PageEditor.vue` | 改 | LubanForm 属性面板接 form 配置（字段/submitConfig/dedup/anti_spam） |
 
-#### [website] `packages/web/luban-website/`
+#### [website] `apps/website/`
 | Task | 文件 | 新建/改 | 摘要 |
 |---|---|---|---|
 | T-web-1 | `composables/useLeadSubmit.ts` | 新建 | 表单提交→BFF（携带 pageId/channel/utm） |
 | T-web-2 | `plugins/lead-form.ts` 或 DynamicPage 增强 | 改 | 拦截 LubanForm 提交事件接入 useLeadSubmit + 成功态 |
 | — | `utils/utm.ts` | 新建 | 解析 URL utm_* |
 
-#### [ui / luban-low-code] `packages/ui/luban-ui/packages/luban-low-code/`
+#### [ui / luban-low-code] `packages/ui/packages/luban-low-code/`
 | Task | 文件 | 新建/改 | 摘要 |
 |---|---|---|---|
 | T-ui-1 | `src/lib/registry.ts` | 改（确认） | LubanForm 已注册（现状已存在），确认提交事件 |

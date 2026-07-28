@@ -28,7 +28,7 @@ plan-template 契约为 luban 全栈设计，本 plan（独立 Python AI 子项�
 
 ## §0 概览
 
-为 luban 低代码平台建独立 AI 助手子项目 `luban-ai-assistant`（Python 核心 + Vue3 前端集成），通过 git submodule 引入 `packages/ai/luban-ai-assistant`（当前空目录，默认分支 main）。P1 交付：自然语言生成/编辑 PageSchema、AI 对话引导、模型可切换（GLM/DeepSeek/通义）、引擎 AI 面板集成。设计稿转页面归 P2。
+为 luban 低代码平台建独立 AI 助手子项目 `luban-ai-assistant`（Python 核心 + Vue3 前端集成），通过 git submodule 引入 `packages/ai-assistant`（当前空目录，默认分支 main）。P1 交付：自然语言生成/编辑 PageSchema、AI 对话引导、模型可切换（GLM/DeepSeek/通义）、引擎 AI 面板集成。设计稿转页面归 P2。
 
 **技术选型（用户多轮确认锁死，勿再讨论）**：Python 3.12 + uv / FastAPI(SSE+WS) / LangGraph(状态图+checkpoint+HITL) / 云端 LLM(LangChain ChatModel + provider 适配层切换) / instructor+Pydantic v2(应用层逼近合法，已接受放弃 token 级约束解码) / Milvus+云端 embedding+hybrid 检索(去 rerank) / MinIO(OSS+Milvus 内部存储) / etcd(Milvus 依赖) / PostgreSQL(checkpoint+会话+元数据+Langfuse) / Langfuse(自托管) / Docker Compose 6 容器无 GPU。
 
@@ -36,7 +36,7 @@ plan-template 契约为 luban 全栈设计，本 plan（独立 Python AI 子项�
 
 | Gap（证据） | 层级 | task | 验收 | 门禁 |
 |---|---|---|---|---|
-| 无 AI 助手（packages/ai/luban-ai-assistant 空目录） | L0 | P1-T1~T10 | 全链路 | G3/G4 |
+| 无 AI 助手（packages/ai-assistant 空目录） | L0 | P1-T1~T10 | 全链路 | G3/G4 |
 | 引擎无远程画布 API（PageEditor onAddNode 等为私有 setup 函数，调研确认） | L0 | P1-T8 | 画布 API 收口 | G3/G4 |
 | stores/page.ts 与 PageEditor 局部 schema 分裂（调研确认状态分裂隐患） | L0 | P1-T8 | 收口统一 | G3 |
 | 无模型切换能力（用户要 GLM/DeepSeek/通义 切换） | L0 | P1-T2 | 三家冒烟 | G3 |

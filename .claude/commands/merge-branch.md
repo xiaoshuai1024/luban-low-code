@@ -87,8 +87,8 @@ git submodule update --init --recursive
 
 ```
 luban-workspace                   → ✅ 分支存在
-packages/engine/luban             → ✅ 分支存在
-packages/bff/luban-bff            → ❌ 无此分支，跳过
+apps/engine             → ✅ 分支存在
+apps/bff            → ❌ 无此分支，跳过
 ...
 ```
 
@@ -192,8 +192,8 @@ done
 | 项目 | 命令 | 说明 |
 |------|------|------|
 | root | `git diff --cached` | 确认暂存内容正确 |
-| Java 后端 | `cd packages/backend/luban-backend && mvn -q verify` | 单测 + 集成测 |
-| Go 后端 | `cd packages/backend/luban-backend-go && go test ./... -race -cover` | 单测 + 竞态 + 覆盖率 |
+| Java 后端 | `cd apps/backend-java && mvn -q verify` | 单测 + 集成测 |
+| Go 后端 | `cd apps/backend-go && go test ./... -race -cover` | 单测 + 竞态 + 覆盖率 |
 | 引擎/BFF/UI/website | `cd packages/<...> && pnpm test && pnpm run build` | 单测 + 构建 |
 
 - 若测试失败 → 修复直到全部通过
@@ -202,7 +202,7 @@ done
 #### 4.3 后端启动验证
 
 ```bash
-cd packages/backend/luban-backend
+cd apps/backend-java
 mvn -q spring-boot:run &
 BACKEND_PID=$!
 (sleep 60 && kill "${BACKEND_PID}" 2>/dev/null) &
@@ -242,12 +242,12 @@ git log --oneline --no-merges "${MERGE_BASE}..HEAD"
   分支: feature/<branch-name>
   基点: ${MERGE_BASE}
 
-  ┌─ packages/engine/luban ─────────────────────────┐
+  ┌─ apps/engine ─────────────────────────┐
   │  合并 N 个 commit                                │
   │  冲突: 无                                        │
   └──────────────────────────────────────────────────┘
 
-  ┌─ packages/backend/luban-backend ────────────────┐
+  ┌─ apps/backend-java ────────────────┐
   │  合并 N 个 commit                                │
   └──────────────────────────────────────────────────┘
 

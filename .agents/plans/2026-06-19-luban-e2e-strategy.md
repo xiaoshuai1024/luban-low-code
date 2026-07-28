@@ -152,7 +152,7 @@ auth.setup 拿 token → 同一 BFF 请求分别打 Java 后端(8080) / Go 后�
 | **W1-T2** | workspace | 跨项目起服务编排：根 `docker-compose.e2e.yml` 或 `scripts/e2e/up-all.sh`（backend Java + Go + bff + engine + website，端口固定）+ `Makefile` 加 `e2e-up`/`e2e-down`/`e2e`/`e2e-cross` target | W1-T1 | `make e2e-up` 起齐 5 服务健康检查绿；`make e2e-down` 干净退出 |
 | **W1-T3** | workspace | 流程 A 发布闭环 `e2e/flows/publish-flow.spec.ts`（真实登录→建站点→建页面→发布→website SSR 断言）；补 `scripts/e2e/engine-render-preflight.sh` 为真实预检（build 零 console error + schema 合规） | W1-T2 | `pnpm test:e2e --project=engine` 流程 A 绿；任一环节断（如停 backend）则红 |
 | **W1-T4** | workspace | 流程 C 双后端一致性 `e2e/contract/dual-backend.spec.ts`（同请求打 Java/Go 等价断言） | W1-T2 | 双端均在线时绿；单端断言差异红（防 drift） |
-| **W2-T1** | website | `packages/web/luban-website/` 加 Playwright：`playwright.config.ts`(webServer 自动起 dev) + `auth.setup` + `.env.example` | W0-T1 | `pnpm run install:e2e && pnpm run test:e2e` 骨架跑通 |
+| **W2-T1** | website | `apps/website/` 加 Playwright：`playwright.config.ts`(webServer 自动起 dev) + `auth.setup` + `.env.example` | W0-T1 | `pnpm run install:e2e && pnpm run test:e2e` 骨架跑通 |
 | **W2-T2** | website | website e2e：SSR 注入(`__INITIAL_STATE__`) + SEO meta(title/og) + hydration 无 mismatch | W2-T1 | 公开页 spec 绿；关 SSR 渲染断言红 |
 | **W2-T3** | workspace | 流程 B 线索闭环 `e2e/flows/lead-capture-flow.spec.ts`（website 提交→engine 线索中心可见，字段/脱敏断言） | W1-T3, W2-T2 | 全链路绿；DB 无对应记录时红 |
 | **W3-T1** | engine | engine `cypress/e2e/` → `e2e/`(Playwright) 迁移：login/navigation/sites/pages/leads 5 文件平移；**去 mock-token**，改 `auth.setup` 真实登录；删 cypress 依赖与 `cypress.config.ts` | W0-T1, W1-T1 | Playwright 等价用例绿；停 backend 时 leads/sites 红（证非假绿） |
@@ -198,7 +198,7 @@ auth.setup 拿 token → 同一 BFF 请求分别打 Java 后端(8080) / Go 后�
 
 | 既有资产 | 位置 | 复用方式 |
 |---|---|---|
-| engine Cypress 用例断言 | `packages/engine/luban/cypress/e2e/*.cy.ts` | W3-T1 平移为 Playwright 断言（中文文案定位不变），不重写 |
+| engine Cypress 用例断言 | `apps/engine/cypress/e2e/*.cy.ts` | W3-T1 平移为 Playwright 断言（中文文案定位不变），不重写 |
 | ui designer po/support | `apps/luban-ui-e2e/src/support/app.po.ts` | W3-T2 平移为 Playwright locator 封装 |
 | luban-base/low-code 组件测 | `test/e2e/*.e2e.spec.ts`（实为 vitest mount） | W3-T2 正名为 `test/component/`，保留 vitest，不改语义 |
 | 双后端契约定义 | `docs/DUAL_BACKEND_PARITY.md` | W1-T4 流程 C 断言口径以该文档为准 |

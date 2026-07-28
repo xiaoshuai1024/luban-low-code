@@ -68,7 +68,7 @@
     },
     {
       "id": "W2-T1",
-      "title": "packages/web/luban-website 加 Playwright：playwright.config.ts(webServer 自动起 dev) + auth.setup + .env.example + package.json test:e2e 脚本",
+      "title": "apps/website 加 Playwright：playwright.config.ts(webServer 自动起 dev) + auth.setup + .env.example + package.json test:e2e 脚本",
       "wave": 2,
       "group": "website",
       "dependsOn": ["W0-T1"],

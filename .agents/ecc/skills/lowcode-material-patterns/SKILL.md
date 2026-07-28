@@ -6,7 +6,7 @@ origin: luban
 
 # Low-Code Material Patterns
 
-Patterns for the luban material library (`packages/ui/luban-ui`, Vue 3 + Vite, pnpm) and the engine schema layer (`packages/engine/luban`). The material contract is the highest-priority constraint in the repo. Specs: `docs/LOWCODE_ENGINE_SPEC.md`, `.agents/rules/luban-material-schema.md`, `.agents/rules/luban-multi-client-consistency.md`.
+Patterns for the luban material library (`packages/ui`, Vue 3 + Vite, pnpm) and the engine schema layer (`apps/engine`). The material contract is the highest-priority constraint in the repo. Specs: `docs/LOWCODE_ENGINE_SPEC.md`, `.agents/rules/luban-material-schema.md`, `.agents/rules/luban-multi-client-consistency.md`.
 
 ## When to Activate
 
@@ -35,7 +35,7 @@ Four consumers, one contract. Drift between any two is a bug.
 A material is a component + a props schema + metadata, registered with the engine.
 
 ```
-packages/ui/luban-ui/src/materials/button/
+packages/ui/src/materials/button/
 ├── Button.vue              # the component
 ├── button.schema.ts        # the props schema (the contract)
 ├── button.meta.ts          # name, version, group, icon
@@ -234,14 +234,14 @@ Where a client harness exists (SSR website, electron, flutter), assert the same 
 
 ## Build & Verification (run before finishing)
 
-From `packages/ui/luban-ui` and `packages/engine/luban`:
+From `packages/ui` and `apps/engine`:
 
 ```bash
 pnpm run build       # emits components + schema artifacts; must succeed
 pnpm test            # unit + contract tests
 ```
 
-Then SSR smoke in `packages/web/luban-website`: render a schema using the changed material and confirm zero new `console.error` from the renderer.
+Then SSR smoke in `apps/website`: render a schema using the changed material and confirm zero new `console.error` from the renderer.
 
 ## Common Anti-Patterns
 

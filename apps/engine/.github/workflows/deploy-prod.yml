@@ -1,0 +1,60 @@
+name: Deploy prod
+
+on:
+  repository_dispatch:
+    types: [release]
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: true
+
+jobs:
+  bump-and-deploy:
+    if: github.event.client_payload.env == 'prod'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Bump versions.env
+        env:
+          SERVICE: ${{ github.event.client_payload.service }}
+          TAG: ${{ github.event.client_payload.tag }}
+        run: |
+          set -euo pipefail
+          case "${SERVICE}" in
+            backend) VAR=BACKEND_TAG ;;
+            bff) VAR=BFF_TAG ;;
+            website) VAR=WEBSITE_TAG ;;
+            manage) VAR=MANAGE_TAG ;;
+            *) echo "Unknown service: ${SERVICE}"; exit 1 ;;
+          esac
+          sed -i.bak "s|^${VAR}=.*|${VAR}=${TAG}|" deploy/environments/prod/versions.env
+          rm -f deploy/environments/prod/versions.env.bak
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add deploy/environments/prod/versions.env
+          if git diff --staged --quiet; then
+            echo "No version change"
+          else
+            git commit -m "chore(deploy): bump ${{ github.event.client_payload.service }} to ${{ github.event.client_payload.tag }}"
+            git push
+          fi
+
+      - name: Deploy on server
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd /opt/luban/prod/luban
+            bash deploy/scripts/deploy-prod.sh

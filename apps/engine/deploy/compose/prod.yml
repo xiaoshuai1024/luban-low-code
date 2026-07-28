@@ -1,0 +1,123 @@
+# Run from repo root: docker compose -f deploy/compose/prod.yml --env-file deploy/environments/prod/versions.env [--env-file deploy/environments/prod/app.env] up -d
+# Requires app.env with ACME_EMAIL (see deploy/environments/prod/app.env.example).
+
+name: luban-prod
+
+services:
+  traefik:
+    image: traefik:v3.1
+    container_name: luban-prod-traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL in app.env}
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--certificatesresolvers.le.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.le.acme.httpchallenge=true"
+      - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_letsencrypt:/letsencrypt
+    networks:
+      - luban
+
+  backend:
+    image: ${REGISTRY}/luban-backend:${BACKEND_TAG}
+    container_name: luban-prod-backend
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    env_file:
+      - deploy/environments/prod/app.env
+    environment:
+      APP_PORT: "8080"
+      MYSQL_HOST: ${MYSQL_HOST:-host.docker.internal}
+      MYSQL_PORT: ${MYSQL_PORT:-3306}
+      MYSQL_DB: ${MYSQL_DB:-luban_prod}
+      MYSQL_USER: ${MYSQL_USER:-luban}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-}
+      REDIS_HOST: ${REDIS_HOST:-host.docker.internal}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend-api.rule=Host(`api.xiaoshuai1024.top`) && PathPrefix(`/backend`)"
+      - "traefik.http.routers.backend-api.entrypoints=websecure"
+      - "traefik.http.routers.backend-api.tls.certresolver=le"
+      - "traefik.http.routers.backend-api.service=backend-svc"
+      - "traefik.http.routers.backend-health.rule=Host(`api.xiaoshuai1024.top`) && Path(`/healthz`)"
+      - "traefik.http.routers.backend-health.entrypoints=websecure"
+      - "traefik.http.routers.backend-health.tls.certresolver=le"
+      - "traefik.http.routers.backend-health.priority=100"
+      - "traefik.http.routers.backend-health.middlewares=backend-health-rewrite"
+      - "traefik.http.routers.backend-health.service=backend-svc"
+      - "traefik.http.middlewares.backend-health-rewrite.replacepathregex.regex=^/healthz$$"
+      - "traefik.http.middlewares.backend-health-rewrite.replacepathregex.replacement=/backend/healthz"
+      - "traefik.http.services.backend-svc.loadbalancer.server.port=8080"
+    networks:
+      - luban
+
+  bff:
+    image: ${REGISTRY}/luban-bff:${BFF_TAG}
+    container_name: luban-prod-bff
+    restart: unless-stopped
+    environment:
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bff.rule=Host(`luban-bff.xiaoshuai1024.top`)"
+      - "traefik.http.routers.bff.entrypoints=websecure"
+      - "traefik.http.routers.bff.tls.certresolver=le"
+      - "traefik.http.services.bff.loadbalancer.server.port=3000"
+    networks:
+      - luban
+
+  website:
+    image: ${REGISTRY}/luban-website:${WEBSITE_TAG}
+    container_name: luban-prod-website
+    restart: unless-stopped
+    environment:
+      NITRO_PORT: "4173"
+      PORT: "4173"
+      HOST: "0.0.0.0"
+      NUXT_PUBLIC_BFF_BASE_URL: "https://luban-bff.xiaoshuai1024.top"
+      NUXT_PUBLIC_DEFAULT_SITE_SLUG: "default"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.website.rule=Host(`luban.xiaoshuai1024.top`)"
+      - "traefik.http.routers.website.entrypoints=websecure"
+      - "traefik.http.routers.website.tls.certresolver=le"
+      - "traefik.http.services.website.loadbalancer.server.port=4173"
+    networks:
+      - luban
+
+  manage:
+    image: ${REGISTRY}/luban-manage:${MANAGE_TAG}
+    container_name: luban-prod-manage
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.manage.rule=Host(`manage.xiaoshuai1024.top`)"
+      - "traefik.http.routers.manage.entrypoints=websecure"
+      - "traefik.http.routers.manage.tls.certresolver=le"
+      - "traefik.http.services.manage.loadbalancer.server.port=4200"
+    networks:
+      - luban
+
+networks:
+  luban:
+    name: luban-prod_luban
+
+volumes:
+  traefik_letsencrypt:

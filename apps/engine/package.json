@@ -1,0 +1,41 @@
+{
+  "name": "luban",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "install:e2e": "playwright install chrome",
+    "install:e2e:ci": "playwright install chromium",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ci": "LUBAN_E2E_USE_PLAYWRIGHT_CHROMIUM=1 playwright test"
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "^2.3.2",
+    "axios": "^1.7.7",
+    "element-plus": "^2.8.4",
+    "luban-low-code": "link:../../ui/luban-ui/packages/luban-low-code",
+    "pinia": "^2.2.6",
+    "sortablejs": "1.15.3",
+    "vue": "^3.5.13",
+    "vue-router": "^4.4.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@vitejs/plugin-vue": "^5.2.0",
+    "@vitest/coverage-v8": "^2.1.9",
+    "@vue/test-utils": "^2.4.6",
+    "jsdom": "^25.0.1",
+    "sass": "^1.81.0",
+    "typescript": "~5.6.3",
+    "vite": "^6.0.1",
+    "vitest": "^2.1.4",
+    "vue-tsc": "^2.1.10"
+  }
+}

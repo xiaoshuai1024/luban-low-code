@@ -63,6 +63,12 @@ import { pricingMaterial } from './marketing/pricing/material';
 import { testimonialCarouselMaterial } from './marketing/testimonial-carousel/material';
 import { galleryMaterial } from './marketing/gallery/material';
 import { logoCloudMaterial } from './marketing/logo-cloud/material';
+// === 新物料（D14 鲁班官网）===
+import { markdownMaterial } from './content/markdown/material';
+import { stepsMaterial } from './content/steps/material';
+import { codeBlockMaterial } from './data-display/code-block/material';
+import { alertMaterial } from './feedback/alert/material';
+import { backToTopMaterial } from './navigation/back-to-top/material';
 
 /**
  * 全部 20 物料定义（注册顺序：general → content → layout → form
@@ -109,6 +115,11 @@ export const materials: MaterialDefinition[] = [
   testimonialCarouselMaterial,
   galleryMaterial,
   logoCloudMaterial,
+  markdownMaterial,
+  stepsMaterial,
+  codeBlockMaterial,
+  alertMaterial,
+  backToTopMaterial,
 ];
 
 /**
@@ -168,3 +179,8 @@ export { pricingMaterial } from './marketing/pricing/material';
 export { testimonialCarouselMaterial } from './marketing/testimonial-carousel/material';
 export { galleryMaterial } from './marketing/gallery/material';
 export { logoCloudMaterial } from './marketing/logo-cloud/material';
+export { markdownMaterial } from './content/markdown/material';
+export { stepsMaterial } from './content/steps/material';
+export { codeBlockMaterial } from './data-display/code-block/material';
+export { alertMaterial } from './feedback/alert/material';
+export { backToTopMaterial } from './navigation/back-to-top/material';

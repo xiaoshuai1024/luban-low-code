@@ -21,7 +21,7 @@ if not default_site:
 site_id = default_site['id']
 print(f'Site: {site_id} (slug=default)')
 
-def create_page(name, path, children, status='draft'):
+def create_page(name, path, children, status='published'):
     schema = {'root': {'id': 'root', 'type': 'LubanPage', 'props': {}, 'children': children}}
     data = json.dumps({'name': name, 'path': path, 'status': status, 'schema': schema}).encode()
     req = urllib.request.Request(f'{BFF}/api/sites/{site_id}/pages', data=data,

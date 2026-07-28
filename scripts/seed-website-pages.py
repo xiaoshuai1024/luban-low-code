@@ -11,11 +11,15 @@ req = urllib.request.Request(f'{BFF}/api/auth/login', data=login_data,
 token = json.loads(urllib.request.urlopen(req).read())['token']
 headers = {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
 
-# Get site
+# Get site with slug 'default' (website SSR uses this slug)
 req = urllib.request.Request(f'{BFF}/api/sites', headers=headers)
 sites = json.loads(urllib.request.urlopen(req).read())
-site_id = sites[0]['id']
-print(f'Site: {site_id}')
+default_site = next((s for s in sites if s.get('slug') == 'default'), None)
+if not default_site:
+    print('ERROR: no site with slug "default" found')
+    sys.exit(1)
+site_id = default_site['id']
+print(f'Site: {site_id} (slug=default)')
 
 def create_page(name, path, children, status='draft'):
     schema = {'root': {'id': 'root', 'type': 'LubanPage', 'props': {}, 'children': children}}

@@ -92,8 +92,9 @@ test.describe('AI 助手面板 @smoke', () => {
     await expect(page.getByText('页面名称')).toBeVisible({ timeout: 15000 });
     await page.getByRole('button', { name: /AI 助手/ }).click();
     await page.getByRole('tab', { name: '引导' }).click();
-    // 引导 tab 内容区渲染（建议卡片或空态，取决于 AI 服务是否起齐）
-    await expect(page.getByRole('tabpanel', { name: '引导' })).toBeVisible({ timeout: 10000 });
+    // 引导 tab 内容区渲染：等待 loading 消失后内容出现（建议卡片 / 空态 / 错误回退）
+    // ElTabs 切换 pane 有 display 切换时序，用具体内容断言更稳
+    await expect(page.locator('.ai-panel__guidance')).toBeVisible({ timeout: 10000 });
   });
 });
 

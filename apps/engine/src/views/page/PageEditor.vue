@@ -61,9 +61,12 @@ import ComponentTree from './components/ComponentTree.vue'
 import DatasourceManageDialog from './components/DatasourceManageDialog.vue'
 import PageSeoPanel from './components/PageSeoPanel.vue'
 import VersionHistory from './components/VersionHistory.vue'
+import AiAssistantPanel from './components/AiAssistantPanel.vue'
 import { findNode, findParent, removeNode, moveChild, moveNodeAcross } from './components/schemaTree'
 import { useHistory } from '@/composables/useHistory'
 import { useKeyboard } from '@/composables/useKeyboard'
+import { usePageEditorApi } from '@/composables/usePageEditorApi'
+import { useFeatureGate } from '@/composables/useFeatureGate'
 import { isFeatureEnabled } from '@/config/features'
 import type { PageSeo } from '@/types/schema'
 import { schemaToHtml, downloadHtml, buildExportPackage, downloadExportPackage } from '@/utils/staticExport'
@@ -165,6 +168,17 @@ function setBreakpoint(bp: ResponsiveBreakpoint): void {
 /** 撤销/重做历史栈（结构变更与属性变更均入栈；属性输入噪声由 limit 截断兜底）。 */
 const history = useHistory(schema)
 const { canUndo, canRedo } = history
+
+/**
+ * 画布操作收口 API（plan P1-T8）——供 AiAssistantPanel 落地生成结果（replaceSchema）。
+ * 现有 on* 私有函数保持不变（向后兼容）；AI 助手经此 api 与画布/撤销栈交互。
+ */
+const editorApi = usePageEditorApi({ schema, history, selectedId })
+
+/** AI 助手抽屉（FeatureGate ai.assistant 控制入口可见性；plan P1-T8/P2-T4）。 */
+const { isEnabled } = useFeatureGate()
+const aiAssistantEnabled = isEnabled('ai.assistant')
+const aiPanelVisible = ref(false)
 useKeyboard({
   undo: () => history.undo(),
   redo: () => history.redo(),
@@ -718,6 +732,9 @@ watch(siteId, () => {
           >
             发布
           </ElButton>
+          <ElButton v-if="aiAssistantEnabled" type="primary" @click="aiPanelVisible = true">
+            AI 助手
+          </ElButton>
           <ElButton @click="goBack">返回列表</ElButton>
         </ElFormItem>
       </ElForm>
@@ -795,6 +812,9 @@ watch(siteId, () => {
         </ElButton>
         <ElButton size="small" type="success" :loading="publishing" :disabled="isNew" @click="handlePublish">
           发布
+        </ElButton>
+        <ElButton v-if="aiAssistantEnabled" size="small" type="primary" @click="aiPanelVisible = true">
+          AI 助手
         </ElButton>
       </div>
     </div>
@@ -886,6 +906,17 @@ watch(siteId, () => {
         :site-id="siteId"
         :page-id="pageId || ''"
         @rollback="onVersionRollback"
+      />
+      <!-- AI 助手抽屉（plan P1-T8/T9 + P2-T4；FeatureGate ai.assistant 控制入口，
+           抽屉本身经 v-if 不可见时也不挂载，避免无谓的配置拉取） -->
+      <AiAssistantPanel
+        v-if="aiAssistantEnabled"
+        v-model="aiPanelVisible"
+        :site-id="siteId"
+        :page-id="pageId"
+        :schema="schema"
+        :api="editorApi"
+        :selected-id="selectedId"
       />
         <!-- D15-B1 数据源管理弹窗 -->
         <DatasourceManageDialog

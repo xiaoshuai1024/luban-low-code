@@ -121,9 +121,13 @@ def _fake_completion_response(content: str) -> MagicMock:
 
 
 def test_chat_returns_structured_pydantic(monkeypatch: pytest.MonkeyPatch) -> None:
-    """chat(messages, response_model) 经 LiteLLM + response_format 返回 Pydantic 对象。"""
-    s = _make_settings(ModelProvider.DEEPSEEK)
-    p = DeepSeekProvider(s)
+    """chat(messages, response_model) 经 LiteLLM + response_format 返回 Pydantic 对象。
+
+    用 GLM provider(支持 response_format=json_schema)验证结构化路径。
+    DeepSeek 不支持 response_format,见 test_chat_deepseek_omits_response_format。
+    """
+    s = _make_settings(ModelProvider.GLM)
+    p = ZhipuProvider(s)
 
     captured: dict[str, Any] = {}
 
@@ -140,13 +144,54 @@ def test_chat_returns_structured_pydantic(monkeypatch: pytest.MonkeyPatch) -> No
     assert isinstance(result, _Out)
     assert result.title == "用户列表页"
     # LiteLLM 收到正确参数
-    assert captured["model"] == "deepseek/deepseek-chat"
-    assert captured["api_key"] == "ds-k"
+    assert captured["model"] == "glm/glm-4"
+    assert captured["api_key"] == "glm-k"
     # messages 被转成 OpenAI 格式(role/content dict)
     assert isinstance(captured["messages"], list)
     assert captured["messages"][0]["role"] == "user"
-    # 结构化模式:response_format 带 schema
+    # 结构化模式:response_format 带 schema(GLM 支持)
     assert "response_format" in captured
+
+
+def test_chat_deepseek_omits_response_format(monkeypatch: pytest.MonkeyPatch) -> None:
+    """DeepSeek 不支持 response_format,chat() 不传该参数 + 追加 JSON 指令。
+
+    覆盖 _supports_json_schema=False 的 prompt 约束路径。
+    """
+    s = _make_settings(ModelProvider.DEEPSEEK)
+    p = DeepSeekProvider(s)
+    assert p._supports_json_schema is False
+
+    captured: dict[str, Any] = {}
+
+    def fake_completion(*args: Any, **kwargs: Any) -> Any:
+        captured.update(kwargs)
+        return _fake_completion_response('{"title": "用户列表页"}')
+
+    monkeypatch.setattr("app.llm.provider.completion", fake_completion)
+    result = p.chat([HumanMessage(content="生成标题")], _Out)
+
+    assert result.title == "用户列表页"
+    # 不传 response_format(DeepSeek 不支持)
+    assert "response_format" not in captured
+    # 追加了 JSON 约束 system message(在用户消息之后)
+    roles = [m["role"] for m in captured["messages"]]
+    assert roles == ["user", "system"]
+    assert "JSON Schema" in captured["messages"][-1]["content"]
+
+
+def test_chat_strips_markdown_codeblock(monkeypatch: pytest.MonkeyPatch) -> None:
+    """LLM 把 JSON 包在 ```json``` 里时,chat() 去掉代码块标记后解析(DeepSeek 路径)。"""
+    s = _make_settings(ModelProvider.DEEPSEEK)
+    p = DeepSeekProvider(s)
+
+    def fake_completion(*args: Any, **kwargs: Any) -> Any:
+        # 模拟 DeepSeek 偶尔输出 markdown 代码块
+        return _fake_completion_response('```json\n{"title": "代码块包裹"}\n```')
+
+    monkeypatch.setattr("app.llm.provider.completion", fake_completion)
+    result = p.chat([HumanMessage(content="x")], _Out)
+    assert result.title == "代码块包裹"
 
 
 def test_chat_handles_llm_invalid_json_with_retry(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -189,9 +234,9 @@ async def test_stream_yields_token_chunks(monkeypatch: pytest.MonkeyPatch) -> No
 
 
 def test_chat_preserves_system_and_human_roles(monkeypatch: pytest.MonkeyPatch) -> None:
-    """messages 转换保留 system/human 角色顺序。"""
-    s = _make_settings(ModelProvider.DEEPSEEK)
-    p = DeepSeekProvider(s)
+    """messages 转换保留 system/human 角色顺序(GLM 路径,无 JSON instruction 追加)。"""
+    s = _make_settings(ModelProvider.GLM)
+    p = ZhipuProvider(s)
     captured: dict[str, Any] = {}
 
     def fake_completion(*args: Any, **kwargs: Any) -> Any:

@@ -30,7 +30,14 @@ class ZhipuProvider(_LiteLLMCompatProvider):
 
 
 class DeepSeekProvider(_LiteLLMCompatProvider):
-    """DeepSeek(LiteLLM deepseek/ 前缀,原生 OpenAI 兼容)。"""
+    """DeepSeek(LiteLLM deepseek/ 前缀,原生 OpenAI 兼容)。
+
+    能力注意:DeepSeek 当前不支持 response_format 参数(任何 type 均报
+    "This response_format type is unavailable now")。父类 _supports_json_schema=False,
+    chat() 走 prompt JSON 约束路径(追加 schema 指令 + 去 markdown 包裹)。
+    """
+
+    _supports_json_schema = False
 
     def __init__(self, settings: Settings) -> None:
         super().__init__(

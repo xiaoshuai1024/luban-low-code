@@ -63,12 +63,32 @@ def _response_format_for(model: type[BaseModel]) -> dict[str, Any]:
     }
 
 
+def _strip_markdown_codeblock(content: str) -> str:
+    """LLM 偶尔把 JSON 包在 ```json ... ``` 里(尤其未传 response_format 时)。
+    去掉首尾 ``` 行,保证 json.loads 能解析。"""
+    s = content.strip()
+    if s.startswith("```"):
+        # 去首行 ``` 或 ```json
+        first_nl = s.find("\n")
+        if first_nl > 0:
+            s = s[first_nl + 1 :]
+        if s.endswith("```"):
+            s = s[: -3]
+    return s.strip()
+
+
 class Provider(abc.ABC):
     """LLM provider 抽象。
 
     chat(): 结构化输出(LiteLLM response_format + Pydantic),返回 Pydantic 对象。
     stream(): 原始 token 流(yield str),对话式流式回显。
+
+    provider 能力声明:
+    - _supports_json_schema: 是否支持 response_format=json_schema 严格模式。
+      DeepSeek 当前完全不支持 response_format,设 False 走 prompt 约束路径。
     """
+
+    _supports_json_schema: bool = True
 
     @property
     @abc.abstractmethod
@@ -89,24 +109,53 @@ class Provider(abc.ABC):
     def _api_key(self) -> str:
         """厂商 API key(供 LiteLLM 调用)。"""
 
+    def _build_response_format(self, model: type[BaseModel]) -> dict[str, Any] | None:
+        """按 provider 能力构造 response_format;不支持时返回 None(走 prompt 约束)。"""
+        if self._supports_json_schema:
+            return _response_format_for(model)
+        return None
+
+    def _inject_json_instruction(
+        self, openai_msgs: list[dict[str, str]], response_model: type[BaseModel]
+    ) -> list[dict[str, str]]:
+        """不支持 response_format 的 provider(如 DeepSeek):追加 JSON 约束指令。
+
+        在 messages 末尾加一条 system message,明示只输出符合 schema 的裸 JSON
+        (无 markdown 代码块),供应用层 json.loads 直接解析。
+        """
+        schema_hint = json.dumps(response_model.model_json_schema(), ensure_ascii=False)
+        instruction = (
+            "你必须只输出符合以下 JSON Schema 的合法 JSON。"
+            "不要输出任何其他内容,不要用 markdown 代码块标记(禁止 ```json):\n"
+            f"{schema_hint}"
+        )
+        return [*openai_msgs, {"role": "system", "content": instruction}]
+
     def chat(self, messages: list[BaseMessage], response_model: type[BaseModel]) -> BaseModel:
         """结构化输出:强制 LLM 返回符合 response_model 的 Pydantic 对象。
 
-        经 LiteLLM response_format(JSON schema) + 应用层重试逼近合法。
+        - 支持 response_format 的 provider:LiteLLM json_schema 严格模式 + 应用层重试。
+        - 不支持的 provider(DeepSeek):追加 prompt JSON 约束 + 应用层重试 + 去 markdown 包裹。
         LLM 偶尔产出非法 JSON 时重试(上限 _STRUCTURED_MAX_RETRIES)。
         """
         openai_msgs = _messages_to_openai(messages)
+        rf = self._build_response_format(response_model)
+        if rf is None:
+            openai_msgs = self._inject_json_instruction(openai_msgs, response_model)
+
         last_err: Exception | None = None
         for attempt in range(_STRUCTURED_MAX_RETRIES + 1):
             try:
+                kwargs: dict[str, Any] = {"response_format": rf} if rf is not None else {}
                 resp = completion(
                     model=self.litellm_model,
                     api_key=self._api_key(),
                     messages=openai_msgs,
-                    response_format=_response_format_for(response_model),
                     temperature=0.2,
+                    **kwargs,
                 )
                 content = resp.choices[0].message.content
+                content = _strip_markdown_codeblock(content)
                 data = json.loads(content)
                 return response_model.model_validate(data)
             except (json.JSONDecodeError, ValidationError) as e:

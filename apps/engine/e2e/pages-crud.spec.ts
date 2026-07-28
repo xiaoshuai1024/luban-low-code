@@ -60,6 +60,6 @@ test.describe('Pages CRUD @core', () => {
       await cancelBtn.click();
     }
     // Page should still be visible
-    await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.el-table')).toBeVisible({ timeout: 5000 });
   });
 });

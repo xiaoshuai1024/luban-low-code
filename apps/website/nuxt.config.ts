@@ -29,6 +29,13 @@ export default defineNuxtConfig({
       defaultSiteSlug: process.env.NUXT_PUBLIC_DEFAULT_SITE_SLUG || "default",
     },
   },
+  // 全局注入 luban-low-code CSS（RuntimeRenderer 动态渲染组件，
+  // Vite CSS tree-shaking 无法自动收集已注册物料组件的 scoped 样式）
+  css: [
+    fileURLToPath(
+      new URL("../../packages/ui/packages/luban-low-code/dist/index.css", import.meta.url),
+    ),
+  ],
   vite: {
     resolve: {
       // luban-base/luban-low-code 的 exports 条件在 nuxt nitro SSR commonjs resolver 下解析失败，

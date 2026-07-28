@@ -1,0 +1,50 @@
+{
+  "name": "luban-low-code",
+  "version": "0.0.15",
+  "private": false,
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "@luban-ui/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "nx": {
+    "name": "luban-low-code",
+    "tags": [
+      "lib:low-code",
+      "type:library"
+    ],
+    "targets": {
+      "version": {
+        "executor": "nx:run-commands",
+        "options": {
+          "cwd": "packages/luban-low-code",
+          "command": "pnpm version patch --no-git-tag-version"
+        }
+      },
+      "publish": {
+        "executor": "nx:run-commands",
+        "dependsOn": [
+          "build",
+          "test"
+        ],
+        "options": {
+          "cwd": "packages/luban-low-code",
+          "command": "npm publish --access public"
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "luban-base": "^0.0.2",
+    "sortablejs": "^1.15.3",
+    "vue": "^3.5.13"
+  }
+}

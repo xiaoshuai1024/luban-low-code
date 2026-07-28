@@ -1,0 +1,25 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compileOnSave": false,
+  "files": [],
+  "references": [
+    {
+      "path": "./apps/luban-ui-e2e"
+    },
+    {
+      "path": "./apps/luban-ui"
+    },
+    {
+      "path": "./packages/luban-base"
+    },
+    {
+      "path": "./packages/luban-low-code"
+    },
+    {
+      "path": "./packages/luban-utils"
+    },
+    {
+      "path": "./packages/luban-utils/format-utils"
+    }
+  ]
+}

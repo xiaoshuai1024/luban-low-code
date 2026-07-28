@@ -1,0 +1,65 @@
+name: Test
+
+on:
+  pull_request:
+    branches: [master, main]
+  push:
+    branches: [master, main]
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: Unit + component tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --no-frozen-lockfile
+
+      - name: luban-ui unit tests
+        run: pnpm run test
+
+      - name: luban-base component tests
+        run: pnpm run test:base:component
+
+      - name: luban-low-code component tests
+        run: pnpm run test:lowcode:component
+
+  e2e:
+    name: E2E (Playwright designer)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm --filter '@luban-ui/luban-ui-e2e' exec playwright install chromium
+
+      - name: Designer E2E
+        env:
+          LUBAN_E2E_USE_PLAYWRIGHT_CHROMIUM: "1"
+        working-directory: apps/luban-ui-e2e
+        run: npx playwright test

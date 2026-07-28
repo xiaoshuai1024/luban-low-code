@@ -32,14 +32,15 @@ let pageId = '';
 test.beforeAll(async ({ request }) => {
   const token = readToken();
   if (!token) return;
+  const authHeaders = { Authorization: `Bearer ${token}` };
   // 取第一个 site
-  const sitesRes = await request.get(`${BFF_URL}/api/sites`, { headers: { luban_token: token } });
+  const sitesRes = await request.get(`${BFF_URL}/api/sites`, { headers: authHeaders });
   const sites = await sitesRes.json().catch(() => []);
   siteId = Array.isArray(sites) && sites.length ? sites[0].id : '';
   if (!siteId) return;
   // 建一个测试页用于 AI 面板交互
   const createRes = await request.post(`${BFF_URL}/api/sites/${siteId}/pages`, {
-    headers: { luban_token: token, 'Content-Type': 'application/json' },
+    headers: { ...authHeaders, 'Content-Type': 'application/json' },
     data: {
       name: `ai-e2e-${Date.now()}`,
       path: `/ai-e2e-${Date.now()}`,
@@ -57,7 +58,7 @@ test.afterAll(async ({ request }) => {
   const token = readToken();
   if (siteId && pageId && token) {
     await request.delete(`${BFF_URL}/api/sites/${siteId}/pages/${pageId}`, {
-      headers: { luban_token: token },
+      headers: { Authorization: `Bearer ${token}` },
     }).catch(() => {});
   }
 });
@@ -99,8 +100,9 @@ test.describe('AI 助手面板 @smoke', () => {
 test.describe('AI 生成主链路 @core', () => {
   // 依赖 AI 服务起齐 + LLM key；不可达则 skip（禁假绿 plan §7.2）
   test.skip(async ({ request }) => {
+    const aiUrl = process.env.LUBAN_E2E_AI_URL ?? BFF_URL.replace(':3100', ':8000');
     try {
-      const res = await request.get(`${BFF_URL.replace(':3100', ':8000')}/healthz`, { timeout: 3000 });
+      const res = await request.get(`${aiUrl}/healthz`, { timeout: 3000 });
       if (!res.ok()) return true;
       const body = await res.json();
       return body?.status !== 'ok';

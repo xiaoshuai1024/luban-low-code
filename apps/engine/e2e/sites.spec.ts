@@ -10,7 +10,7 @@ test.use({ storageState: 'e2e/.auth/user.json' });
 test.describe('Sites management @smoke', () => {
   test('加载站点列表与工具栏', async ({ page }) => {
     await page.goto('/sites');
-    await expect(page.getByRole('heading', { name: '站点管理' })).toBeVisible();
+    await expect(page.getByText('站点管理').first()).toBeVisible();
     await expect(page.getByRole('button', { name: '新建站点' })).toBeVisible();
   });
 

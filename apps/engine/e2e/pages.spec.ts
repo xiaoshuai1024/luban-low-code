@@ -15,14 +15,11 @@ test.describe('Pages management @smoke', () => {
     await expect(page.getByRole('button', { name: '新建页面' })).toBeVisible();
   });
 
-  test('打开新建页面编辑器', async ({ page }) => {
+  test('新建页面弹出模板选择器', async ({ page }) => {
     await page.goto('/sites');
     await page.locator('table tbody tr').first().getByRole('button', { name: '页面' }).click();
     await page.getByRole('button', { name: '新建页面' }).click();
-    await expect(page).toHaveURL(/\/sites\/[^/]+\/pages\/new$/);
-    await expect(page.getByText('页面名称')).toBeVisible();
-    await expect(page.getByText('路径')).toBeVisible();
-    await expect(page.getByRole('button', { name: '保存' })).toBeVisible();
-    await expect(page.getByRole('button', { name: '返回列表' })).toBeVisible();
+    // V2-T3 FeatureGate templates 开启时弹模板选择器
+    await expect(page.getByRole('dialog')).toContainText('选择模板');
   });
 });

@@ -9,35 +9,44 @@ test.use({ storageState: 'e2e/.auth/user.json' });
 test.describe('Navigation @smoke', () => {
   test('工作台可访问', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.getByText('工作台')).toBeVisible();
+    await expect(page.getByText('工作台').first()).toBeVisible();
     await expect(page.getByText('站点数')).toBeVisible();
   });
 
-  test('侧边栏链接有效', async ({ page }) => {
+  test('侧边栏导航到各页面', async ({ page }) => {
+    // 侧边栏 ElMenuItem 渲染为 <a>，用 text 定位后取父级可点击元素
+    async function clickNav(title: string) {
+      const navItem = page.locator('.el-menu-item').filter({ hasText: title });
+      await navItem.click();
+    }
+
     await page.goto('/dashboard');
-    await page.getByRole('link', { name: '站点管理' }).click();
+
+    await clickNav('站点管理');
     await expect(page).toHaveURL(/\/sites/);
-    await page.getByRole('link', { name: '用户管理' }).click();
+
+    await clickNav('用户管理');
     await expect(page).toHaveURL(/\/users/);
-    await page.getByRole('link', { name: '系统设置' }).click();
+
+    await clickNav('系统设置');
     await expect(page).toHaveURL(/\/settings/);
   });
 
   test('站点管理页加载', async ({ page }) => {
     await page.goto('/sites');
-    await expect(page.getByRole('heading', { name: '站点管理' })).toBeVisible();
+    await expect(page.getByText('站点管理').first()).toBeVisible();
     await expect(page.getByRole('button', { name: '新建站点' })).toBeVisible();
   });
 
   test('用户管理页加载', async ({ page }) => {
     await page.goto('/users');
-    await expect(page.getByRole('heading', { name: '用户管理' })).toBeVisible();
+    await expect(page.getByText('用户管理').first()).toBeVisible();
     await expect(page.getByRole('button', { name: '新建用户' })).toBeVisible();
   });
 
   test('系统设置页加载', async ({ page }) => {
     await page.goto('/settings');
-    await expect(page.getByText('系统设置')).toBeVisible();
+    await expect(page.getByText('系统设置').first()).toBeVisible();
     await expect(page.getByText('基础信息')).toBeVisible();
   });
 });

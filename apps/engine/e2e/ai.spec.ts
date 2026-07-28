@@ -132,7 +132,7 @@ test.describe('AI 生成主链路 @core', () => {
   });
 
   test('设计稿转页面（拖入图片 → 对照预览 → 确认）', async ({ page }) => {
-    test.skip(({ }) => !fs.existsSync('e2e/fixtures/sample-design.png'), '须有设计稿样本图 e2e/fixtures/sample-design.png');
+    test.skip(!fs.existsSync('e2e/fixtures/sample-design.png'), '须有设计稿样本图 e2e/fixtures/sample-design.png');
     await page.goto(`/sites/${siteId}/pages/${pageId}`);
     await expect(page.getByText('页面名称')).toBeVisible({ timeout: 15000 });
     await page.getByRole('button', { name: /AI 助手/ }).click();

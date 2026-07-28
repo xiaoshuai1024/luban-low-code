@@ -176,8 +176,14 @@ export async function* streamAi(
       const { done, value } = await reader.read()
       if (done) break
       buffer += decoder.decode(value, { stream: true })
-      // SSE 帧以 \n\n 分隔
+      // SSE 帧分隔符：HTTP 标准 CRLF(\r\n\r\n)，降级兼容 bare LF(\n\n)
       let sep: number
+      while ((sep = buffer.indexOf('\r\n\r\n')) >= 0) {
+        const frame = buffer.slice(0, sep)
+        buffer = buffer.slice(sep + 4)
+        const ev = parseSseFrame(frame)
+        if (ev) yield ev
+      }
       while ((sep = buffer.indexOf('\n\n')) >= 0) {
         const frame = buffer.slice(0, sep)
         buffer = buffer.slice(sep + 2)
@@ -330,6 +336,12 @@ export async function* streamDesignToPage(
       if (done) break
       buffer += decoder.decode(value, { stream: true })
       let sep: number
+      while ((sep = buffer.indexOf('\r\n\r\n')) >= 0) {
+        const frame = buffer.slice(0, sep)
+        buffer = buffer.slice(sep + 4)
+        const ev = parseSseFrame(frame)
+        if (ev) yield ev
+      }
       while ((sep = buffer.indexOf('\n\n')) >= 0) {
         const frame = buffer.slice(0, sep)
         buffer = buffer.slice(sep + 2)

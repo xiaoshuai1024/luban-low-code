@@ -1,6 +1,6 @@
 <!--
 description: Java/Go 双后端同接口行为一致（响应体/错误码/状态机）
-globs: apps/backend-java/**, apps/backend-go/**, apps/bff/**
+globs: apps/backend-java/**, apps/bff/**
 alwaysApply: false
 -->
 

@@ -31,7 +31,7 @@
 - < >
 
 ### 6. 涉及的子模块（粗判）
-- <apps/engine | packages/ui | apps/bff | packages/backend/* | ...>
+- <apps/engine | packages/ui | apps/bff | apps/backend-java | ...>
 
 ## 收敛规则
 

@@ -358,10 +358,10 @@ engine 通过 `link:` 依赖同 monorepo 的 `packages/ui/packages/luban-low-cod
 resolve: {
   alias: {
     'luban-low-code': fileURLToPath(
-      new URL('../../../packages/ui/packages/luban-low-code/src/index.ts', import.meta.url)
+      new URL('../../packages/ui/packages/luban-low-code/src/index.ts', import.meta.url)
     ),
     'luban-base': fileURLToPath(
-      new URL('../../../packages/ui/packages/luban-base/src/index.ts', import.meta.url)
+      new URL('../../packages/ui/packages/luban-base/src/index.ts', import.meta.url)
     ),
     // 源码依赖的第三方，别名到 engine 本地 node_modules 副本
     sortablejs: fileURLToPath(new URL('./node_modules/sortablejs/modular/sortable.esm.js', import.meta.url)),

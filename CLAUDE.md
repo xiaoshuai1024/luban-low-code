@@ -15,7 +15,7 @@ luban-workspace — luban 低代码平台 monorepo（原 git superproject + 8 su
 | 组件库/物料 | `packages/ui` | Vue 3 / Vite | master |
 | SSR 站点 | `apps/website` | TypeScript / SSR | master |
 | 后端 Java | `apps/backend-java` | Java / Spring Boot / Maven | master |
-| 后端 Go | `apps/backend-go` | Go | master |
+| 后端 Go（弃用） | `apps/backend-go` | Go（保留代码，不部署） | master |
 | AI 助手 | `packages/ai-assistant` | （规划中） | main |
 | 桌面端 | `apps/electron`（规划） | Electron | main |
 | 移动端 | `apps/flutter`（规划） | Flutter | main |
@@ -32,8 +32,8 @@ luban-workspace — luban 低代码平台 monorepo（原 git superproject + 8 su
 ### 2. 低代码引擎交付门槛（替代微信合规）
 凡改动引擎/物料/schema，须满足：本地 `pnpm run build` 成功且渲染器零新增 console error；物料 props schema 合规（见 `.agents/rules/luban-material-schema.md`）；引擎产物在 `apps/website`（SSR）及各端渲染一致；不确定行为标注"需验证"。
 
-### 3. Java/Go 双后端行为一致
-同一接口契约，Java 与 Go 实现的响应体/错误码/状态机须一致；变更须两端同步或显式标注差异。见 `.agents/rules/luban-dual-backend-parity.md`。
+### 3. 后端契约一致性（Java 单后端）
+同一接口契约须与 OpenAPI/Swagger 定义一致；BFF/website/各端改动同步契约。原 Java/Go 双后端已收敛为单后端 Java（Go 实现弃用，`apps/backend-go` 保留代码但不部署/不维护）。
 
 ### 4. E2E 禁止跳过/假绿
 所有 E2E 真实执行，禁止 `*.skip`/条件跳过；需跳过须用户明确同意；禁止"未起依赖→全 skip→退出 0"冒充通过。见 `.agents/rules/luban-e2e-execution-contract.md`。

@@ -1,36 +1,36 @@
-// Theme-related variables for theming; use !default so consumers can override.
-$lb-primary: #1976d2 !default;
-$lb-secondary: #9c27b0 !default;
-$lb-surface: #f5f5f5 !default;
-$lb-error: #d32f2f !default;
-$lb-text-primary: rgba(0, 0, 0, 0.87) !default;
-$lb-text-secondary: rgba(0, 0, 0, 0.6) !default;
-$lb-border-radius: 4px !default;
+// Theme variables — Luban prototype design language (indigo-cyan palette)
+$lb-primary: #4f46e5 !default;
+$lb-secondary: #7c3aed !default;
+$lb-surface: #f8fafc !default;
+$lb-error: #ef4444 !default;
+$lb-text-primary: #1e293b !default;
+$lb-text-secondary: #64748b !default;
+$lb-border-radius: 8px !default;
 $lb-spacing-unit: 8px !default;
-$lb-shadow: 0 1px 3px rgba(0, 0, 0, 0.12) !default;
+$lb-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !default;
+$lb-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -4px rgba(0, 0, 0, 0.04) !default;
 $lb-breakpoint-sm: 600px !default;
 $lb-breakpoint-md: 960px !default;
 $lb-breakpoint-lg: 1280px !default;
 
-// === V2-T1 设计 token 扩展（语义化 + 营销建站色板）===
-// 所有新增 token 保留 !default，方便消费方覆盖。
+// Semantic tokens
 $lb-bg: #ffffff !default;
-$lb-bg-muted: #f9fafb !default;
+$lb-bg-muted: #f8fafc !default;
 $lb-bg-elevated: #ffffff !default;
-$lb-bg-dark: #1a1a2e !default;
-$lb-border: #e5e7eb !default;
-$lb-border-strong: #d1d5db !default;
-$lb-text-on-dark: #ffffff !default;
-$lb-text-heading: #111827 !default;
-$lb-text-body: #374151 !default;
-$lb-text-muted: #6b7280 !default;
-$lb-accent: #4361ee !default;
+$lb-bg-dark: #0f172a !default;
+$lb-border: #e2e8f0 !default;
+$lb-border-strong: #cbd5e1 !default;
+$lb-text-on-dark: #f1f5f9 !default;
+$lb-text-heading: #1e293b !default;
+$lb-text-body: #334155 !default;
+$lb-text-muted: #64748b !default;
+$lb-accent: #06b6d4 !default;
 $lb-accent-contrast: #ffffff !default;
 $lb-success-bg: #ecfdf5 !default;
-$lb-success-text: #065f46 !default;
+$lb-success-text: #059669 !default;
 $lb-warning: #f59e0b !default;
 $lb-star-active: #f59e0b !default;
-$lb-star-inactive: #ddd !default;
+$lb-star-inactive: #e2e8f0 !default;
 
 // === V2-T1 :root CSS 变量层（运行时换肤入口）===
 // 把 SCSS 变量同步到 :root 自定义属性，组件内用 var(--lb-*) 消费，

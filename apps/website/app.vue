@@ -46,33 +46,20 @@ nuxtApp.hook('page:finish', () => {
 </template>
 
 <style>
-/* Loading Screen */
-.page-loader {
-  position: fixed; inset: 0; z-index: 9999;
-  background: #fff;
-  display: flex; align-items: center; justify-content: center;
-}
-.page-loader__spinner { text-align: center; }
-.page-loader__logo { font-size: 36px; font-weight: 800; color: #4f46e5; margin-bottom: 24px; letter-spacing: -1px; }
-.page-loader__dots { display: flex; gap: 8px; justify-content: center; }
-.page-loader__dots span {
-  width: 10px; height: 10px; border-radius: 50%; background: #4f46e5;
-  animation: loaderPulse 1.4s infinite ease-in-out both;
-}
-.page-loader__dots span:nth-child(1) { animation-delay: -0.32s; }
-.page-loader__dots span:nth-child(2) { animation-delay: -0.16s; }
-.page-loader__dots span:nth-child(3) { animation-delay: 0s; }
-@keyframes loaderPulse {
-  0%, 80%, 100% { transform: scale(0); opacity: 0.4; }
-  40% { transform: scale(1); opacity: 1; }
-}
-.loader-enter-active { transition: opacity 0.3s ease; }
-.loader-leave-active { transition: opacity 0.5s ease; }
-.loader-enter-from, .loader-leave-to { opacity: 0; }
-
-/* Page Transitions */
-.page-enter-active { transition: opacity 0.2s ease, transform 0.2s ease; }
-.page-leave-active { transition: opacity 0.15s ease; }
-.page-enter-from { opacity: 0; transform: translateY(8px); }
-.page-leave-to { opacity: 0; }
+.page-loader { position:fixed;inset:0;z-index:9999;background:#fff;display:flex;align-items:center;justify-content:center; }
+.page-loader__spinner { text-align:center; }
+.page-loader__logo { font-size:36px;font-weight:800;color:#4f46e5;margin-bottom:24px;letter-spacing:-1px; }
+.page-loader__dots { display:flex;gap:8px;justify-content:center; }
+.page-loader__dots span { width:10px;height:10px;border-radius:50%;background:#4f46e5;animation:ldrPulse 1.4s infinite ease-in-out both; }
+.page-loader__dots span:nth-child(1) { animation-delay:-0.32s; }
+.page-loader__dots span:nth-child(2) { animation-delay:-0.16s; }
+.page-loader__dots span:nth-child(3) { animation-delay:0s; }
+@keyframes ldrPulse { 0%,80%,100%{transform:scale(0);opacity:.4} 40%{transform:scale(1);opacity:1} }
+.loader-enter-active { transition:opacity .3s ease; }
+.loader-leave-active { transition:opacity .5s ease; }
+.loader-enter-from,.loader-leave-to { opacity:0; }
+.page-enter-active { transition:opacity .2s ease,transform .2s ease; }
+.page-leave-active { transition:opacity .15s ease; }
+.page-enter-from { opacity:0;transform:translateY(8px); }
+.page-leave-to { opacity:0; }
 </style>

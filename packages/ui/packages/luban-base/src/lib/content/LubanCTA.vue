@@ -73,63 +73,21 @@ withDefaults(
 
 <style scoped lang="scss">
 .lb-cta {
-  padding: 48px 24px;
-  text-align: center;
-  width: 100%;
+  width: 100%; text-align: center;
   &--full .lb-cta__content { max-width: none; }
 }
 .lb-cta__content {
-  max-width: 600px;
-  margin: 0 auto;
+  max-width: 1200px; margin: 0 auto; padding: 80px 24px;
+  background: linear-gradient(135deg, var(--lb-primary) 0%, var(--lb-secondary) 100%);
+  border-radius: 24px; color: #fff;
 }
-.lb-cta__heading {
-  font-size: 1.75rem;
-  font-weight: 700;
-  margin: 0 0 12px;
-}
-.lb-cta__description {
-  font-size: 1rem;
-  opacity: 0.9;
-  margin: 0 0 24px;
-  line-height: 1.5;
-}
-.lb-cta__actions {
-  display: inline-flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-.lb-cta__button {
-  display: inline-block;
-  padding: 10px 28px;
-  font-size: 1rem;
-  font-weight: 600;
-  border-radius: 6px;
-  text-decoration: none;
-  cursor: pointer;
-  transition: all 0.2s;
-  &--primary {
-    background: var(--lb-bg);
-    color: var(--lb-accent);
-    &:hover { opacity: 0.9; }
-  }
-  &--outline {
-    background: transparent;
-    color: var(--lb-accent-contrast);
-    border: 2px solid var(--lb-accent-contrast);
-    &:hover { background: rgba(255,255,255,0.1); }
-  }
-  &--ghost {
-    background: transparent;
-    color: var(--lb-accent-contrast);
-    &:hover { text-decoration: underline; }
-  }
-  &--secondary {
-    background: transparent;
-    color: var(--lb-accent-contrast);
-    border: 2px solid rgba(255,255,255,0.6);
-    &:hover { background: rgba(255,255,255,0.1); }
-  }
-  &--disabled { opacity: 0.6; cursor: default; }
+.lb-cta__heading { font-size: 2.25rem; font-weight: 800; margin: 0 0 16px; color: #fff; }
+.lb-cta__description { font-size: 1.05rem; opacity: .85; margin: 0 auto 32px; max-width: 500px; line-height: 1.6; }
+.lb-cta__actions { display: inline-flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+.lb-cta__button { display:inline-block;padding:14px 32px;font-size:1rem;font-weight:600;border-radius:10px;text-decoration:none;transition:all .15s;
+  &--primary { background:#fff;color:var(--lb-primary); &:hover { background:#f1f5f9; } }
+  &--outline,&--secondary { background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.3); &:hover { background:rgba(255,255,255,.1);border-color:#fff; } }
+  &--ghost { background:transparent;color:#fff; &:hover { text-decoration:underline; } }
+  &--disabled { opacity:.6;cursor:default; }
 }
 </style>

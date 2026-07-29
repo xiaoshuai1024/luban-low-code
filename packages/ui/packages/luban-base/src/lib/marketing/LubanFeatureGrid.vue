@@ -61,10 +61,12 @@ withDefaults(
   gap: 24px;
 }
 .lb-feature-grid__card {
-  padding: 28px 24px;
+  padding: 32px;
   border: 1px solid var(--lb-border);
   border-radius: 12px;
   background: var(--lb-bg);
+  transition: all .2s;
+  &:hover { border-color:#818cf8; box-shadow:0 10px 15px -3px rgba(0,0,0,.06); transform:translateY(-2px); }
 }
 .lb-feature-grid__icon {
   font-size: 2rem;

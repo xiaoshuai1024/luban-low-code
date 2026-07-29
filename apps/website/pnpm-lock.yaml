@@ -8,15 +8,15 @@ importers:
 
   .:
     dependencies:
+      '@luban-low-code/luban-base':
+        specifier: link:../../packages/ui/packages/luban-base
+        version: link:../../packages/ui/packages/luban-base
+      '@luban-low-code/luban-low-code':
+        specifier: link:../../packages/ui/packages/luban-low-code
+        version: link:../../packages/ui/packages/luban-low-code
       '@pinia/nuxt':
         specifier: ^0.5.4
         version: 0.5.4(magicast@0.5.3)(typescript@5.6.3)(vue@3.5.40(typescript@5.6.3))
-      luban-base:
-        specifier: link:../../packages/ui/packages/luban-base
-        version: link:../../packages/ui/packages/luban-base
-      luban-low-code:
-        specifier: link:../../packages/ui/packages/luban-low-code
-        version: link:../../packages/ui/packages/luban-low-code
       nuxt:
         specifier: ^3.14.0
         version: 3.21.10(@vue/compiler-sfc@3.5.40)(cac@6.7.14)(db0@0.3.4)(esbuild@0.28.1)(ioredis@5.11.1)(magicast@0.5.3)(rollup-plugin-visualizer@7.0.1(rollup@4.62.3))(rollup@4.62.3)(srvx@0.11.22)(terser@5.49.0)(typescript@5.6.3)(vite@7.3.6(jiti@2.7.0)(terser@5.49.0)(yaml@2.9.0))(yaml@2.9.0)

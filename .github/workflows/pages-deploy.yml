@@ -50,7 +50,13 @@ jobs:
         working-directory: apps/website
         run: |
           pnpm install --frozen-lockfile
+          # Temporarily disable custom SSR router so pages/index.vue is used
+          mv app/router.options.ts app/router.options.ts.bak 2>/dev/null || true
+          mv router/routes.ts router/routes.ts.bak 2>/dev/null || true
           npx nuxi generate
+          # Restore custom router for SSR app
+          mv app/router.options.ts.bak app/router.options.ts 2>/dev/null || true
+          mv router/routes.ts.bak router/routes.ts 2>/dev/null || true
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

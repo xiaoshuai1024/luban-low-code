@@ -11,9 +11,9 @@ useHead({ title: 'Luban — Open-Source Low-Code Platform' });
         <div class="nav-links">
           <a href="#features">Features</a>
           <a href="#how">How it Works</a>
-          <a href="/components">Components</a>
-          <a href="/docs">Docs</a>
-          <a href="/examples">Examples</a>
+          <a href="/default/components">Components</a>
+          <a href="/default/docs">Docs</a>
+          <a href="/default/examples">Examples</a>
           <a href="https://github.com" target="_blank">GitHub</a>
           <a href="#" class="nav-cta">Get Started</a>
         </div>
@@ -152,7 +152,7 @@ useHead({ title: 'Luban — Open-Source Low-Code Platform' });
       <div class="container">
         <div class="footer-grid">
           <div><h3 class="footer-logo">Luban</h3><p class="footer-desc">Open-source low-code platform. Build web apps visually with 75+ Material Design components. Vue 3 + Spring Boot + MIT.</p></div>
-          <div><h4>Product</h4><a href="#features">Features</a><a href="#components">Components</a><a href="#templates">Templates</a><a href="/default/docs/api">API</a></div>
+          <div><h4>Product</h4><a href="#features">Features</a><a href="/default/components">Components</a><a href="#templates">Templates</a><a href="/default/docs/api">API</a></div>
           <div><h4>Resources</h4><a href="/default/docs">Docs</a><a href="/default/docs/getting-started">Getting Started</a><a href="/default/docs/architecture">Architecture</a><a href="/default/examples">Examples</a></div>
           <div><h4>Community</h4><a href="/default/open-source">Open Source</a><a href="https://github.com">GitHub</a><a href="/default/open-source">Roadmap</a></div>
           <div><h4>Legal</h4><a href="/default/open-source">MIT License</a></div>

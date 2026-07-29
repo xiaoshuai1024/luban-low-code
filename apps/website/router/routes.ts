@@ -19,13 +19,8 @@ export const routes: RouteRecord[] = [
     name: "home",
     component: () => import("~/views/Home.vue"),
   },
-  { path: "/components", name: "components", component: () => import("~/views/Components.vue") },
-  { path: "/docs", name: "docs", component: () => import("~/views/Docs.vue") },
-  { path: "/docs/getting-started", name: "docs-getting-started", component: () => import("~/views/DocsGettingStarted.vue") },
-  { path: "/docs/architecture", name: "docs-architecture", component: () => import("~/views/DocsArchitecture.vue") },
-  { path: "/docs/api", name: "docs-api", component: () => import("~/views/DocsApi.vue") },
-  { path: "/examples", name: "examples", component: () => import("~/views/Examples.vue") },
-  { path: "/open-source", name: "open-source", component: () => import("~/views/OpenSource.vue") },
+  // All sub-pages rendered via LubanPage (DynamicPage.vue fetches schema from BFF)
+  // Paths: /default/components, /default/docs, /default/examples, /default/open-source, etc.
   {
     path: "/:site/:path*",
     name: "page",

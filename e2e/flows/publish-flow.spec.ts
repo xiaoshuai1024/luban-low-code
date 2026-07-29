@@ -13,7 +13,7 @@ import 'dotenv/config';
  */
 
 const WEBSITE_BASE = process.env.LUBAN_E2E_WEBSITE_URL ?? 'http://127.0.0.1:3000';
-const BFF_BASE = process.env.LUBAN_E2E_BFF_URL ?? 'http://127.0.0.1:3100';
+const BFF_BASE = process.env.LUBAN_E2E_BFF_URL ?? 'http://localhost:3000';
 const RUN_ID = `e2e-${Date.now()}`;
 const SITE_NAME = `${RUN_ID}-site`;
 const PAGE_NAME = `${RUN_ID}-page`;
@@ -55,7 +55,7 @@ test.beforeAll(async () => {
   await ctx.dispose();
 });
 
-test.describe('流程A：发布闭环 @cross', () => {
+test.describe('流程A：发布闭环 @cross @J-publish', () => {
   test('建站点 → 建页面 → 发布 → website SSR 渲染', async ({ page }) => {
     test.setTimeout(120_000);
 
@@ -73,7 +73,13 @@ test.describe('流程A：发布闭环 @cross', () => {
     // === ④ 切换到 website，访问公开页（真实 SSR）===
     // website 路由：/:site/:path* → DynamicPage → usePageByPath(bff) → LubanPage 渲染
     const publicUrl = `${WEBSITE_BASE}/${SITE_SLUG}${PAGE_PATH}`;
-    const res = await page.goto(publicUrl);
+    // Nuxt dev 按需编译：首次访问可能返回 500（编译中），重试一次给编译时间。
+    // prod build 无此问题。重试上限 3 次 × 5s 间隔。
+    let res = await page.goto(publicUrl);
+    for (let attempt = 0; attempt < 3 && res && res.status() >= 500; attempt++) {
+      await page.waitForTimeout(5_000);
+      res = await page.goto(publicUrl);
+    }
     expect(res, 'website 公开页须返回响应').not.toBeNull();
     expect(res!.status(), '已发布页须 200').toBe(200);
 

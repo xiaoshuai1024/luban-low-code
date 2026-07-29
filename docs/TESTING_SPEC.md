@@ -16,12 +16,11 @@
 
 | 子项目 | 路径 | 工具 | 行覆盖率 | 分支覆盖率 |
 |--------|------|------|---------|-----------|
-| 低代码引擎 | `apps/engine` | Vitest coverage-v8 | **85%** | 75% |
-| BFF | `apps/bff` | Vitest coverage-v8 | **85%** | 75% |
-| UI 物料库 | `packages/ui` | Vitest coverage-v8 | **90%** | 80% |
-| SSR 站点 | `apps/website` | Vitest coverage-v8 | **85%** | 75% |
-| 后端 Java | `apps/backend-java` | JaCoCo | **80%** | 70% |
-| 后端 Go | `apps/backend-go` | `go test -cover` | **75%** | - |
+| 低代码引擎 | `packages/engine/luban` | Vitest coverage-v8 | **85%** | 75% |
+| BFF | `packages/bff/luban-bff` | Vitest coverage-v8 | **85%** | 75% |
+| UI 物料库 | `packages/ui/luban-ui` | Vitest coverage-v8 | **90%** | 80% |
+| SSR 站点 | `packages/web/luban-website` | Vitest coverage-v8 | **85%** | 75% |
+| 后端 Java | `packages/backend/luban-backend` | JaCoCo | **80%** | 70% |
 | client（各端） | `packages/client/*` | 各端原生工具 | **85%** | 75% |
 
 一键全栈覆盖率：`make test-coverage`（汇总表格 + HTML 报告）。
@@ -58,6 +57,19 @@
 | 状态变更操作 | N = 状态转换数 | 每个合法转换 1 条；非法转换至少 1 条 |
 | 删除操作 | 1 | 删除前确认 + 删除后列表不包含 |
 | 引擎渲染新物料 | 2 | 默认渲染 + props 边界 |
+
+### 旅程覆盖率度量（Journey Coverage）
+
+E2E 覆盖率的**主指标是旅程覆盖率，不是代码行覆盖率**。代码行覆盖率（V8/JaCoCo）在 E2E 下会严重虚高（一条链路路过一大片代码但不一定有断言），仅作"死区发现"辅助。
+
+**口径**：
+$$\text{旅程覆盖率} = \frac{\text{有 spec 绑定的旅程数}}{\text{已声明的旅程总数}}$$
+
+- **分母**：所有 taskGraph JSON `journeys[]` 的并集（全局旅程总盘，见 `docs/dev/ssot-task-graph.md`）。
+- **分子**：spec 标题含 `@J-<journey-id>` 标签的旅程（见 `docs/dev/e2e-test-style-guide.md` §4）。
+- **门禁**：`make journey-coverage` → P0 旅程须 100% 有 spec 绑定（阻断合并）；P1/P2 仅报告覆盖率与缺口，不阻断。
+
+**与代码行覆盖率的关系**：二者正交。`make test-coverage` 同时输出两个维度（代码行覆盖率 + 旅程覆盖率），任一 P0 阻断 → 整体阻断。
 
 ---
 
@@ -182,7 +194,7 @@ mvn jacoco:report              # 仅生成覆盖率报告
 ### 后端 Go — go mod
 
 ```bash
-cd apps/backend-go
+# Go 后端已废弃
 go test ./... -race -cover     # 全部测试 + 竞态检测 + 覆盖率
 go test ./... -run TestXxx     # 单个测试
 go test -coverprofile=cover.out ./... && go tool cover -html=cover.out  # HTML 覆盖率报告

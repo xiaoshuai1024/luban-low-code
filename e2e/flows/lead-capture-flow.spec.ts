@@ -19,7 +19,7 @@ import 'dotenv/config';
  */
 
 const WEBSITE_BASE = process.env.LUBAN_E2E_WEBSITE_URL ?? 'http://127.0.0.1:3000';
-const BFF_BASE = process.env.LUBAN_E2E_BFF_URL ?? 'http://127.0.0.1:3100';
+const BFF_BASE = process.env.LUBAN_E2E_BFF_URL ?? 'http://localhost:3000';
 const ACCOUNT = process.env.LUBAN_E2E_ACCOUNT!;
 const PASSWORD = process.env.LUBAN_E2E_PASSWORD!;
 
@@ -46,7 +46,7 @@ test.beforeAll(async () => {
   expect(formId, 'setup 须拿到 formId').toBeTruthy();
 });
 
-test.describe('流程B：线索闭环 @cross', () => {
+test.describe('流程B：线索闭环 @cross @J-leads', () => {
   test('website 表单提交 → backend 入库 → engine 线索中心可见', async ({ page }) => {
     test.setTimeout(120_000);
 
@@ -84,8 +84,9 @@ test.describe('流程B：线索闭环 @cross', () => {
     await page.locator('tr', { hasText: CONTACT_NAME }).first().getByRole('button', { name: '详情' }).click();
     await expect(page.getByRole('heading', { name: '线索详情' })).toBeVisible();
 
-    // 字段一致：姓名
-    await expect(page.getByText(CONTACT_NAME)).toBeVisible();
+    // 字段一致：姓名（限定详情抽屉，避免与列表行重复匹配触发 strict mode）
+    const detailPanel = page.getByRole('dialog', { name: '线索详情' });
+    await expect(detailPanel.getByText(CONTACT_NAME)).toBeVisible();
     // 脱敏：手机号 138****.... 格式（不暴露完整）
     const bodyText = await page.locator('body').textContent();
     expect(bodyText, '详情须显示脱敏手机号 138****').toContain('138****');

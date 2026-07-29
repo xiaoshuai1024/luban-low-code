@@ -273,12 +273,11 @@ luban 11 个子项目默认分支不同，全量 `/pr-all` 可能部分失败。
 
 | 命令 | 作用 |
 |------|------|
-| `/pr-engine` | 仅 `apps/engine` |
-| `/pr-bff` | 仅 `apps/bff` |
-| `/pr-ui` | 仅 `packages/ui` |
-| `/pr-website` | 仅 `apps/website` |
-| `/pr-backend-java` | 仅 `apps/backend-java` |
-| `/pr-backend-go` | 仅 `apps/backend-go` |
+| `/pr-engine` | 仅 `packages/engine/luban` |
+| `/pr-bff` | 仅 `packages/bff/luban-bff` |
+| `/pr-ui` | 仅 `packages/ui/luban-ui` |
+| `/pr-website` | 仅 `packages/web/luban-website` |
+| `/pr-backend-java` | 仅 `packages/backend/luban-backend` |
 | `/pr-client` | 仅 `packages/client/*` |
 | `/pr-workspace` | 仅 meta 仓 |
 

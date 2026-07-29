@@ -1,180 +1,137 @@
-# Luban 全栈部署编排（开发环境）
-#
-# 用法：
-#   1. 复制 .env.dev.example → .env.dev，按需修改敏感值
-#   2. docker compose --env-file .env.dev up -d --build
-#   3. docker compose down
-#
-# 服务拓扑：mysql/redis（自建）→ backend-java → bff → engine(设计器) + website(渲染) + ai-assistant
-# 注：Go 后端已弃用（原 Java/Go 双后端 → 单后端 Java），不在部署清单。
-#
-# 端口（宿主:容器）：
-#   mysql     ${MYSQL_HOST_PORT:-3306}:3306
-#   redis     ${REDIS_HOST_PORT:-6379}:6379
-#   backend   8080  (context-path /backend；健康检查 /backend/actuator/health)
-#   bff       3100
-#   engine    4200  (nginx 静态托管；/api proxy → bff:3100)
-#   website   3000  (nuxt SSR，容器内监听 4173)
-#   ai        8000  (FastAPI；profiles: ai，默认不起)
-#
-# 构建说明（monorepo）：
-#   engine/website 需要 workspace 依赖（ui packages），build context 为仓库根（.），
-#   通过 .dockerignore 排除 node_modules / 构建产物加速。bff / backend-java 自包含。
-
+# =====================================================================
+# luban — one-click local stack (docker-compose / Compose spec)
+# Usage:  cp .env.example .env  &&  docker compose up --build
+# =====================================================================
 services:
   mysql:
     image: mysql:8.0
-    env_file: .env.dev
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-luban}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-luban}
-      MYSQL_CHARSET: utf8mb4
-      MYSQL_COLLATION: utf8mb4_unicode_ci
-    ports:
-      - "${MYSQL_HOST_PORT:-3306}:3306"
-    volumes:
-      - luban-mysql:/var/lib/mysql
+    container_name: luban-mysql
     restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-luban_root_dev}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-luban}
+      MYSQL_USER: ${MYSQL_USER:-luban}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-luban_dev_pass}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:-luban}"]
-      interval: 5s
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u$$MYSQL_USER", "-p$$MYSQL_PASSWORD"]
+      interval: 10s
       timeout: 5s
-      retries: 20
+      retries: 10
+      start_period: 30s
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "${REDIS_HOST_PORT:-6379}:6379"
+    container_name: luban-redis
     restart: unless-stopped
+    ports:
+      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
+      interval: 10s
       timeout: 3s
-      retries: 10
+      retries: 5
+      start_period: 5s
 
-  backend-java:
+  backend:
     build:
-      context: ./apps/backend-java
-    env_file: .env.dev
-    environment:
-      APP_PORT: "8080"
-      MYSQL_HOST: mysql
-      MYSQL_PORT: "3306"
-      MYSQL_DB: ${MYSQL_DATABASE:-luban}
-      MYSQL_USER: root
-      MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD:-luban}
-      REDIS_HOST: redis
-      REDIS_PORT: "6379"
-    ports:
-      - "8080:8080"
+      context: packages/backend/luban-backend
+      dockerfile: Dockerfile
+    image: luban-backend:dev
+    container_name: luban-backend
+    restart: unless-stopped
     depends_on:
       mysql:
         condition: service_healthy
       redis:
         condition: service_healthy
-    restart: unless-stopped
+    environment:
+      APP_PORT: "8080"
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_DB: ${MYSQL_DB:-luban}
+      MYSQL_USER: ${MYSQL_USER:-luban}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-luban_dev_pass}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      LEAD_ENC_KEY: ${LEAD_ENC_KEY}
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET}
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/backend/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
 
   bff:
     build:
-      context: ./apps/bff
-    env_file: .env.dev
-    environment:
-      # 单后端：仅指向 Java（Go 后端已弃用）
-      BACKEND_BASE_URL: http://backend-java:8080/backend
-      PORT: "3100"
-    ports:
-      - "3100:3100"
-    depends_on:
-      - backend-java
+      context: packages/bff/luban-bff
+      dockerfile: Dockerfile
+    image: luban-bff:dev
+    container_name: luban-bff
     restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      BACKEND_BASE_URL: http://backend:8080/backend
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET}
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
 
   engine:
+    # build context = workspace root, so vite.config.ts alias to packages/ui/luban-ui resolves.
     build:
       context: .
-      dockerfile: apps/engine/Dockerfile
-    env_file: .env.dev
-    environment:
-      # nginx proxy /api → bff:3100，见 nginx-manage.conf
-      VITE_BFF_BASE_URL: http://bff:3100
-    ports:
-      - "4200:4200"
-    depends_on:
-      - bff
+      dockerfile: packages/engine/luban/Dockerfile
+    image: luban-engine:dev
+    container_name: luban-engine
     restart: unless-stopped
+    depends_on:
+      bff:
+        condition: service_started
+    environment:
+      VITE_API_BASE_URL: /api
+    ports:
+      # engine nginx serves on container port 4200 (see packages/engine/luban/Dockerfile)
+      - "5173:4200"
 
   website:
     build:
-      context: .
-      dockerfile: apps/website/Dockerfile
-    env_file: .env.dev
-    environment:
-      NUXT_PUBLIC_BFF_BASE_URL: http://bff:3100
-      NUXT_PUBLIC_DEFAULT_SITE_SLUG: ${DEFAULT_SITE_SLUG:-default}
-      # Nuxt Nitro 默认监听 4173；compose 映射 3000:4173
-      NITRO_PORT: "4173"
-      PORT: "4173"
-    ports:
-      - "3000:4173"
-    depends_on:
-      - bff
+      context: packages/web/luban-website
+      dockerfile: Dockerfile
+    image: luban-website:dev
+    container_name: luban-website
     restart: unless-stopped
-
-  ai-assistant:
-    build:
-      context: ./packages/ai-assistant
-    env_file: .env.dev
-    environment:
-      POSTGRES_DSN: postgresql://luban:luban@ai-postgres:5432/luban_ai
-      QDRANT_HOST: ai-qdrant
-      QDRANT_PORT: "6333"
-      # 本地 sentence-transformers（bge-small-zh-v1.5,512 维,免外网）
-      EMBEDDING_PROVIDER: local
-      BFF_BASE_URL: http://bff:3100
-      EMBEDDING_MODEL: /data
-      EMBEDDING_DIM: "512"
-    volumes:
-      - ai-embedding-cache:/data:ro  # 预下载的 bge 模型（只读挂载）
-    ports:
-      - "8002:8000"
     depends_on:
-      ai-postgres:
-        condition: service_healthy
-      ai-qdrant:
+      bff:
         condition: service_started
-    restart: unless-stopped
-    # 规划中：默认不启动，显式 --profile ai 才起
-    profiles: ["ai"]
-
-  # AI 助手依赖（仅 --profile ai 时启动）
-  ai-postgres:
-    image: postgres:16-alpine
     environment:
-      POSTGRES_USER: luban
-      POSTGRES_PASSWORD: luban
-      POSTGRES_DB: luban_ai
-    volumes:
-      - ai-pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U luban -d luban_ai"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-    profiles: ["ai"]
-
-  ai-qdrant:
-    image: qdrant/qdrant:latest
-    volumes:
-      - ai-qdrantdata:/qdrant/storage
-    healthcheck:
-      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/6333'"]
-      interval: 10s
-      timeout: 5s
-      retries: 6
-    restart: unless-stopped
-    profiles: ["ai"]
+      NUXT_PUBLIC_BFF_BASE_URL: http://localhost:3000
+      NUXT_PUBLIC_DEFAULT_SITE_SLUG: default
+      NODE_ENV: production
+    ports:
+      - "3001:4173"
 
 volumes:
-  luban-mysql:
-  ai-pgdata:
-  ai-qdrantdata:
-  ai-embedding-cache:
+  mysql_data:
+    driver: local
+
+networks:
+  default:
+    name: luban-net

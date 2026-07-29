@@ -36,7 +36,10 @@ $lb-star-inactive: #e2e8f0 !default;
 // 把 SCSS 变量同步到 :root 自定义属性，组件内用 var(--lb-*) 消费，
 // 运行时 applyTheme(tokens) 覆盖这些自定义属性即可整站换肤。
 :root {
-  --lb-primary: #{$lb-primary};
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  color: #1e293b;
+  line-height: 1.6;
+    --lb-primary: #{$lb-primary};
   --lb-secondary: #{$lb-secondary};
   --lb-surface: #{$lb-surface};
   --lb-error: #{$lb-error};

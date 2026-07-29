@@ -19,6 +19,10 @@ export default defineNuxtConfig({
       meta: [
         { name: "format-detection", content: "telephone=no" },
       ],
+      style: [
+        // Global font-family (Vue scoped :root not work, inject unscoped)
+        "html{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'PingFang SC','Microsoft YaHei',sans-serif;color:#1e293b;line-height:1.6}body{font-family:inherit;color:inherit;line-height:inherit}",
+      ],
     },
   },
   runtimeConfig: {

@@ -46,6 +46,15 @@ nuxtApp.hook('page:finish', () => {
 </template>
 
 <style>
+/* Global unscoped styles — Vue scoped CSS cannot apply to :root */
+html {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  color: #1e293b;
+  line-height: 1.6;
+}
+body { font-family: inherit; color: inherit; line-height: inherit; }
+</style>
+<style scoped>
 .page-loader { position:fixed;inset:0;z-index:9999;background:#fff;display:flex;align-items:center;justify-content:center; }
 .page-loader__spinner { text-align:center; }
 .page-loader__logo { font-size:36px;font-weight:800;color:#4f46e5;margin-bottom:24px;letter-spacing:-1px; }

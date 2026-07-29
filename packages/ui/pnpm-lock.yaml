@@ -168,12 +168,12 @@ importers:
 
   packages/luban-low-code:
     dependencies:
+      '@luban-low-code/luban-base':
+        specifier: ^0.0.18
+        version: 0.0.18(typescript@5.9.3)
       highlight.js:
         specifier: ^11.11.0
         version: 11.11.1
-      luban-base:
-        specifier: ^0.0.2
-        version: 0.0.2(typescript@5.9.3)
       markdown-it:
         specifier: ^14.1.0
         version: 14.3.0
@@ -1072,6 +1072,9 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
+  '@luban-low-code/luban-base@0.0.18':
+    resolution: {integrity: sha512-JAA2IBBcz9Pc3fKiMZIijB9YhePxFshGG045ITSFpnoZUxqHpmKunCfuraZRQvXFZkGIOZQ2seBP4gjbXtgIAA==}
 
   '@manypkg/find-root@1.1.0':
     resolution: {integrity: sha512-mki5uBvhHzO8kYYix/WRy2WX8S3B5wdVSc9D6KcU5lQNglP2yt58/VfLuAK49glRXChosY8ap2oJ1qgma3GUVA==}
@@ -3595,9 +3598,6 @@ packages:
     resolution: {integrity: sha512-MhWWlVnuab1RG5/zMRRcVGXZLCXrZTgfwMikgzCegsPnG62yDQo5JnqKkrK4jO5iKqDAZGItAqN5CtKBCBWRUA==}
     engines: {node: '>=16.14'}
 
-  luban-base@0.0.2:
-    resolution: {integrity: sha512-TuEnnQNeHlUIpW0tz4oula6FDFgPI4gyK7GYuK+ZSfRJ/nx/5wjVeASd//kM8v0JphqIhUa8yWy2KELngvySow==}
-
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
 
@@ -5903,6 +5903,12 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
+
+  '@luban-low-code/luban-base@0.0.18(typescript@5.9.3)':
+    dependencies:
+      vue: 3.5.30(typescript@5.9.3)
+    transitivePeerDependencies:
+      - typescript
 
   '@manypkg/find-root@1.1.0':
     dependencies:
@@ -8671,12 +8677,6 @@ snapshots:
       yallist: 4.0.0
 
   lru-cache@8.0.5: {}
-
-  luban-base@0.0.2(typescript@5.9.3):
-    dependencies:
-      vue: 3.5.30(typescript@5.9.3)
-    transitivePeerDependencies:
-      - typescript
 
   magic-string@0.30.21:
     dependencies:

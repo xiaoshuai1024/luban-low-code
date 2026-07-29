@@ -56,6 +56,11 @@ export async function callBackend<T>(
     throw new BackendHttpError(res.status, code, msg, errBody?.details);
   }
 
+  // 204 No Content -> return undefined (DELETE, PATCH revoke, etc.)
+  if (res.status === 204) {
+    return undefined as T;
+  }
+
   // 对于 settings 之类直接透传 JSON 的接口，可能是 text
   const contentType = res.headers.get("content-type") || "";
   if (contentType.includes("application/json")) {

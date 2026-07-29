@@ -16,8 +16,8 @@
   },
   "dependencies": {
     "@pinia/nuxt": "^0.5.4",
-    "luban-base": "link:../../packages/ui/packages/luban-base",
-    "luban-low-code": "link:../../packages/ui/packages/luban-low-code",
+    "@luban-low-code/luban-base": "link:../../packages/ui/packages/luban-base",
+    "@luban-low-code/luban-low-code": "link:../../packages/ui/packages/luban-low-code",
     "nuxt": "^3.14.0",
     "pinia": "^2.2.6",
     "vue": "^3.5.13"

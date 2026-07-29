@@ -45,16 +45,16 @@ export default defineNuxtConfig({
       // luban-base/luban-low-code 的 exports 条件在 nuxt nitro SSR commonjs resolver 下解析失败，
       // 显式 alias 指向 dist 入口绕过（依赖 packages/ui 先 nx build 产出 dist）。
       alias: {
-        "luban-base": fileURLToPath(
+        "@luban-low-code/luban-base": fileURLToPath(
           new URL("../../packages/ui/packages/luban-base/dist/index.js", import.meta.url),
         ),
-        "luban-low-code": fileURLToPath(
+        "@luban-low-code/luban-low-code": fileURLToPath(
           new URL("../../packages/ui/packages/luban-low-code/dist/index.js", import.meta.url),
         ),
       },
     },
     optimizeDeps: {
-      include: ["luban-low-code", "luban-base"],
+      include: ["@luban-low-code/luban-low-code", "@luban-low-code/luban-base"],
     },
   },
 });

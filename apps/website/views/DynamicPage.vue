@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { LubanPage } from "luban-low-code";
-import type { PageSchema } from "luban-low-code";
+import { LubanPage } from "@luban-low-code/luban-low-code";
+import type { PageSchema } from "@luban-low-code/luban-low-code";
 import { DEFAULT_SITE_SLUG } from "~/utils/routes";
 import { useSitePageStore } from "~/stores/sitePage";
 import type { SubmitConfig } from "~/composables/useLeadSubmit";

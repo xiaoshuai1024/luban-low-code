@@ -1,4 +1,4 @@
-import type { PageSchema, PageSeo } from "luban-low-code";
+import type { PageSchema, PageSeo } from "@luban-low-code/luban-low-code";
 
 /**
  * BFF 公开接口返回的页面数据（已发布页面，含 schema）

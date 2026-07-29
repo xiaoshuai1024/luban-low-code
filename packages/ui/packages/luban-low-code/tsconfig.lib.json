@@ -12,7 +12,11 @@
     "types": ["node", "vite/client", "vue", "dom"]
   },
   "include": ["src/**/*.ts", "src/**/*.vue"],
-  "references": [],
+  "references": [
+    {
+      "path": "../luban-base/tsconfig.lib.json"
+    }
+  ],
   "exclude": [
     "vite.config.ts",
     "vite.config.mts",

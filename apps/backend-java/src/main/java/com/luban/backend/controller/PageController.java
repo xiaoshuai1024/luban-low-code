@@ -49,7 +49,7 @@ public class PageController {
     public PageResponse update(
             @PathVariable("id") String siteId,
             @PathVariable String pageId,
-            @Valid @RequestBody PageSaveRequest req) {
+            @RequestBody PageSaveRequest req) {
         return pageService.update(
             siteId,
             pageId,

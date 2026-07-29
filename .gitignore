@@ -61,3 +61,6 @@ desktop.ini
 *.log
 logs/
 .cache/
+.claude/
+*.tsbuildinfo
+.claude/worktrees/

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callBackend } from "@/lib/backendClient";
 import { parseTokenFromRequest } from "@/lib/authToken";
+import { toBackendResponse, authHeaders, unauthenticated } from "@/lib/apiHandler";
 
 interface Site {
   id: string;
@@ -16,70 +17,55 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ siteId: string }> }
 ) {
-  const payload = parseTokenFromRequest(req);
-  if (!payload) {
-    return NextResponse.json(
-      { code: "UNAUTHENTICATED", message: "invalid token" },
-      { status: 401 }
-    );
+  try {
+    const h = authHeaders(parseTokenFromRequest(req));
+    if (!h) return unauthenticated();
+    const { siteId } = await params;
+    const site = await callBackend<Site>(`/sites/${siteId}`, {
+      method: "GET",
+      headers: h,
+    });
+    return NextResponse.json(site);
+  } catch (e) {
+    return toBackendResponse(e);
   }
-  const { siteId } = await params;
-  const headers: HeadersInit = {
-    "X-User-ID": payload.sub,
-    "X-User-Role": payload.role,
-  };
-  const site = await callBackend<Site>(`/sites/${siteId}`, {
-    method: "GET",
-    headers,
-  });
-  return NextResponse.json(site);
 }
 
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ siteId: string }> }
 ) {
-  const payload = parseTokenFromRequest(req);
-  if (!payload) {
-    return NextResponse.json(
-      { code: "UNAUTHENTICATED", message: "invalid token" },
-      { status: 401 }
-    );
+  try {
+    const h = authHeaders(parseTokenFromRequest(req));
+    if (!h) return unauthenticated();
+    const { siteId } = await params;
+    const body = await req.json();
+    const site = await callBackend<Site>(`/sites/${siteId}`, {
+      method: "PUT",
+      headers: h,
+      body: JSON.stringify(body),
+    });
+    return NextResponse.json(site);
+  } catch (e) {
+    return toBackendResponse(e);
   }
-  const { siteId } = await params;
-  const headers: HeadersInit = {
-    "X-User-ID": payload.sub,
-    "X-User-Role": payload.role,
-  };
-  const body = await req.json();
-  const site = await callBackend<Site>(`/sites/${siteId}`, {
-    method: "PUT",
-    headers,
-    body: JSON.stringify(body),
-  });
-  return NextResponse.json(site);
 }
 
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ siteId: string }> }
 ) {
-  const payload = parseTokenFromRequest(req);
-  if (!payload) {
-    return NextResponse.json(
-      { code: "UNAUTHENTICATED", message: "invalid token" },
-      { status: 401 }
-    );
+  try {
+    const h = authHeaders(parseTokenFromRequest(req));
+    if (!h) return unauthenticated();
+    const { siteId } = await params;
+    await callBackend<unknown>(`/sites/${siteId}`, {
+      method: "DELETE",
+      headers: h,
+    });
+    return new NextResponse(null, { status: 204 });
+  } catch (e) {
+    return toBackendResponse(e);
   }
-  const { siteId } = await params;
-  const headers: HeadersInit = {
-    "X-User-ID": payload.sub,
-    "X-User-Role": payload.role,
-  };
-  await callBackend<unknown>(`/sites/${siteId}`, {
-    method: "DELETE",
-    headers,
-  });
-  return NextResponse.json(null, { status: 204 });
 }
 

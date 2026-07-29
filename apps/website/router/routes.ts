@@ -19,6 +19,13 @@ export const routes: RouteRecord[] = [
     name: "home",
     component: () => import("~/views/Home.vue"),
   },
+  { path: "/components", name: "components", component: () => import("~/views/Components.vue") },
+  { path: "/docs", name: "docs", component: () => import("~/views/Docs.vue") },
+  { path: "/docs/getting-started", name: "docs-getting-started", component: () => import("~/views/DocsGettingStarted.vue") },
+  { path: "/docs/architecture", name: "docs-architecture", component: () => import("~/views/DocsArchitecture.vue") },
+  { path: "/docs/api", name: "docs-api", component: () => import("~/views/DocsApi.vue") },
+  { path: "/examples", name: "examples", component: () => import("~/views/Examples.vue") },
+  { path: "/open-source", name: "open-source", component: () => import("~/views/OpenSource.vue") },
   {
     path: "/:site/:path*",
     name: "page",
@@ -36,20 +43,26 @@ export interface ResolvedRoute {
  */
 export function resolveRoute(currentPath: string): ResolvedRoute | null {
   const normalized = currentPath.replace(/^\/+|\/+$/g, "") || "";
-  // 根路径 -> home
-  if (normalized === "") {
-    const home = routes[0];
-    if (home) return { route: home, params: {} };
-    return null;
+
+  // Exact match routes (added first, checked first)
+  const exactRoutes = routes.filter(r => !r.path.includes(':'));
+  for (const r of exactRoutes) {
+    const pattern = r.path.replace(/^\/+|\/+$/g, "");
+    if (normalized === pattern) {
+      return { route: r, params: {} };
+    }
   }
+
+  // /:site or /:site/:path* -> page (catch-all)
   const segments = normalized.split("/").filter(Boolean);
-  // /:site 或 /:site/:path* -> page
   if (segments.length >= 1) {
-    const pageRoute = routes[1];
+    const pageRoute = routes.find(r => r.path === '/:site/:path*');
     if (!pageRoute) return null;
     const site = segments[0];
     const path = segments.length > 1 ? `/${segments.slice(1).join("/")}` : "/";
     return { route: pageRoute, params: { site, path } };
   }
-  return null;
+
+  // Fallback to home
+  return { route: routes[0], params: {} };
 }

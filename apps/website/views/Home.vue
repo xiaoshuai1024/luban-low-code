@@ -11,9 +11,9 @@ useHead({ title: 'Luban — Open-Source Low-Code Platform' });
         <div class="nav-links">
           <a href="#features">Features</a>
           <a href="#how">How it Works</a>
-          <a href="/default/components">Components</a>
-          <a href="/default/docs">Docs</a>
-          <a href="/default/examples">Examples</a>
+          <a href="/components">Components</a>
+          <a href="/docs">Docs</a>
+          <a href="/examples">Examples</a>
           <a href="https://github.com" target="_blank">GitHub</a>
           <a href="#" class="nav-cta">Get Started</a>
         </div>

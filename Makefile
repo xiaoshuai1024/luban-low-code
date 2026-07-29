@@ -1,4 +1,4 @@
-# luban-workspace — 全栈编排入口
+# luban-workspace — monorepo 全栈编排入口
 # 用法见 README.md 与 docs/SYSTEM_ARCHITECTURE.md（服务拓扑 SSOT）
 #
 # 🔴 Windows 用户须知：本仓所有 dev/test 命令统一通过 `make`，Windows 需先装 make：
@@ -16,6 +16,11 @@
 #   MySQL     :13306  (远端 192.168.100.248)
 #   Redis     :16379  (远端 192.168.100.248)
 # 本机禁起 docker / 中间件。
+#
+# monorepo 结构（原 git submodule 已合并为单一仓库）：
+#   apps/{engine,bff,website,backend-java,backend-go}   可部署应用
+#   packages/{ui,ai-assistant}                           库（ui 含独立 nx workspace）
+#   docs/architecture                                    架构文档
 
 BRANCH ?= main
 PKG_DIRS := packages/engine/luban packages/bff/luban-bff packages/ui/luban-ui packages/web/luban-website \
@@ -54,22 +59,26 @@ e2e-cross:
 e2e-report:
 	cd e2e && pnpm report
 
+# ============================================================
+# 依赖安装 / 构建
+# ============================================================
 
-# 首次：初始化所有 submodule
-clone-all:
-	@git submodule update --init --recursive
+# 安装所有 workspace 依赖（root apps/* + packages/ui 独立 workspace）
+install:
+	$(PNPM) install
+	cd packages/ui && $(PNPM) install
 
-# 同步 submodule 指针到各仓远端最新
-sync-submodules:
-	@git submodule update --remote --merge
+# 构建 ui 物料库（luban-base/luban-low-code dist，apps production build 的前置依赖）
+ui-build:
+	cd packages/ui && $(PNPM) nx run-many --projects=luban-base,luban-low-code --target=build
 
-# 各 submodule 同步默认分支（主仓 + 子仓 fetch+merge，不换分支）
-pull-all:
-	@bash scripts/git/pull-all.sh "$(BRANCH)"
+# 构建所有 TS 应用（engine/bff/website；依赖 ui-build 产出 dist）
+build: ui-build
+	$(PNPM) --filter './apps/*' build
 
-# 各 submodule commit + push 当前分支（不建 PR）
-push-all:
-	@bash scripts/git/push-all.sh
+# ============================================================
+# 测试 / lint / 覆盖率
+# ============================================================
 
 # 各 submodule + meta 仓 gh pr create
 pr-all:
@@ -95,9 +104,9 @@ test:
 lint:
 	@bash scripts/git/run-per-pkg.sh lint
 
-# 各包装依赖（TS pnpm install / Java mvn / Go go mod download）
-install-deps:
-	@bash scripts/git/run-per-pkg.sh install
+# 一键全栈覆盖率门禁（汇总表 + HTML 报告）
+test-coverage:
+	@bash scripts/coverage/coverage-summary.sh
 
 # ============================================================
 # 本地开发启动（单服务 / 全栈）—— 见 docs/SYSTEM_ARCHITECTURE.md
@@ -115,15 +124,15 @@ dev-java:
 
 # BFF（Next.js；显式 -p 3100，避免与 website 默认 3000 冲突）
 dev-bff:
-	cd packages/bff/luban-bff && pnpm exec next dev -p 3100
+	cd apps/bff && $(PNPM) exec next dev -p 3100
 
 # engine（Vue SPA；vite 默认 5173；/api proxy 已指向 bff:3100）
 dev-engine:
-	cd packages/engine/luban && pnpm run dev
+	cd apps/engine && $(PNPM) run dev
 
 # website（Nuxt SSR；nuxt 默认 3000；env 修正 bffBaseUrl 默认值错误→3100）
 dev-website:
-	cd packages/web/luban-website && NUXT_PUBLIC_BFF_BASE_URL=http://127.0.0.1:3100 pnpm exec nuxt dev
+	cd apps/website && NUXT_PUBLIC_BFF_BASE_URL=http://127.0.0.1:3100 $(PNPM) exec nuxt dev
 
 # --- 全栈一键启动 ---
 

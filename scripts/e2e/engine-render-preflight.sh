@@ -9,11 +9,11 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-ENGINE="$ROOT/packages/engine/luban"
+ENGINE="$ROOT/apps/engine"
 
 echo "[preflight] ① engine build（vue-tsc 类型检查 + vite 构建）..."
 cd "$ENGINE"
-if ! pnpm run build >/tmp/luban-engine-build.log 2>&1; then
+if ! pnpm --config.verifyDepsBeforeRun=false run build >/tmp/luban-engine-build.log 2>&1; then
   echo "[preflight] ✗ engine build 失败，见 /tmp/luban-engine-build.log"
   tail -30 /tmp/luban-engine-build.log
   exit 1
@@ -32,7 +32,7 @@ echo "[preflight] ✓ 无 console.error 残留"
 
 # 物料 schema 合规：luban-low-code 注册的物料须有 props 定义
 echo "[preflight] ③ 物料 schema 合规检查..."
-LOWCODE="$ROOT/packages/ui/luban-ui/packages/luban-low-code"
+LOWCODE="$ROOT/packages/ui/packages/luban-low-code"
 if [ -d "$LOWCODE/src" ]; then
   # 检查 registry 中注册的物料是否都有 props 类型/默认值（粗检：导出 register 调用）
   REG_COUNT=$(grep -rn "register" "$LOWCODE/src" 2>/dev/null | grep -v "node_modules" | wc -l | tr -d ' ')

@@ -44,7 +44,7 @@ alwaysApply: false
 
 | 借口 | 正确的排查/修复方式 |
 |------|-------------------|
-| "后端没启动" | `cd packages/backend/luban-backend && mvn spring-boot:run`（Java）或 `go run`（Go） |
+| "后端没启动" | `cd apps/backend-java && mvn spring-boot:run`（Java）或 `go run`（Go） |
 | "MySQL 不可达" | 各后端独立配置 MySQL，检查连接参数 |
 | "Redis/其它中间件不可用" | 排查端口、配置；必要时本地起容器 |
 | "缺少测试数据" | 通过 BFF/后端接口创建 / SQL INSERT / 测试 fixture |

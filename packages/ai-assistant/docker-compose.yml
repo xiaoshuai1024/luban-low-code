@@ -1,0 +1,64 @@
+# luban-ai-assistant 本地开发/测试编排（3 容器，无 GPU）
+# 容器：fastapi / postgres / qdrant
+#
+# 迁移说明（M0）：原 6 容器（含 etcd/milvus/minio/langfuse）已精简为新方案选型。
+# 生产部署见 deploy/deploy.sh（SSH 推到测试服务器）。本地：docker compose up -d --wait
+# 敏感字段从 .env（本地）或部署脚本 source .env.dev 注入，不入 compose 明文。
+
+services:
+  fastapi:
+    build: .
+    image: luban-ai-assistant:dev
+    container_name: luban-ai-fastapi
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # 服务发现（容器名）
+      POSTGRES_DSN: postgresql://luban:luban@postgres:5432/luban_ai
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: "6333"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: luban-ai-postgres
+    environment:
+      POSTGRES_USER: luban
+      POSTGRES_PASSWORD: luban
+      POSTGRES_DB: luban_ai
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U luban -d luban_ai"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    ports:
+      - "5432:5432"
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: luban-ai-qdrant
+    volumes:
+      - qdrantdata:/qdrant/storage
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/6333'"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  qdrantdata:

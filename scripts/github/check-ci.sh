@@ -5,7 +5,7 @@
 #
 # 用法（主仓根目录）:
 #   bash scripts/github/check-ci.sh
-#   bash scripts/github/check-ci.sh --repo packages/engine/luban
+#   bash scripts/github/check-ci.sh --repo apps/engine
 #   bash scripts/github/check-ci.sh --pr 123            # 仅查指定 PR 号（每个 repo 解析）
 #   bash scripts/github/check-ci.sh --watch             # 轮询直到所有完成（默认不轮询）
 #   bash scripts/github/check-ci.sh --branch feature/x  # 指定分支

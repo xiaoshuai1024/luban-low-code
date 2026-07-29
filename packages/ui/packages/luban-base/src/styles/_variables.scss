@@ -1,0 +1,73 @@
+// Theme variables — Luban prototype design language (indigo-cyan palette)
+$lb-primary: #4f46e5 !default;
+$lb-secondary: #7c3aed !default;
+$lb-surface: #f8fafc !default;
+$lb-error: #ef4444 !default;
+$lb-text-primary: #1e293b !default;
+$lb-text-secondary: #64748b !default;
+$lb-border-radius: 8px !default;
+$lb-spacing-unit: 8px !default;
+$lb-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !default;
+$lb-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -4px rgba(0, 0, 0, 0.04) !default;
+$lb-breakpoint-sm: 600px !default;
+$lb-breakpoint-md: 960px !default;
+$lb-breakpoint-lg: 1280px !default;
+
+// Semantic tokens
+$lb-bg: #ffffff !default;
+$lb-bg-muted: #f8fafc !default;
+$lb-bg-elevated: #ffffff !default;
+$lb-bg-dark: #0f172a !default;
+$lb-border: #e2e8f0 !default;
+$lb-border-strong: #cbd5e1 !default;
+$lb-text-on-dark: #f1f5f9 !default;
+$lb-text-heading: #1e293b !default;
+$lb-text-body: #334155 !default;
+$lb-text-muted: #64748b !default;
+$lb-accent: #06b6d4 !default;
+$lb-accent-contrast: #ffffff !default;
+$lb-success-bg: #ecfdf5 !default;
+$lb-success-text: #059669 !default;
+$lb-warning: #f59e0b !default;
+$lb-star-active: #f59e0b !default;
+$lb-star-inactive: #e2e8f0 !default;
+
+// === V2-T1 :root CSS 变量层（运行时换肤入口）===
+// 把 SCSS 变量同步到 :root 自定义属性，组件内用 var(--lb-*) 消费，
+// 运行时 applyTheme(tokens) 覆盖这些自定义属性即可整站换肤。
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  color: #1e293b;
+  line-height: 1.6;
+    --lb-primary: #{$lb-primary};
+  --lb-secondary: #{$lb-secondary};
+  --lb-surface: #{$lb-surface};
+  --lb-error: #{$lb-error};
+  --lb-text-primary: #{$lb-text-primary};
+  --lb-text-secondary: #{$lb-text-secondary};
+  --lb-border-radius: #{$lb-border-radius};
+  --lb-spacing-unit: #{$lb-spacing-unit};
+  --lb-shadow: #{$lb-shadow};
+  --lb-breakpoint-sm: #{$lb-breakpoint-sm};
+  --lb-breakpoint-md: #{$lb-breakpoint-md};
+  --lb-breakpoint-lg: #{$lb-breakpoint-lg};
+
+  // 语义化 token
+  --lb-bg: #{$lb-bg};
+  --lb-bg-muted: #{$lb-bg-muted};
+  --lb-bg-elevated: #{$lb-bg-elevated};
+  --lb-bg-dark: #{$lb-bg-dark};
+  --lb-border: #{$lb-border};
+  --lb-border-strong: #{$lb-border-strong};
+  --lb-text-on-dark: #{$lb-text-on-dark};
+  --lb-text-heading: #{$lb-text-heading};
+  --lb-text-body: #{$lb-text-body};
+  --lb-text-muted: #{$lb-text-muted};
+  --lb-accent: #{$lb-accent};
+  --lb-accent-contrast: #{$lb-accent-contrast};
+  --lb-success-bg: #{$lb-success-bg};
+  --lb-success-text: #{$lb-success-text};
+  --lb-warning: #{$lb-warning};
+  --lb-star-active: #{$lb-star-active};
+  --lb-star-inactive: #{$lb-star-inactive};
+}

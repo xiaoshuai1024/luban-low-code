@@ -9,9 +9,9 @@
 
 ## 涉及子模块与栈
 
-- <packages/engine/luban | TS | 目标覆盖率 85%>
-- <packages/backend/luban-backend | Java | 80%>
-- <packages/backend/luban-backend-go | Go | 75%>
+- <apps/engine | TS | 目标覆盖率 85%>
+- <apps/backend-java | Java | 80%>
+- <apps/backend-go | Go | 75%>
 
 ## 循环（重复直到功能完整）
 

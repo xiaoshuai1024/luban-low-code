@@ -44,9 +44,9 @@ PROD_API_BASE=https://TODO-luban-prod-api.example
 
 ```bash
 # Java 后端
-cd packages/backend/luban-backend && make prod
+cd apps/backend-java && make prod
 # Go 后端（按包内 prod 启动方式）
-cd packages/backend/luban-backend-go && <go-prod-cmd>
+cd apps/backend-go && <go-prod-cmd>
 ```
 
 **启动后必须**：
@@ -62,7 +62,7 @@ cd packages/backend/luban-backend-go && <go-prod-cmd>
 ### Step 4 — 重启 BFF（指向生产 API）
 
 ```bash
-cd packages/bff/luban-bff
+cd apps/bff
 PROD_API_BASE=https://TODO-luban-prod-api.example pnpm run dev
 ```
 
@@ -71,11 +71,11 @@ PROD_API_BASE=https://TODO-luban-prod-api.example pnpm run dev
 ### Step 5 — 重启 website / 引擎渲染（按需）
 
 ```bash
-cd packages/web/luban-website
+cd apps/website
 PROD_API_BASE=https://TODO-luban-prod-api.example pnpm run dev
 
 # 引擎渲染 dev（若需）
-cd packages/engine/luban
+cd apps/engine
 PROD_API_BASE=https://TODO-luban-prod-api.example pnpm run dev
 ```
 

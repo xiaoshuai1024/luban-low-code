@@ -1,0 +1,50 @@
+<mxfile host="app.diagrams.net" modified="2026-06-29T00:00:00.000Z" agent="ZCode" version="30.2.4">
+  <diagram name="留资提交闭环" id="lead-flow">
+    <mxGraphModel dx="1400" dy="820" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="720" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="luban · 留资提交闭环（C 端表单 → 加密去重 → 线索中心）" style="text;html=1;align=center;fontSize=18;fontStyle=1;fontColor=#1a1a2e;" vertex="1" parent="1"><mxGeometry x="300" y="15" width="800" height="32" as="geometry"/></mxCell>
+
+        <!-- 访客端 -->
+        <mxCell id="g_c" value="访客端（website SSR）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;verticalAlign=top;fontStyle=1;fontSize=12;" vertex="1" parent="1"><mxGeometry x="30" y="90" width="280" height="240" as="geometry"/></mxCell>
+        <mxCell id="c1" value="RuntimeRenderer 渲染整页&#10;（按 published schema）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#cdebcd;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1"><mxGeometry x="50" y="130" width="240" height="45" as="geometry"/></mxCell>
+        <mxCell id="c2" value="LubanLeadCapture 表单&#10;LubanPhoneInput / RegionSelect…" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#cdebcd;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1"><mxGeometry x="50" y="185" width="240" height="45" as="geometry"/></mxCell>
+        <mxCell id="c3" value="访客填写 → 字段校验&#10;emit('submit', fields)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#cdebcd;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1"><mxGeometry x="50" y="240" width="240" height="45" as="geometry"/></mxCell>
+        <mxCell id="c4" value="useLeadSubmit.submit(formId, contact)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#82b366;strokeColor=#2d6a2d;fontColor=#fff;fontSize=10;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="50" y="293" width="240" height="32" as="geometry"/></mxCell>
+
+        <!-- BFF -->
+        <mxCell id="g_bff" value="BFF :3100" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=top;fontStyle=1;fontSize=12;" vertex="1" parent="1"><mxGeometry x="370" y="90" width="240" height="240" as="geometry"/></mxCell>
+        <mxCell id="b1" value="POST /api/forms/:formId/submit&#10;（公开端点）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;fontSize=10;" vertex="1" parent="1"><mxGeometry x="390" y="130" width="200" height="45" as="geometry"/></mxCell>
+        <mxCell id="b2" value="限流 RateLimit&#10;（防刷）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;fontSize=10;" vertex="1" parent="1"><mxGeometry x="390" y="185" width="200" height="45" as="geometry"/></mxCell>
+        <mxCell id="b3" value="callBackend → Java&#10;/lead/forms/:id/submit" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#23445d;fontColor=#fff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="390" y="240" width="200" height="45" as="geometry"/></mxCell>
+
+        <!-- 后端 -->
+        <mxCell id="g_be" value="Java 后端（publicside + shared）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666;verticalAlign=top;fontStyle=1;fontSize=12;" vertex="1" parent="1"><mxGeometry x="670" y="90" width="700" height="240" as="geometry"/></mxCell>
+        <mxCell id="be1" value="DedupService&#10;去重指纹 sha256&#10;(formId:排序去重键)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6d0de;strokeColor=#996185;fontSize=9;" vertex="1" parent="1"><mxGeometry x="690" y="130" width="150" height="60" as="geometry"/></mxCell>
+        <mxCell id="be2" value="策略判定&#10;REJECT / MARK /&#10;OVERWRITE / MERGE" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6d0de;strokeColor=#996185;fontSize=9;" vertex="1" parent="1"><mxGeometry x="850" y="130" width="140" height="60" as="geometry"/></mxCell>
+        <mxCell id="be3" value="LeadCryptoService&#10;AES-GCM 加密&#10;手机/邮箱&#10;base64(IV‖ct+tag)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" vertex="1" parent="1"><mxGeometry x="1000" y="130" width="160" height="60" as="geometry"/></mxCell>
+        <mxCell id="be4" value="AntiSpamService&#10;反垃圾 + 时间窗" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6d0de;strokeColor=#996185;fontSize=9;" vertex="1" parent="1"><mxGeometry x="1170" y="130" width="180" height="60" as="geometry"/></mxCell>
+        <mxCell id="be5" value="落库 leads 表（密文存储）+ 写审计日志" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#82b366;strokeColor=#2d6a2d;fontColor=#fff;fontSize=10;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="690" y="210" width="660" height="32" as="geometry"/></mxCell>
+        <mxCell id="be6" value="生产强制 32B key；脱敏 138****1234 / a***@b.com" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;fontStyle=2;" vertex="1" parent="1"><mxGeometry x="690" y="250" width="660" height="28" as="geometry"/></mxCell>
+
+        <!-- 线索中心 -->
+        <mxCell id="g_op" value="运营线索中心（engine）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;verticalAlign=top;fontStyle=1;fontSize=12;" vertex="1" parent="1"><mxGeometry x="30" y="430" width="1340" height="180" as="geometry"/></mxCell>
+        <mxCell id="op1" value="📋 线索列表&#10;按状态/渠道/表单筛选&#10;去重后展示" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="1"><mxGeometry x="50" y="470" width="160" height="60" as="geometry"/></mxCell>
+        <mxCell id="op2" value="🔀 状态流转&#10;LeadStatusMachine&#10;NEW→ASSIGNED→&#10;CONTACTING→CONVERTED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="1"><mxGeometry x="230" y="470" width="180" height="60" as="geometry"/></mxCell>
+        <mxCell id="op3" value="🔓 查看联系方式&#10;AES-GCM 解密&#10;写 lead_audit_logs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1"><mxGeometry x="430" y="470" width="170" height="60" as="geometry"/></mxCell>
+        <mxCell id="op4" value="📊 数据分析&#10;PV/UV · 转化漏斗&#10;渠道归因看板" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1"><mxGeometry x="620" y="470" width="170" height="60" as="geometry"/></mxCell>
+        <mxCell id="op5" value="📤 CSV 导出" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="1"><mxGeometry x="810" y="470" width="130" height="60" as="geometry"/></mxCell>
+
+        <mxCell id="op_note" value="状态机强制合法转移（非法抛 409）；解密必写审计；全程按 siteId 租户隔离" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;fontStyle=2;" vertex="1" parent="1"><mxGeometry x="970" y="475" width="380" height="50" as="geometry"/></mxCell>
+
+        <!-- 连线 -->
+        <mxCell id="ec1" style="rounded=1;html=1;strokeColor=#2d6a2d;strokeWidth=2;endArrow=classic;" edge="1" parent="1" source="c4" target="b1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ec2" style="rounded=1;html=1;strokeColor=#6c8ebf;strokeWidth=2;endArrow=classic;" edge="1" parent="1" source="b3" target="be1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ec3" style="rounded=1;html=1;strokeColor=#2d6a2d;strokeWidth=2;endArrow=classic;" edge="1" parent="1" source="be5" target="op1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <mxCell id="footnote" value="🔒 安全亮点：字段级 AES-GCM 加密（非全表加密）· sha256 去重指纹 · 生产强制密钥 · 解密审计 · 状态机防越权流转 · 租户隔离。这是 luban 区别于普通表单工具的生产级安全设计。" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontStyle=2;" vertex="1" parent="1"><mxGeometry x="30" y="650" width="1340" height="40" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -33,9 +33,9 @@ description: 全自动审查循环：并行派发 ~20 个窄范围审查 subagen
 9. Go 测试（`go test`，与 Java IT 场景对齐）
 
 **引擎 / BFF / website (~6 个):**
-10. 引擎渲染核心（packages/engine/luban：零 console error、物料 schema、渲染正确性）
-11. BFF 聚合层（packages/bff/luban-bff：字段规范、错误体、与后端契约）
-12. website SSR（packages/web/luban-website：SSR 渲染、路由、与引擎渲染一致）
+10. 引擎渲染核心（apps/engine：零 console error、物料 schema、渲染正确性）
+11. BFF 聚合层（apps/bff：字段规范、错误体、与后端契约）
+12. website SSR（apps/website：SSR 渲染、路由、与引擎渲染一致）
 13. 物料库 luban-ui（props schema、token 使用、注册）
 14. 多端一致（引擎 vs website vs 各 client 渲染一致）
 15. TS 单测 + E2E（覆盖度、假绿、断言强度）
@@ -99,7 +99,7 @@ description: 全自动审查循环：并行派发 ~20 个窄范围审查 subagen
     { "round": 1, "reviewAgents": 4, "fixAgents": 3, "status": "completed" }
   ],
   "fileStates": {
-    "packages/backend/luban-backend/src/.../FileA.java": {
+    "apps/backend-java/src/.../FileA.java": {
       "status": "fixed",
       "consecutiveClean": 2,
       "lastRoundReviewed": 1,
@@ -241,12 +241,12 @@ git diff --name-only HEAD~{lubanReviewCommitCount} HEAD   # 主仓
 
 | 项目 | 测试命令 | 覆盖范围 |
 |------|---------|---------|
-| backend-java | `cd packages/backend/luban-backend && mvn -q verify` | Surefire 单测 + Failsafe 集成测 + JaCoCo 覆盖率门禁 |
-| backend-go | `cd packages/backend/luban-backend-go && go test ./... -race -cover` | 单测 + 竞态 + 覆盖率 |
-| engine | `cd packages/engine/luban && pnpm test && pnpm run build` | 单测 + 类型 + 构建 |
-| bff | `cd packages/bff/luban-bff && pnpm test && pnpm run build` | 单测 + 构建 |
-| ui | `cd packages/ui/luban-ui && pnpm test && pnpm run build` | 单测 + 构建 |
-| website | `cd packages/web/luban-website && pnpm test && pnpm run build` | 单测 + 构建 |
+| backend-java | `cd apps/backend-java && mvn -q verify` | Surefire 单测 + Failsafe 集成测 + JaCoCo 覆盖率门禁 |
+| backend-go | `cd apps/backend-go && go test ./... -race -cover` | 单测 + 竞态 + 覆盖率 |
+| engine | `cd apps/engine && pnpm test && pnpm run build` | 单测 + 类型 + 构建 |
+| bff | `cd apps/bff && pnpm test && pnpm run build` | 单测 + 构建 |
+| ui | `cd packages/ui && pnpm test && pnpm run build` | 单测 + 构建 |
+| website | `cd apps/website && pnpm test && pnpm run build` | 单测 + 构建 |
 
 每个项目独立判定，**任一项目失败即阻断提交**。项目间可并行执行以压缩 wall-clock time。仅跑有改动的项目，无改动的项目跳过。
 
@@ -262,8 +262,8 @@ git diff --name-only HEAD~{lubanReviewCommitCount} HEAD   # 主仓
 
 退出前跑一次 P0 E2E 作为最终确认，**E2E 失败同样阻断提交**：
 
-- 引擎渲染：`cd packages/engine/luban && pnpm run test:e2e`
-- website：`cd packages/web/luban-website && pnpm run test:e2e`（要求 BFF + 后端已启动）
+- 引擎渲染：`cd apps/engine && pnpm run test:e2e`
+- website：`cd apps/website && pnpm run test:e2e`（要求 BFF + 后端已启动）
 
 > 按 CLAUDE.md「E2E 测试禁止跳过」硬约束：E2E 因环境限制（Playwright 不可用、后端未启动等）无法运行时，**禁止自动跳过、禁止写 `expect(true).toBe(true)` 占位测试**。记录到状态文件，收敛报告醒目标注 `🔴 E2E 未执行（环境不可用）`，**不提交**，等待用户处理环境后重跑。
 
@@ -343,8 +343,8 @@ git diff --name-only HEAD~{lubanReviewCommitCount} HEAD   # 主仓
 ### 第一层：编译验证（快速门禁，每个修复 agent 必跑）
 
 1. 在对应包根执行编译验证：
-   - Java 后端改动：`cd packages/backend/luban-backend && mvn -q compile`
-   - Go 后端改动：`cd packages/backend/luban-backend-go && go build ./...`
+   - Java 后端改动：`cd apps/backend-java && mvn -q compile`
+   - Go 后端改动：`cd apps/backend-go && go build ./...`
    - TS 包改动：`cd packages/<pkg> && pnpm run build`
 2. 若编译失败 → 立即派发新的修复 agent，带入编译错误信息
 3. **最多重试 3 次**，仍失败则标记为 🔴 阻断问题进入下一轮

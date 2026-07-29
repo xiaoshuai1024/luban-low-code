@@ -1,0 +1,8 @@
+node_modules
+dist
+pnpm-lock.yaml
+.git
+cypress/screenshots
+cypress/videos
+.env*
+README.md

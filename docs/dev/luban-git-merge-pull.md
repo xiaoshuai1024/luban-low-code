@@ -24,12 +24,12 @@ squash 合并重写 commit 历史（新 hash），原 feature 分支 HEAD 不进
 gh pr merge <num> --repo <engine> --squash --delete-branch
 
 # 2. 在 meta 仓更新 engine 子仓指针到稳定主干 commit
-cd packages/engine/luban
+cd apps/engine
 git fetch origin master
 git checkout master
 git reset --hard origin/master   # 现在 HEAD = a8b169a（含 squash 内容）
 cd -  # 回 meta
-git add packages/engine/luban
+git add apps/engine
 git commit -m "chore: engine 指针更新至 master(squash 合并 a8b169a)"
 git push                          # 更新 meta PR
 
@@ -48,7 +48,7 @@ gh pr merge <num> --squash --delete-branch
 ## 经验：本地主仓在 feature 分支时如何注册新 submodule
 
 ### 场景
-main 已合并了新 submodule（如 `packages/ai/luban-ai-assistant`），但本地主仓当前在另一个 feature 分支（有未提交改动），该分支的 `.gitmodules` 和 index 都没有新 submodule 条目。直接 `git submodule update --init` 报 `pathspec did not match`。
+main 已合并了新 submodule（如 `packages/ai-assistant`），但本地主仓当前在另一个 feature 分支（有未提交改动），该分支的 `.gitmodules` 和 index 都没有新 submodule 条目。直接 `git submodule update --init` 报 `pathspec did not match`。
 
 ### 根因
 submodule 的注册由两部分构成：①`.gitmodules` 条目（声明）②index 中的 gitlink（mode 160000 + commit 指针）。feature 分支两者都没有，`git submodule update` 不知道要拉什么。
@@ -58,8 +58,8 @@ submodule 的注册由两部分构成：①`.gitmodules` 条目（声明）②in
 
 ```bash
 git checkout main -- .gitmodules
-git checkout main -- packages/ai/luban-ai-assistant   # 取 gitlink
-git submodule update --init packages/ai/luban-ai-assistant
+git checkout main -- packages/ai-assistant   # 取 gitlink
+git submodule update --init packages/ai-assistant
 ```
 
 之后 `git diff --cached` 只显示 `.gitmodules` + gitlink 两项，单独 commit 即可，不影响 feature 分支的其他工作。

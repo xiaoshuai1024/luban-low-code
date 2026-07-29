@@ -8,7 +8,7 @@ supersededBy: luban-ai-assistant-2026
 program: true
 taskGraph: docs/superpowers/tasks/luban-ai-assistant-program.json
 contractSource: plan-template 命令体 + writing-plans SKILL + PLAN_WRITING_CONTRACT.md
-scope: 为 luban 低代码平台建独立 AI 助手子项目（Python 核心 + Vue3 前端集成），submodule 引入 packages/ai/luban-ai-assistant
+scope: 为 luban 低代码平台建独立 AI 助手子项目（Python 核心 + Vue3 前端集成），submodule 引入 packages/ai-assistant
 split: 拆 plan-1（生成/编辑+引导+切换+集成）/ plan-2（设计稿转页面多模态）；本文件为聚合 program
 branches: ai 子仓 feature/luban-ai-assistant-<plan>；engine 子仓 feature/luban-ai-assistant-<plan> 同名分支
 ---
@@ -19,7 +19,7 @@ branches: ai 子仓 feature/luban-ai-assistant-<plan>；engine 子仓 feature/lu
 
 ## 1. 项目定位
 
-为 luban 低代码平台建独立 AI 助手子项目 `luban-ai-assistant`，通过 git submodule 引入 `packages/ai/luban-ai-assistant`（当前空目录，默认分支 main，可单独维护）。
+为 luban 低代码平台建独立 AI 助手子项目 `luban-ai-assistant`，通过 git submodule 引入 `packages/ai-assistant`（当前空目录，默认分支 main，可单独维护）。
 
 - **语言分栈**：AI 核心 Python（生产级），前端画布集成 TS/Vue3 消费流式 API
 - **部署**：用户测试服务器（已装 Docker，无 GPU），Docker Compose 一键起 6 容器

@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Luban — Open-Source Low-Code Platform</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --c-primary: #4f46e5;
+    --c-primary-dark: #4338ca;
+    --c-primary-light: #818cf8;
+    --c-accent: #06b6d4;
+    --c-bg: #ffffff;
+    --c-bg-alt: #f8fafc;
+    --c-bg-dark: #0f172a;
+    --c-text: #1e293b;
+    --c-text-muted: #64748b;
+    --c-text-inv: #f1f5f9;
+    --c-border: #e2e8f0;
+    --radius: 12px;
+    --shadow: 0 1px 3px 0 rgba(0,0,0,.04), 0 1px 2px -1px rgba(0,0,0,.04);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,.06), 0 4px 6px -4px rgba(0,0,0,.04);
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', sans-serif; color: var(--c-text); background: var(--c-bg); line-height: 1.6; }
+  a { color: var(--c-primary); text-decoration: none; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+  .section { padding: 100px 0; }
+
+  /* Nav */
+  .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(255,255,255,.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--c-border); }
+  .nav .container { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+  .nav-logo { font-size: 22px; font-weight: 800; color: var(--c-primary); letter-spacing: -.5px; }
+  .nav-links { display: flex; gap: 32px; align-items: center; }
+  .nav-links a { font-size: 14px; font-weight: 500; color: var(--c-text-muted); transition: color .15s; }
+  .nav-links a:hover { color: var(--c-text); }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: all .15s; text-decoration: none; }
+  .btn-primary { background: var(--c-primary); color: #fff; }
+  .btn-primary:hover { background: var(--c-primary-dark); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(79,70,229,.3); }
+  .btn-outline { background: transparent; border: 1.5px solid var(--c-border); color: var(--c-text); }
+  .btn-outline:hover { border-color: var(--c-primary); color: var(--c-primary); }
+  .btn-ghost { background: transparent; color: var(--c-text-muted); }
+  .btn-lg { padding: 14px 32px; font-size: 16px; border-radius: 10px; }
+
+  /* Hero */
+  .hero { padding: 160px 0 100px; text-align: center; position: relative; overflow: hidden; }
+  .hero::before { content: ''; position: absolute; top: -50%; left: -20%; width: 140%; height: 200%; background: radial-gradient(ellipse at 50% 0%, rgba(79,70,229,.08) 0%, transparent 50%), radial-gradient(ellipse at 80% 20%, rgba(6,182,212,.06) 0%, transparent 40%); pointer-events: none; }
+  .hero-badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px; border-radius: 100px; background: rgba(79,70,229,.08); color: var(--c-primary); font-size: 13px; font-weight: 600; margin-bottom: 24px; }
+  .hero-badge-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c-primary); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .5; transform: scale(1.3); } }
+  .hero h1 { font-size: 56px; font-weight: 800; letter-spacing: -1.5px; line-height: 1.15; margin-bottom: 20px; background: linear-gradient(135deg, var(--c-primary) 0%, var(--c-accent) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .hero p { font-size: 18px; color: var(--c-text-muted); max-width: 640px; margin: 0 auto 40px; line-height: 1.7; }
+  .hero-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+  .hero-stats { display: flex; gap: 48px; justify-content: center; margin-top: 64px; }
+  .hero-stat { text-align: center; }
+  .hero-stat-num { font-size: 32px; font-weight: 700; color: var(--c-text); }
+  .hero-stat-label { font-size: 13px; color: var(--c-text-muted); margin-top: 4px; }
+
+  /* Section Title */
+  .section-label { display: inline-block; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--c-primary); margin-bottom: 12px; }
+  .section-title { font-size: 36px; font-weight: 800; letter-spacing: -.5px; line-height: 1.25; margin-bottom: 16px; }
+  .section-desc { font-size: 17px; color: var(--c-text-muted); max-width: 600px; line-height: 1.7; }
+
+  /* Features Grid */
+  .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 48px; }
+  .feature-card { padding: 32px; border-radius: var(--radius); border: 1px solid var(--c-border); background: var(--c-bg); transition: all .2s; }
+  .feature-card:hover { border-color: var(--c-primary-light); box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+  .feature-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 20px; }
+  .feature-icon.purple { background: #eef2ff; color: var(--c-primary); }
+  .feature-icon.cyan { background: #ecfeff; color: var(--c-accent); }
+  .feature-icon.amber { background: #fffbeb; color: #d97706; }
+  .feature-icon.green { background: #ecfdf5; color: #059669; }
+  .feature-icon.rose { background: #fff1f2; color: #e11d48; }
+  .feature-icon.blue { background: #eff6ff; color: #2563eb; }
+  .feature-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+  .feature-card p { font-size: 14px; color: var(--c-text-muted); line-height: 1.6; }
+
+  /* Code showcase */
+  .code-show { background: var(--c-bg-dark); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-lg); }
+  .code-show-header { display: flex; gap: 8px; padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,.08); }
+  .code-show-dot { width: 12px; height: 12px; border-radius: 50%; }
+  .code-show-dot.red { background: #ef4444; } .code-show-dot.yellow { background: #eab308; } .code-show-dot.green { background: #22c55e; }
+  .code-show pre { padding: 24px; margin: 0; overflow-x: auto; font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace; font-size: 13px; line-height: 1.7; color: #e2e8f0; }
+  .code-show .key { color: #93c5fd; } .code-show .str { color: #86efac; } .code-show .num { color: #fde68a; } .code-show .comment { color: #64748b; }
+
+  /* Steps */
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; margin-top: 48px; }
+  .step { text-align: center; position: relative; }
+  .step:not(:last-child)::after { content: ''; position: absolute; top: 28px; left: calc(50% + 40px); width: calc(100% - 80px); height: 2px; background: var(--c-border); }
+  .step-num { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--c-primary); color: #fff; font-size: 22px; font-weight: 700; margin: 0 auto 16px; }
+  .step h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+  .step p { font-size: 14px; color: var(--c-text-muted); }
+
+  /* Components Grid */
+  .comp-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 48px; }
+  .comp-item { padding: 14px 16px; border-radius: 8px; border: 1px solid var(--c-border); font-size: 13px; font-weight: 500; text-align: center; transition: all .15s; background: var(--c-bg); cursor: default; }
+  .comp-item:hover { border-color: var(--c-primary); color: var(--c-primary); background: #eef2ff; }
+
+  /* Two column */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; }
+
+  /* Social proof */
+  .quotes { margin-top: 48px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .quote { padding: 28px; border-radius: var(--radius); border: 1px solid var(--c-border); background: var(--c-bg); }
+  .quote p { font-size: 14px; color: var(--c-text-muted); line-height: 1.7; font-style: italic; }
+  .quote-author { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
+  .quote-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--c-primary); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; font-weight: 600; }
+  .quote-name { font-size: 14px; font-weight: 600; } .quote-role { font-size: 12px; color: var(--c-text-muted); }
+
+  /* CTA */
+  .cta { text-align: center; }
+  .cta-box { background: linear-gradient(135deg, var(--c-primary) 0%, #7c3aed 100%); border-radius: 24px; padding: 64px; color: #fff; }
+  .cta-box h2 { font-size: 36px; font-weight: 800; margin-bottom: 16px; }
+  .cta-box p { font-size: 17px; opacity: .85; max-width: 500px; margin: 0 auto 32px; }
+  .cta-box .btn-primary { background: #fff; color: var(--c-primary); }
+  .cta-box .btn-primary:hover { background: #f1f5f9; }
+  .cta-box .btn-outline { border-color: rgba(255,255,255,.3); color: #fff; }
+  .cta-box .btn-outline:hover { background: rgba(255,255,255,.1); border-color: #fff; }
+
+  /* Footer */
+  .footer { background: var(--c-bg-dark); color: var(--c-text-inv); padding: 64px 0 32px; }
+  .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 48px; }
+  .footer h4 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; color: rgba(255,255,255,.5); }
+  .footer a { display: block; font-size: 14px; color: rgba(255,255,255,.7); margin-bottom: 10px; transition: color .15s; }
+  .footer a:hover { color: #fff; }
+  .footer-bottom { margin-top: 48px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,.08); font-size: 13px; color: rgba(255,255,255,.4); display: flex; justify-content: space-between; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .hero h1 { font-size: 36px; }
+    .features-grid, .steps, .comp-grid, .two-col, .quotes, .footer-grid { grid-template-columns: 1fr; }
+    .nav-links { display: none; }
+    .hero-stats { flex-wrap: wrap; gap: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container">
+    <div class="nav-logo">Luban</div>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#how">How it Works</a>
+      <a href="#components">Components</a>
+      <a href="#templates">Templates</a>
+      <a href="/docs">Docs</a>
+      <a href="https://github.com">GitHub</a>
+      <a href="#" class="btn btn-primary">Get Started</a>
+    </div>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="container">
+    <div class="hero-badge"><span class="hero-badge-dot"></span> v1.0 Now Available — Open Source</div>
+    <h1>Build Apps at the Speed<br>of Thought</h1>
+    <p>Drag-and-drop visual builder with 75+ Material Design components. Connect to any database, deploy anywhere. The open-source low-code platform for developers who want to ship faster.</p>
+    <div class="hero-actions">
+      <a href="/docs/getting-started" class="btn btn-primary btn-lg">Get Started Free →</a>
+      <a href="/components" class="btn btn-outline btn-lg">Browse Components</a>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="hero-stat-num">75+</div><div class="hero-stat-label">Components</div></div>
+      <div class="hero-stat"><div class="hero-stat-num">Vue 3</div><div class="hero-stat-label">Framework</div></div>
+      <div class="hero-stat"><div class="hero-stat-num">MIT</div><div class="hero-stat-label">License</div></div>
+      <div class="hero-stat"><div class="hero-stat-num">SSR</div><div class="hero-stat-label">Rendering</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="features">
+  <div class="container">
+    <div style="text-align:center"><span class="section-label">Platform</span></div>
+    <h2 class="section-title" style="text-align:center">Everything you need to build<br>modern web applications</h2>
+    <p class="section-desc" style="text-align:center;margin:0 auto">From simple landing pages to complex dashboards — all powered by a unified visual builder.</p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon purple">🎨</div>
+        <h3>Visual Builder</h3>
+        <p>Drag-and-drop interface with real-time preview. No coding required to create beautiful layouts.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon cyan">📚</div>
+        <h3>75+ Components</h3>
+        <p>Buttons, forms, tables, charts, modals — a complete Material Design component library.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon amber">⚡</div>
+        <h3>SSR Ready</h3>
+        <p>Nuxt Nitro server-side rendering. SEO-friendly, fast loading, perfect for public sites.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">🤖</div>
+        <h3>AI Powered</h3>
+        <p>Describe your page in natural language. DeepSeek generates the schema — confirm and publish.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon rose">📊</div>
+        <h3>Data Driven</h3>
+        <p>Connect MySQL, PostgreSQL, or REST APIs. Bind data to components with a visual query builder.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon blue">🌐</div>
+        <h3>Multi-Platform</h3>
+        <p>Build once, render everywhere. Desktop, tablet, mobile — responsive breakpoints built in.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background: var(--c-bg-alt)" id="how">
+  <div class="container">
+    <div class="two-col">
+      <div>
+        <span class="section-label">How it Works</span>
+        <h2 class="section-title">From idea to live page<br>in three steps</h2>
+        <p class="section-desc" style="margin-bottom:32px">No build tools, no deployment pipelines — everything happens in the browser.</p>
+        <div style="display:flex;flex-direction:column;gap:24px">
+          <div style="display:flex;gap:16px">
+            <div style="flex-shrink:0;width:40px;height:40px;border-radius:50%;background:var(--c-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700">1</div>
+            <div><h4 style="font-weight:700;margin-bottom:4px">Drag Components</h4><p style="font-size:14px;color:var(--c-text-muted)">Pick from 75+ components in the palette. Drag onto the canvas. Each component has sensible defaults so you can see results instantly.</p></div>
+          </div>
+          <div style="display:flex;gap:16px">
+            <div style="flex-shrink:0;width:40px;height:40px;border-radius:50%;background:var(--c-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700">2</div>
+            <div><h4 style="font-weight:700;margin-bottom:4px">Configure Properties</h4><p style="font-size:14px;color:var(--c-text-muted)">Customize styles, bind data, add interactions — all in the right panel. Changes reflect immediately on the canvas.</p></div>
+          </div>
+          <div style="display:flex;gap:16px">
+            <div style="flex-shrink:0;width:40px;height:40px;border-radius:50%;background:var(--c-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700">3</div>
+            <div><h4 style="font-weight:700;margin-bottom:4px">Publish</h4><p style="font-size:14px;color:var(--c-text-muted)">One click to deploy. Your page runs on our SSR engine — fast, SEO-optimized, and always online.</p></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="code-show">
+          <div class="code-show-header">
+            <span class="code-show-dot red"></span><span class="code-show-dot yellow"></span><span class="code-show-dot green"></span>
+          </div>
+          <pre><span class="comment">// This page is defined as a JSON schema</span>
+{
+  <span class="key">"root"</span>: {
+    <span class="key">"type"</span>: <span class="str">"LubanContainer"</span>,
+    <span class="key">"children"</span>: [
+      {
+        <span class="key">"type"</span>: <span class="str">"LubanNavbar"</span>,
+        <span class="key">"props"</span>: { <span class="key">"title"</span>: <span class="str">"My Site"</span> }
+      },
+      {
+        <span class="key">"type"</span>: <span class="str">"LubanHero"</span>,
+        <span class="key">"props"</span>: {
+          <span class="key">"title"</span>: <span class="str">"Welcome"</span>,
+          <span class="key">"subtitle"</span>: <span class="str">"Built with Luban"</span>
+        }
+      },
+      {
+        <span class="key">"type"</span>: <span class="str">"LubanFeatureGrid"</span>,
+        <span class="key">"props"</span>: { <span class="key">"items"</span>: [...] }
+      },
+      {
+        <span class="key">"type"</span>: <span class="str">"LubanFooter"</span>,
+        <span class="key">"props"</span>: { <span class="key">"copyright"</span>: <span class="str">"2026"</span> }
+      }
+    ]
+  }
+}</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="components">
+  <div class="container">
+    <div style="text-align:center">
+      <span class="section-label">Component Library</span>
+      <h2 class="section-title">75+ production-ready<br>Material Design components</h2>
+      <p class="section-desc" style="margin:0 auto">Every component is self-contained, customizable, and works across all screen sizes.</p>
+    </div>
+    <div class="comp-grid">
+      <div class="comp-item">🧭 Navbar</div><div class="comp-item">🦸 Hero</div><div class="comp-item">🎯 CTA</div><div class="comp-item">📊 Stats</div>
+      <div class="comp-item">📋 Table</div><div class="comp-item">📝 Form</div><div class="comp-item">✏️ Input</div><div class="comp-item">✅ Select</div>
+      <div class="comp-item">⬜ Button</div><div class="comp-item">📄 Card</div><div class="comp-item">🖼 Image</div><div class="comp-item">🔗 Link</div>
+      <div class="comp-item">📑 Tabs</div><div class="comp-item">📐 Row/Col</div><div class="comp-item">🧩 Container</div><div class="comp-item">🔔 Modal</div>
+      <div class="comp-item">📌 Drawer</div><div class="comp-item">💬 Toast</div><div class="comp-item">⚠️ Alert</div><div class="comp-item">❓ FAQ</div>
+      <div class="comp-item">⭐ Rating</div><div class="comp-item">🔄 Carousel</div><div class="comp-item">📈 Gallery</div><div class="comp-item">💳 Pricing</div>
+      <div class="comp-item">📝 Markdown</div><div class="comp-item">💻 CodeBlock</div><div class="comp-item">🪜 Steps</div><div class="comp-item">⬆ BackToTop</div>
+      <div class="comp-item">🔢 Countdown</div><div class="comp-item">🎫 Coupon</div><div class="comp-item">🏷 Tag</div><div class="comp-item">↔ Divider</div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background: var(--c-bg-dark); color: var(--c-text-inv)" id="templates">
+  <div class="container">
+    <div style="text-align:center">
+      <span class="section-label" style="color:var(--c-primary-light)">Use Cases</span>
+      <h2 class="section-title" style="color:#fff">Templates for every need</h2>
+      <p style="font-size:17px;color:rgba(255,255,255,.6);max-width:600px;margin:0 auto">Start with a template and customize to fit your brand. All templates are built with Luban components.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:48px">
+      <div style="padding:32px;border-radius:var(--radius);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);transition:.2s">
+        <div style="font-size:32px;margin-bottom:16px">🏪</div>
+        <h3 style="font-size:17px;font-weight:700;margin-bottom:8px;color:#fff">E-Commerce</h3>
+        <p style="font-size:14px;color:rgba(255,255,255,.5)">Product grids, shopping cart, checkout flow, order tracking — all built with native components.</p>
+      </div>
+      <div style="padding:32px;border-radius:var(--radius);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);transition:.2s">
+        <div style="font-size:32px;margin-bottom:16px">📊</div>
+        <h3 style="font-size:17px;font-weight:700;margin-bottom:8px;color:#fff">Admin Dashboard</h3>
+        <p style="font-size:14px;color:rgba(255,255,255,.5)">Data tables, charts, form CRUD, user management — everything an internal tool needs.</p>
+      </div>
+      <div style="padding:32px;border-radius:var(--radius);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);transition:.2s">
+        <div style="font-size:32px;margin-bottom:16px">📢</div>
+        <h3 style="font-size:17px;font-weight:700;margin-bottom:8px;color:#fff">Marketing Site</h3>
+        <p style="font-size:14px;color:rgba(255,255,255,.5)">Hero banners, feature grids, pricing tables, testimonials — launch your product site in minutes.</p>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:40px">
+      <a href="/examples" class="btn btn-outline" style="border-color:rgba(255,255,255,.2);color:#fff">View all templates →</a>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="testimonials">
+  <div class="container">
+    <div style="text-align:center">
+      <span class="section-label">Testimonials</span>
+      <h2 class="section-title">Trusted by developers<br>worldwide</h2>
+    </div>
+    <div class="quotes">
+      <div class="quote">
+        <p>"Switched from hand-coding to Luban for our internal tools. The visual builder saved us weeks of development time."</p>
+        <div class="quote-author"><div class="quote-avatar">Z</div><div><div class="quote-name">Zhang Wei</div><div class="quote-role">Full-stack Developer</div></div></div>
+      </div>
+      <div class="quote">
+        <p>"The AI page generation is surprisingly good. I described a dashboard in plain text and got a working prototype in seconds."</p>
+        <div class="quote-author"><div class="quote-avatar">L</div><div><div class="quote-name">Li Ming</div><div class="quote-role">Product Manager</div></div></div>
+      </div>
+      <div class="quote">
+        <p>"Having 75+ Material Design components ready to use is a huge time saver. The SSR engine is fast and reliable."</p>
+        <div class="quote-author"><div class="quote-avatar">W</div><div><div class="quote-name">Wang Fang</div><div class="quote-role">Tech Lead</div></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section cta">
+  <div class="container">
+    <div class="cta-box">
+      <h2>Ready to build something great?</h2>
+      <p>Start building with Luban today. It's free, open-source, and takes less than 2 minutes to get started.</p>
+      <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
+        <a href="/docs/getting-started" class="btn btn-primary btn-lg">Get Started Free →</a>
+        <a href="https://github.com" class="btn btn-outline btn-lg">View on GitHub</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <h3 style="font-size:20px;font-weight:800;color:#fff;margin-bottom:12px">Luban</h3>
+        <p style="font-size:14px;color:rgba(255,255,255,.5);line-height:1.7">Open-source low-code platform. Build web apps visually with 75+ Material Design components. Vue 3 + Spring Boot + MIT.</p>
+      </div>
+      <div><h4>Product</h4><a href="#features">Features</a><a href="#components">Components</a><a href="#templates">Templates</a><a href="/docs/api">API</a></div>
+      <div><h4>Resources</h4><a href="/docs">Documentation</a><a href="/docs/getting-started">Getting Started</a><a href="/docs/architecture">Architecture</a><a href="/examples">Examples</a></div>
+      <div><h4>Community</h4><a href="/open-source">Open Source</a><a href="https://github.com">GitHub</a><a href="/open-source#roadmap">Roadmap</a></div>
+      <div><h4>Legal</h4><a href="/open-source">MIT License</a></div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 Luban. Built with Luban. All rights reserved.</span>
+      <span>Made with ❤️ for the developer community</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

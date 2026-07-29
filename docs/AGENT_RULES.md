@@ -80,9 +80,9 @@
 
 ---
 
-## 5. 后端规则（Java — `packages/backend/luban-backend`）
+## 5. 后端规则（Java — `apps/backend-java`）
 
-- **本地运行**：修改 `packages/backend/luban-backend/`（Java、Flyway/迁移脚本、`application*.yml`、资源等）后，**必须重启**本地 Spring Boot（结束占用 `server.port` 的旧进程后再启动；常见 `SPRING_PROFILES_ACTIVE=local` + `mvn spring-boot:run`）。
+- **本地运行**：修改 `apps/backend-java/`（Java、Flyway/迁移脚本、`application*.yml`、资源等）后，**必须重启**本地 Spring Boot（结束占用 `server.port` 的旧进程后再启动；常见 `SPRING_PROFILES_ACTIVE=local` + `mvn spring-boot:run`）。
 - **接口与表结构**：新增或变更 REST 字段时须与迁移脚本及实际连接库对齐；禁止「缺列仍 200、数据没落库」。
 - **日志**：
   - 第三方 API 调用必须打日志（INFO 摘要 + WARN/ERROR 失败日志）
@@ -105,7 +105,7 @@
 - **包管理**：所有 TS 仓统一 **pnpm**（`pnpm install`；勿默认使用 `npm install`）；禁用 yarn
 - **依赖脚本**：不要使用 `npx`，命令须声明在 `dependencies` / `devDependencies`
 - **枚举显示**：禁止直接显示英文原值，必须通过中文映射函数渲染（见 [`luban-frontend-ux-enum.md`](../.agents/rules/luban-frontend-ux-enum.md)）
-- **组件库**：统一使用 `packages/ui/luban-ui` 注册的物料，禁止各端自造重复组件
+- **组件库**：统一使用 `packages/ui` 注册的物料，禁止各端自造重复组件
 - **覆盖率**：
   - engine / bff / website：85% line / 75% branch
   - luban-ui 物料库：90% line / 80% branch
@@ -141,7 +141,7 @@ luban 通过低代码引擎驱动多端渲染（web / electron / flutter），�
 
 **这是 luban 平台的核心约束**（见 `CLAUDE.md` 硬约束 2）。
 
-凡改动 `packages/engine/luban/` 或 `packages/ui/luban-ui/`：
+凡改动 `apps/engine/` 或 `packages/ui/`：
 
 - **构建门禁**：合并前 `pnpm run build` 必须通过
 - **渲染零 console error**：交付后引擎渲染器不得出现因本次改动引入的 console error

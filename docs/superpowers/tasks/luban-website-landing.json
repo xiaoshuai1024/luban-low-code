@@ -1,0 +1,22 @@
+{
+  "$schema": "./task-graph-schema.json",
+  "featureId": "luban-website-landing",
+  "title": "鲁班官网（自建产品官网+组件开发）",
+  "createdAt": "2026-07-28",
+  "tasks": [
+    { "id": "T1", "title": "[ui] LubanMarkdown 物料（markdown-it + highlight.js）", "dependsOn": [], "group": "ui", "owner": "ui" },
+    { "id": "T2", "title": "[ui] LubanCodeBlock 物料（语法高亮+复制按钮）", "dependsOn": [], "group": "ui", "owner": "ui" },
+    { "id": "T3", "title": "[ui] LubanAlert 物料（info/warning/error/success callout）", "dependsOn": [], "group": "ui", "owner": "ui" },
+    { "id": "T4", "title": "[ui] LubanSteps 物料（水平/垂直步骤流程）", "dependsOn": [], "group": "ui", "owner": "ui" },
+    { "id": "T5", "title": "[ui] LubanBackToTop 物料（浮动回到顶部按钮）", "dependsOn": [], "group": "ui", "owner": "ui" },
+    { "id": "T6", "title": "[ui] 新组件单测+TDD（vitest 覆盖）", "dependsOn": ["T1","T2","T3","T4","T5"], "group": "ui", "owner": "ui" },
+    { "id": "T7", "title": "[ui] pnpm build 物料库验证", "dependsOn": ["T6"], "group": "ui", "owner": "ui" },
+    { "id": "T8", "title": "[engine] 引擎构建验证（新物料自动注册+引擎渲染零新增 console error）", "dependsOn": ["T7"], "group": "engine", "owner": "engine" },
+    { "id": "T9", "title": "[website] 创建官网首页 page schema（/）", "dependsOn": ["T8"], "group": "website", "owner": "website" },
+    { "id": "T10", "title": "[website] 创建组件展示页 schema（/components）", "dependsOn": ["T8"], "group": "website", "owner": "website" },
+    { "id": "T11", "title": "[website] 创建文档中心+子页 schema（/docs + /docs/getting-started + /docs/architecture + /docs/api）", "dependsOn": ["T8"], "group": "website", "owner": "website" },
+    { "id": "T12", "title": "[website] 创建示例+开源页 schema（/examples + /open-source）", "dependsOn": ["T8"], "group": "website", "owner": "website" },
+    { "id": "T13", "title": "[E2E] 新建 website 渲染 E2E（官网首页+组件页+文档页快照）", "dependsOn": ["T9","T10","T11","T12"], "group": "engine", "owner": "engine" },
+    { "id": "T14", "title": "[E2E] 全量 E2E 回归（24 已有 + 新增 website E2E）", "dependsOn": ["T13"], "group": "engine", "owner": "engine" }
+  ]
+}

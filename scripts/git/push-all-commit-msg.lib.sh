@@ -41,15 +41,15 @@ push_all_read_requirement_title() {
   fi
 }
 
-# label 是子模块路径（如 packages/engine/luban）或 root
+# label 是子模块路径（如 apps/engine）或 root
 push_all_scope_for_label() {
   case "$1" in
     packages/engine/*)  echo "engine" ;;
     packages/bff/*)     echo "bff" ;;
     packages/ui/*)      echo "ui" ;;
     packages/web/*)     echo "website" ;;
-    packages/backend/luban-backend-go) echo "backend-go" ;;
-    packages/backend/luban-backend)    echo "backend" ;;
+    apps/backend-go) echo "backend-go" ;;
+    apps/backend-java)    echo "backend" ;;
     packages/backend/*) echo "backend" ;;
     packages/docs/*)    echo "docs" ;;
     packages/ai/*)      echo "ai" ;;

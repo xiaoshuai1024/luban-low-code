@@ -8,7 +8,7 @@ alwaysApply: false
 
 基于《阿里巴巴 Java 开发手册》，按通用后端项目精简。全部条款见官方手册。
 
-> 适用：luban 双后端中的 Java 侧（`packages/backend/luban-backend`）。Go 侧见相应 Go 规范。
+> 适用：luban 双后端中的 Java 侧（`apps/backend-java`）。Go 侧见相应 Go 规范。
 
 ## 一、命名规范
 

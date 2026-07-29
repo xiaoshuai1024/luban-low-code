@@ -1,0 +1,122 @@
+# ========================== Go语言通用忽略规则 ==========================
+# 编译生成的二进制文件（可执行文件）
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.out
+# 项目根目录的可执行文件（Gin项目编译产物）
+/luban-api  # 替换为你的项目名，或直接写/*（匹配根目录所有可执行文件）
+# 编译生成的目标文件
+*.o
+*.a
+*.obj
+# Go模块缓存
+go.sum
+# 编译缓存目录
+/pkg/
+/bin/
+/vendor/*  # 若项目需要提交vendor，可注释此行（建议不提交）
+# Go构建缓存
+go-build*
+# Go模块下载缓存
+$GOPATH/pkg/mod/
+# Go测试缓存
+_testmain.go
+*.test
+# 调试文件
+*.debug
+# CGO编译产物
+_cgo_defun.c
+_cgo_gotypes.go
+_cgo_export.*
+# 临时文件
+*.tmp
+*.bak
+
+# ========================== Gin项目特有忽略规则 ==========================
+# 环境变量文件（包含数据库密码、端口等敏感信息）
+.env
+.env.local
+.env.*.local
+# 配置文件（若包含敏感信息）
+config/config.yaml
+config/config.toml
+config/config.json
+# 日志文件（Gin日志/业务日志）
+logs/
+*.log
+log/
+# 临时数据文件
+data/
+tmp/
+temp/
+# 性能分析文件
+*.prof
+
+# ========================== 开发工具/编辑器忽略规则 ==========================
+# VSCode
+.vscode/
+.idea/
+# IntelliJ IDEA/Goland
+*.iml
+*.iws
+*.ipr
+out/
+# Vim
+*.swp
+*.swo
+.*.sw?
+.un~
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\\#*
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+# macOS系统文件
+.DS_Store
+.AppleDouble
+.LSOverride
+# Windows系统文件
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN
+# Linux系统文件
+*.swp
+.DS_Store
+
+# ========================== 测试/部署相关忽略 ==========================
+# 测试报告
+coverage.out
+coverage.html
+test-report/
+# 部署脚本临时文件
+deploy/*.sh.bak
+deploy/.env
+# Docker临时配置
+.dockerignore
+docker-compose.override.yml
+# 备份文件
+*.backup
+*.bak
+*.old
+
+# ========================== 其他敏感/临时文件 ==========================
+# 密钥/证书文件
+*.pem
+*.key
+*.crt
+*.p12
+# 缓存文件
+.cache/
+# 上传文件临时目录
+uploads/tmp/

@@ -12,30 +12,30 @@ alwaysApply: true
 
 ## 分栈要求
 
-### 低代码引擎 `packages/engine/luban`（TypeScript）
+### 低代码引擎 `apps/engine`（TypeScript）
 
 - **单元测试**：Vitest，覆盖 schema 解析、渲染管线、物料调度、props 校验
 - **渲染 E2E**：Playwright 驱动引擎渲染页面，断言物料挂载、props 透传、事件链路
 - **构建门禁**：合并前在该仓根执行 `pnpm run build` 必须通过；渲染器零新增 console error
 
-### BFF `packages/bff/luban-bff`（TypeScript / Node）
+### BFF `apps/bff`（TypeScript / Node）
 
 - **单元测试**：Vitest，覆盖聚合逻辑、字段裁剪、错误转换
 - **集成测试**：用 Mock 后端验证 Java/Go 双路调用与降级
 - **合并前**：`pnpm test` 须通过
 
-### UI 物料库 `packages/ui/luban-ui`（Vue 3 / Vite）
+### UI 物料库 `packages/ui`（Vue 3 / Vite）
 
 - **组件测试**：Vitest + Vue Test Utils，每个物料至少覆盖：默认渲染、props 边界、slot、事件
 - **合并前**：`pnpm test` 须通过
 
-### SSR 站点 `packages/web/luban-website`（TypeScript / SSR）
+### SSR 站点 `apps/website`（TypeScript / SSR）
 
 - **单元测试**：Vitest，覆盖 SSR 数据获取、路由、SEO 元信息
 - **E2E**：Playwright 驱动，覆盖核心页面 SSR 渲染与交互
 - **合并前**：`pnpm run build` + `pnpm run test:e2e`
 
-### 后端 Java `packages/backend/luban-backend`（Spring Boot / Maven）
+### 后端 Java `apps/backend-java`（Spring Boot / Maven）
 
 - **优先**：为变更点补充 `src/test/java/**/*Test.java`（Surefire，切片 / Mockito）
 - **接口与 DB 迁移**：补充 `src/test/java/**/*IT.java`（Failsafe），Java 后端独立配置 MySQL（不再共用 `kddev`）
@@ -50,7 +50,7 @@ alwaysApply: true
 - 集成测试（IT）优先用 `@SpyBean` 替代 `@MockBean` 测真实逻辑
 - 并发测试用 `CountDownLatch` + `CompletableFuture`，禁止 `Thread.sleep`
 
-### 后端 Go `packages/backend/luban-backend-go`（go mod）
+### 后端 Go `apps/backend-go`（go mod）
 
 - **单元测试**：`*_test.go`，覆盖核心业务逻辑与错误分支
 - **竞态检测**：`go test ./... -race -cover`

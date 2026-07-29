@@ -10,9 +10,9 @@
 
 | 类型 | 现状（实测） | 目标态（plan 落地后） | 典型命令 |
 |------|----------------|----------------|----------|
-| **引擎渲染 E2E** | ⚠️ Cypress `packages/engine/luban/cypress/e2e/*.cy.ts`（含 mock-token 假绿，见 §1.3） | Playwright `packages/engine/luban/e2e/*.spec.ts`（去假绿，真实登录） | 现状：`cd packages/engine/luban && pnpm run e2e` ；目标：`pnpm run test:e2e` |
-| **website SSR E2E** | 🔴 **无**（零测试） | Playwright `packages/web/luban-website/e2e/` | 目标：`cd packages/web/luban-website && pnpm run install:e2e && pnpm run test:e2e` |
-| **UI 物料 E2E** | ⚠️ nx+Cypress `packages/ui/luban-ui/apps/luban-ui-e2e/`（仅骨架）；`packages/luban-{base,low-code}/test/e2e/*.e2e.spec.ts` 实为 vitest jsdom 组件测 | Playwright（正名组件测为 `test/component/`） | 现状：`cd packages/ui/luban-ui && pnpm run test:e2e` |
+| **引擎渲染 E2E** | ⚠️ Cypress `apps/engine/cypress/e2e/*.cy.ts`（含 mock-token 假绿，见 §1.3） | Playwright `apps/engine/e2e/*.spec.ts`（去假绿，真实登录） | 现状：`cd apps/engine && pnpm run e2e` ；目标：`pnpm run test:e2e` |
+| **website SSR E2E** | 🔴 **无**（零测试） | Playwright `apps/website/e2e/` | 目标：`cd apps/website && pnpm run install:e2e && pnpm run test:e2e` |
+| **UI 物料 E2E** | ⚠️ nx+Cypress `packages/ui/apps/luban-ui-e2e/`（仅骨架）；`packages/luban-{base,low-code}/test/e2e/*.e2e.spec.ts` 实为 vitest jsdom 组件测 | Playwright（正名组件测为 `test/component/`） | 现状：`cd packages/ui && pnpm run test:e2e` |
 | **client Electron/Flutter E2E** | 🔴 **子项目不存在**（空目录，非 submodule） | 待 client 子项目落地后另立 plan | — |
 | **BFF E2E** | 🔴 无 e2e（仅 Vitest unit）；契约由跨项目流程间接覆盖 | 不建独立浏览器 e2e | `cd packages/bff/luban-bff && pnpm run test`（unit） |
 | **后端 Java 集成测** | JUnit+H2 `src/test/java/**/{*Test,*IT}.java` | 同现状 | `cd packages/backend/luban-backend && mvn -q verify` |
@@ -20,7 +20,7 @@
 
 ### 1.3 engine 现有 Cypress 假绿警告（MUST 知晓）
 
-`packages/engine/luban/cypress/support/commands.ts` 的 `loginWithToken` 注入 `MOCK_TOKEN='mock-jwt-token'` 到 localStorage，**绕过真实后端登录**。后果：leads/sites/pages 等 spec 在后端 Controller 不存在时仍全绿。此为 `luban-e2e-execution-contract §2.5.1` 明令禁止的假绿，将在 `luban-e2e-strategy` plan W3-T1 迁移 Playwright 时强制移除。**迁移完成前，不得把 engine Cypress 结果当作后端已验收的证据。**
+`apps/engine/cypress/support/commands.ts` 的 `loginWithToken` 注入 `MOCK_TOKEN='mock-jwt-token'` 到 localStorage，**绕过真实后端登录**。后果：leads/sites/pages 等 spec 在后端 Controller 不存在时仍全绿。此为 `luban-e2e-execution-contract §2.5.1` 明令禁止的假绿，将在 `luban-e2e-strategy` plan W3-T1 迁移 Playwright 时强制移除。**迁移完成前，不得把 engine Cypress 结果当作后端已验收的证据。**
 
 ### 1.4 跨项目流程性 E2E（主项目，新增）
 
@@ -110,7 +110,7 @@
 
 | 项 | 说明 |
 |----|------|
-| **Java 后端日志路径** | 默认 `packages/backend/luban-backend/logs/luban-local.log`（相对进程 `logging.file.path`，一般为在 `packages/backend/luban-backend/` 目录启动时的 `./logs`）。Agent 可用 `Read` / `grep` 直接查该文件。 |
+| **Java 后端日志路径** | 默认 `apps/backend-java/logs/luban-local.log`（相对进程 `logging.file.path`，一般为在 `apps/backend-java/` 目录启动时的 `./logs`）。Agent 可用 `Read` / `grep` 直接查该文件。 |
 | **Go 后端日志路径** | Go 后端按其日志配置（一般 stdout + 可选文件）；结构化日志（如 zap / slog），含 `requestId` 字段。 |
 | **`ts=` / `time=` 含义** | 文件行前缀为后端写出该条日志时的墙钟时间（带时区偏移），**不是** E2E 报告生成时间。终端里默认格式可能没有该前缀，**不代表**与文件不是同一时刻——仍以 **`requestId`** 关联。 |
 | **对齐失败请求（推荐顺序）** | **① 优先用 `requestId`**（响应头 `X-Request-Id`、错误 JSON `requestId`、与文件中 `requestId=…` 同一串）把前端 Network 与后端一行日志 **钉死**；**② 再用时间** 作辅助。 |
@@ -119,15 +119,15 @@
 
 ---
 
-## 4. 引擎渲染 Playwright（`packages/engine/luban`）
+## 4. 引擎渲染 Playwright（`apps/engine`）
 
-> ⚠️ **现状（2026-06-19）**：engine 当前仍用 Cypress（见 §1.3 假绿警告）。本节为 Playwright **目标态**口径，对应 `luban-e2e-strategy` plan W3-T1 迁移完成后生效。迁移前 engine 命令以 `cd packages/engine/luban && pnpm run e2e`（Cypress）为准。
+> ⚠️ **现状（2026-06-19）**：engine 当前仍用 Cypress（见 §1.3 假绿警告）。本节为 Playwright **目标态**口径，对应 `luban-e2e-strategy` plan W3-T1 迁移完成后生效。迁移前 engine 命令以 `cd apps/engine && pnpm run e2e`（Cypress）为准。
 
 ### 4.0 浏览器约定（MUST）
 
 **引擎渲染 E2E 一律使用本机已安装的 Google Chrome**（Playwright `channel: "chrome"`），与无头/有头无关。便于与日常浏览器版本、企业策略、本机证书环境一致。
 
-- **首次 / 换机**：在 `packages/engine/luban` 执行 `pnpm run install:e2e`（内部为 `playwright install chrome`）。
+- **首次 / 换机**：在 `apps/engine` 执行 `pnpm run install:e2e`（内部为 `playwright install chrome`）。
 - **例外**：流水线等**无系统 Chrome** 的环境，使用 `LUBAN_E2E_USE_PLAYWRIGHT_CHROMIUM=1` 回退到 Playwright 自带 Chromium；**不得**在本地开发文档中把该回退写成默认路径。
 
 ### 4.1 前置条件
@@ -141,10 +141,10 @@
 ### 4.2 命令
 
 ```bash
-cd packages/engine/luban && pnpm run install:e2e    # 首次
-cd packages/engine/luban && pnpm run test:e2e       # 默认无头，本机 Chrome
-cd packages/engine/luban && pnpm run test:e2e:headed # 有界面调试
-cd packages/engine/luban && pnpm run test:e2e:ci    # CI：无 Chrome 时用自带 Chromium
+cd apps/engine && pnpm run install:e2e    # 首次
+cd apps/engine && pnpm run test:e2e       # 默认无头，本机 Chrome
+cd apps/engine && pnpm run test:e2e:headed # 有界面调试
+cd apps/engine && pnpm run test:e2e:ci    # CI：无 Chrome 时用自带 Chromium
 ```
 
 ### 4.3 配置与健康变量
@@ -162,7 +162,7 @@ cd packages/engine/luban && pnpm run test:e2e:ci    # CI：无 Chrome 时用自�
 
 ---
 
-## 5. website SSR Playwright（`packages/web/luban-website`）
+## 5. website SSR Playwright（`apps/website`）
 
 ### 5.1 前置条件
 
@@ -173,9 +173,9 @@ cd packages/engine/luban && pnpm run test:e2e:ci    # CI：无 Chrome 时用自�
 ### 5.2 命令
 
 ```bash
-cd packages/web/luban-website && pnpm run install:e2e
-cd packages/web/luban-website && pnpm run test:e2e
-cd packages/web/luban-website && pnpm run test:e2e:headed
+cd apps/website && pnpm run install:e2e
+cd apps/website && pnpm run test:e2e
+cd apps/website && pnpm run test:e2e:headed
 ```
 
 ### 5.3 SSR 特定断言
@@ -261,7 +261,7 @@ Node 24 改变了传给 Electron 内部的 V8 flag 方式，Cypress 捆绑的旧
 ### 解决方案
 升级 Cypress 到 **15+**（首个支持 Node 22-24 的版本）：
 ```bash
-cd packages/engine/luban
+cd apps/engine
 pnpm add -D cypress@^15.17.0
 npx cypress install --force      # 装新二进制
 set CYPRESS_NO_V8_COMPILE_CACHE=1 # 绕 v8 cache（Node24 必须）

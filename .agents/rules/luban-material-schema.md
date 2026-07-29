@@ -1,12 +1,12 @@
 <!--
 description: 物料注册 / props schema / 版本治理
-globs: packages/ui/**, packages/engine/**
+globs: packages/ui/**, apps/engine/**
 alwaysApply: false
 -->
 
 # 物料 schema 与版本治理（MUST）
 
-luban 低代码引擎以**物料 + schema**驱动渲染。物料是 `packages/ui/luban-ui` 注册的组件，schema 描述物料如何被引擎调度、props 如何校验。
+luban 低代码引擎以**物料 + schema**驱动渲染。物料是 `packages/ui` 注册的组件，schema 描述物料如何被引擎调度、props 如何校验。
 
 详细规范见 [`docs/LOWCODE_ENGINE_SPEC.md`](../../docs/LOWCODE_ENGINE_SPEC.md)。
 
@@ -68,9 +68,9 @@ export const MyMaterial = defineMaterial({
 
 ## 物料注册流程
 
-1. 在 `packages/ui/luban-ui/src/materials/<category>/<name>/` 创建物料
+1. 在 `packages/ui/src/materials/<category>/<name>/` 创建物料
 2. 声明物料定义（如上）
-3. 在 `packages/ui/luban-ui/src/materials/index.ts` 注册导出
+3. 在 `packages/ui/src/materials/index.ts` 注册导出
 4. 引擎通过物料清单（manifest）加载
 5. 同步更新物料文档（如有）
 

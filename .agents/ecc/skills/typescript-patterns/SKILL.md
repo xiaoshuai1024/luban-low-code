@@ -6,7 +6,7 @@ origin: luban
 
 # TypeScript Development Patterns
 
-Patterns for the luban TypeScript packages: `packages/engine/luban`, `packages/bff/luban-bff`, `packages/web/luban-website`. Unified on pnpm. Specs: `docs/LOWCODE_ENGINE_SPEC.md`, `.agents/rules/luban-lowcode-engine-quality.md`, `.agents/rules/luban-cross-cutting-standards.md`.
+Patterns for the luban TypeScript packages: `apps/engine`, `apps/bff`, `apps/website`. Unified on pnpm. Specs: `docs/LOWCODE_ENGINE_SPEC.md`, `.agents/rules/luban-lowcode-engine-quality.md`, `.agents/rules/luban-cross-cutting-standards.md`.
 
 ## When to Activate
 
@@ -222,7 +222,7 @@ pnpm run typecheck    # must pass
 pnpm test
 ```
 
-If the change touches the engine or a material, also smoke-render in `packages/web/luban-website` and confirm zero new `console.error` from the renderer.
+If the change touches the engine or a material, also smoke-render in `apps/website` and confirm zero new `console.error` from the renderer.
 
 ## Common Anti-Patterns
 

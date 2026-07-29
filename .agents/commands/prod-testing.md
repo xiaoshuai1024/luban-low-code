@@ -39,7 +39,7 @@ PROD_PASSWORD=<运营/测试账号密码>
 生产环境的 website（SSR）和引擎渲染产物须可访问。如需本地起 dev 指向生产 API：
 
 ```bash
-cd packages/web/luban-website
+cd apps/website
 PROD_API_BASE=https://TODO-luban-prod-api.example pnpm run dev &
 
 # 运行 website E2E（指向本地 dev + 生产 API）

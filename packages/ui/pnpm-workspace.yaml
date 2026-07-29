@@ -1,0 +1,9 @@
+packages:
+  - 'packages/**'
+  - 'luban-ui-playground'
+allowBuilds:
+  '@parcel/watcher': true
+  '@swc/core': true
+  cypress: true
+  esbuild: true
+  nx: true

@@ -173,17 +173,17 @@ Review 测试代码时逐条检查：
 ### TS 仓（engine / bff / ui / website）— pnpm
 
 ```bash
-cd packages/engine/luban && pnpm install
-cd packages/engine/luban && pnpm test              # Vitest 单测
-cd packages/engine/luban && pnpm run build         # 构建（合并前 MUST）
-cd packages/engine/luban && pnpm run test:e2e      # Playwright E2E
-cd packages/engine/luban && pnpm run test:coverage # 覆盖率报告
+cd apps/engine && pnpm install
+cd apps/engine && pnpm test              # Vitest 单测
+cd apps/engine && pnpm run build         # 构建（合并前 MUST）
+cd apps/engine && pnpm run test:e2e      # Playwright E2E
+cd apps/engine && pnpm run test:coverage # 覆盖率报告
 ```
 
 ### 后端 Java — Maven
 
 ```bash
-cd packages/backend/luban-backend
+cd apps/backend-java
 mvn -q verify                  # 单测 + 集成测 + JaCoCo check
 mvn -q test                    # 仅单测
 mvn spring-boot:run            # 本地启动

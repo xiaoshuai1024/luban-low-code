@@ -59,7 +59,7 @@
 
 | 项 | 值 | 配置来源 |
 |----|----|---------|
-| 包名 | `luban` | `packages/engine/luban/package.json:2` |
+| 包名 | `luban` | `apps/engine/package.json:2` |
 | 角色 | Vue 3 + Vite SPA；运营后台（站点/页面/线索/用户）+ 全屏设计器 | — |
 | dev 端口 | **5173**（vite 默认，无 port flag） | `vite.config.ts:19` |
 | preview 端口 | 4200 | `vite.config.ts:15` |
@@ -81,7 +81,7 @@
 
 | 项 | 值 | 配置来源 |
 |----|----|---------|
-| 包名 | `luban-bff` | `packages/bff/luban-bff/package.json:2` |
+| 包名 | `luban-bff` | `apps/bff/package.json:2` |
 | 角色 | Next.js 16 BFF；鉴权(JWT)、聚合后端、公开 submit 端点 | — |
 | dev 端口 | **3100**（须显式 `-p 3100`，否则 next 默认 3000 与 website 冲突） | 本文档约定（见 §4 启动） |
 | 后端地址 | `BACKEND_BASE_URL ?? "http://127.0.0.1:8080/backend"` | `src/lib/backendClient.ts:3-4` |
@@ -105,7 +105,7 @@
 
 | 项 | 值 | 配置来源 |
 |----|----|---------|
-| 包名 | `luban-website` | `packages/web/luban-website/package.json:2` |
+| 包名 | `luban-website` | `apps/website/package.json:2` |
 | 角色 | Nuxt 3 SSR；渲染已发布页面 + 提交留资 | — |
 | dev 端口 | **3000**（nuxt 默认） | — |
 | BFF 地址 | `NUXT_PUBLIC_BFF_BASE_URL ?? "http://127.0.0.1:3000"` ⚠️ 默认值错误 | `nuxt.config.ts:13` |
@@ -125,7 +125,7 @@
 
 | 项 | 值 | 配置来源 |
 |----|----|---------|
-| 包路径 | `packages/backend/luban-backend` | — |
+| 包路径 | `apps/backend-java` | — |
 | 角色 | Spring Boot + MyBatis + Flyway REST | — |
 | 端口 | `${APP_PORT:8080}` | `application.yml:2` |
 | context-path | `/backend`（所有路由前缀） | `application.yml:4` |
@@ -242,7 +242,7 @@ make dev-check         # 探测 Java/BFF/engine/website 是否 UP（200/302/404 
 
 ```bash
 # 前置：dev-apps 全起 + 中间件远端可达
-cd packages/engine/luban
+cd apps/engine
 set CYPRESS_NO_V8_COMPILE_CACHE=1     # Node24 必须，绕 Cypress v8 cache 问题
 npx cypress run --browser electron     # Cypress 15+ 兼容 Node24
 ```

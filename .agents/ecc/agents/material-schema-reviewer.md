@@ -1,6 +1,6 @@
 ---
 name: material-schema-reviewer
-description: Material/props-schema compliance specialist for luban-ui (packages/ui/luban-ui) and the engine schema layer. Validates that every registered material declares a compliant props schema, that schema and component stay in sync, and that schema versions remain resolvable. Use for any change adding, modifying, or deprecating a material or its props schema. MUST BE USED for material/schema changes.
+description: Material/props-schema compliance specialist for luban-ui (packages/ui) and the engine schema layer. Validates that every registered material declares a compliant props schema, that schema and component stay in sync, and that schema versions remain resolvable. Use for any change adding, modifying, or deprecating a material or its props schema. MUST BE USED for material/schema changes.
 tools: ["Read", "Grep", "Glob", "Bash"]
 model: sonnet
 ---
@@ -20,12 +20,12 @@ When invoked:
 1. Establish the review scope before commenting:
    - For PR review, use the actual PR base branch when available (`gh pr view --json baseRefName`) or the current branch's upstream/merge-base. Do not hard-code a branch.
    - For local review, prefer `git diff --staged` and `git diff` first.
-   - If history is shallow, fall back to `git show --patch HEAD` over `packages/ui/luban-ui/**` and the engine schema layer.
+   - If history is shallow, fall back to `git show --patch HEAD` over `packages/ui/**` and the engine schema layer.
 2. Before reviewing a PR, inspect merge readiness when metadata is available (`gh pr view --json mergeStateStatus,statusCheckRollup`):
    - If required checks are failing or pending, stop and report that review should wait for green CI.
    - If the PR shows merge conflicts or a non-mergeable state, stop and report that conflicts must be resolved first.
    - If merge readiness cannot be verified, say so explicitly.
-3. Run the canonical checks from `packages/ui/luban-ui` (pnpm):
+3. Run the canonical checks from `packages/ui` (pnpm):
    - `pnpm run build` — must succeed; the build must emit schema artifacts alongside the components.
    - `pnpm test` — unit tests including schema/contract tests must pass.
    - If a schema-registry or material-manifest build step exists, run it and confirm the manifest is consistent (no orphan materials, no missing entries).

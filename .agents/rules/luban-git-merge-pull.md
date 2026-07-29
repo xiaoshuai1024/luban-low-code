@@ -16,9 +16,9 @@ alwaysApply: false
 
 ```bash
 # 运行 pull-all.sh 后，在每个子模块中切回 feature 分支：
-cd packages/engine/luban && git checkout feature/你的分支
-cd packages/bff/luban-bff && git checkout feature/你的分支
-cd packages/ui/luban-ui && git checkout feature/你的分支
+cd apps/engine && git checkout feature/你的分支
+cd apps/bff && git checkout feature/你的分支
+cd packages/ui && git checkout feature/你的分支
 # ... 其余子模块同理
 ```
 
@@ -26,9 +26,9 @@ cd packages/ui/luban-ui && git checkout feature/你的分支
 
 ```bash
 # 运行 pull-all.sh 前：
-cd packages/engine/luban && git stash   # 暂存本地改动
+cd apps/engine && git stash   # 暂存本地改动
 # 运行 pull-all.sh 后：
-cd packages/engine/luban && git stash pop  # 恢复
+cd apps/engine && git stash pop  # 恢复
 ```
 
 ### merged origin/<默认分支> 后子模块指针变动
@@ -70,10 +70,10 @@ luban 11 个子项目默认分支不同（6 master + 5 main），全量脚本按
 ### 解决方案
 失败时改用按包命令：
 ```bash
-/pr-engine    # 仅 packages/engine/luban
-/pr-bff       # 仅 packages/bff/luban-bff
-/pr-ui        # 仅 packages/ui/luban-ui
-/pr-website   # 仅 packages/web/luban-website
+/pr-engine    # 仅 apps/engine
+/pr-bff       # 仅 apps/bff
+/pr-ui        # 仅 packages/ui
+/pr-website   # 仅 apps/website
 /pr-backend-java
 /pr-backend-go
 /pr-client

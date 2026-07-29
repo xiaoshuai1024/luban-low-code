@@ -1,12 +1,12 @@
 # CLAUDE.md
 
-luban-workspace — luban 低代码平台的统一治理 meta 仓。Git superproject 通过 submodule 引入 11 个子项目，统一 AI agent 规则、测试门禁、命令与工作流。
+luban-workspace — luban 低代码平台 monorepo（原 git superproject + 8 submodule 已通过 git filter-repo 合并为单一仓库，历史完整保留）。统一 AI agent 规则、测试门禁、命令与工作流。
 
 本文件为 Claude Code 主入口。所有 agent 通用规范见 `AGENTS.md`。
 
 ## 项目概述
 
-**luban 低代码平台（luban-workspace）** — meta 仓 + 11 子项目：
+**luban 低代码平台（luban-workspace）** — monorepo（apps/ 可部署应用 + packages/ 库 + docs/）：
 
 | 子项目 | 路径 | 技术栈 | 默认分支 |
 |------|------|--------|--------|
@@ -29,7 +29,7 @@ luban-workspace — luban 低代码平台的统一治理 meta 仓。Git superpro
 所有信息与代码须基于实际代码、官方文档或已验证事实。禁止凭空推测 API/签名/配置；禁止编造报错；不清楚时说"不确定"，先查代码/文档再答。违反者代码审查应被驳回。
 
 ### 2. 低代码引擎交付门槛（替代微信合规）
-凡改动引擎/物料/schema，须满足：本地 `pnpm run build` 成功且渲染器零新增 console error；物料 props schema 合规（见 `.agents/rules/luban-material-schema.md`）；引擎产物在 `packages/web/luban-website`（SSR）及各端渲染一致；不确定行为标注"需验证"。
+凡改动引擎/物料/schema，须满足：本地 `pnpm run build` 成功且渲染器零新增 console error；物料 props schema 合规（见 `.agents/rules/luban-material-schema.md`）；引擎产物在 `apps/website`（SSR）及各端渲染一致；不确定行为标注"需验证"。
 
 ### 3. 后端单端权威（Java）
 Java 后端 `packages/backend/luban-backend` 为唯一后端实现（Go 双后端战略已放弃，Q4=C，2026-06-28，见 `docs/DUAL_BACKEND_PARITY.md`）。不再要求双后端契约对齐。
@@ -72,10 +72,10 @@ make test-coverage     # 一键分栈覆盖率汇总 + HTML 报告
 ## 关键约定
 
 ### Git 工作流（GitHub）
-- 分支：各子仓保留现有默认分支（6 master + 5 main）；新提交统一 `feature/*`
-- 禁止直接 push 默认分支；多系统改动用同名 feature 分支
+- 分支：monorepo 单一仓库，默认分支 master；新提交统一 `feature/*`
+- 禁止直接 push 默认分支；跨子系统改动一次 commit 完成（monorepo 优势）
 - 合并冲突：优先分析双方逻辑保留双方；禁止 `--ours/--theirs`；无法确认询问用户
-- 常用：`/pr-all` `/pull-all` `/push-all`
+- 常用：`git pull` / `git push` / `gh pr create`（monorepo 单仓标准操作；原 `/pull-all` `/push-all` `/pr-all` 为 submodule 时代命令，待改写或弃用）
 
 ### 测试门禁
 - 每个子项目改码后在该包根目录执行构建+测试

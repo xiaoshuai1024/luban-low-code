@@ -1,7 +1,7 @@
 # Swagger / OpenAPI（后端）
 
 > 后端如何通过 **SpringDoc** 暴露 **OpenAPI 3** 与 **Swagger UI**，保证新接口可被文档收录并支持 **Try it out** 联调。
-> 适用：luban Java 后端（`packages/backend/luban-backend`）。Go 后端用 swag/gin-swagger 等等价方案，契约须一致。
+> 适用：luban Java 后端（`apps/backend-java`）。Go 后端用 swag/gin-swagger 等等价方案，契约须一致。
 
 ---
 

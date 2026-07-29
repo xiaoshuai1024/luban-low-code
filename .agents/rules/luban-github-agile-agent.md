@@ -85,7 +85,7 @@ gh release create v1.0.0 ./dist/*
 ## 经验：gh CLI 在子模块中的鉴权
 
 ### 场景
-在 luban 子模块（如 `packages/engine/luban`）执行 `gh pr create` 报错 "not authenticated"。
+在 luban 子模块（如 `apps/engine`）执行 `gh pr create` 报错 "not authenticated"。
 
 ### 根因
 `gh` 的鉴权状态可能因 git 上下文（子模块、多 origin）解析出不同的仓库归属。

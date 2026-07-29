@@ -1,6 +1,6 @@
 ---
 name: lowcode-engine-reviewer
-description: Low-code engine quality specialist for the luban engine (packages/engine/luban), the material library (packages/ui/luban-ui), and the SSR site (packages/web/luban-website). Reviews renderer correctness, canvas behavior, schema compliance, material registration, and cross-client rendering consistency. Use for any change touching the engine, materials, schema, or rendering. MUST BE USED for engine/ui/schema changes.
+description: Low-code engine quality specialist for the luban engine (apps/engine), the material library (packages/ui), and the SSR site (apps/website). Reviews renderer correctness, canvas behavior, schema compliance, material registration, and cross-client rendering consistency. Use for any change touching the engine, materials, schema, or rendering. MUST BE USED for engine/ui/schema changes.
 tools: ["Read", "Grep", "Glob", "Bash"]
 model: sonnet
 ---
@@ -26,9 +26,9 @@ When invoked:
    - If the PR shows merge conflicts or a non-mergeable state, stop and report that conflicts must be resolved first.
    - If merge readiness cannot be verified, say so explicitly.
 3. Run the canonical engine checks from each touched package root (pnpm workspace):
-   - `pnpm run build` in `packages/engine/luban` and `packages/ui/luban-ui` — MUST succeed.
+   - `pnpm run build` in `apps/engine` and `packages/ui` — MUST succeed.
    - `pnpm test` — unit tests must pass.
-   - `pnpm run build` of the engine followed by an SSR render smoke in `packages/web/luban-website` — confirm no new `console.error` from the renderer (the "zero new console error" bar).
+   - `pnpm run build` of the engine followed by an SSR render smoke in `apps/website` — confirm no new `console.error` from the renderer (the "zero new console error" bar).
    - `pnpm run test:e2e` for the engine path if an `engine-e2e` flow exists.
 4. If none of the diff commands produce engine/material/schema/website changes, stop and report that the scope could not be established.
 5. Read the changed files plus the schema/material registration context they touch.
@@ -59,7 +59,7 @@ Per `.agents/rules/luban-material-schema.md`:
 
 ### HIGH -- Cross-Client Rendering Consistency
 Per `.agents/rules/luban-multi-client-consistency.md` and the dual-backend contract:
-- **Same schema, different output**: A schema that renders correctly in the engine canvas but breaks in `packages/web/luban-website` (SSR), `luban-electron`, or `luban-flutter`. Flag any engine-only API used during render.
+- **Same schema, different output**: A schema that renders correctly in the engine canvas but breaks in `apps/website` (SSR), `luban-electron`, or `luban-flutter`. Flag any engine-only API used during render.
 - **BFF field dependency**: Rendering that depends on a BFF field not actually returned by the BFF/Java-or-Go backend — runtime `undefined`.
 - **Environment-specific branches**: `if (isElectron)` / `if (isFlutter)` inside render logic that silently changes output instead of being a first-class client capability.
 

@@ -18,12 +18,12 @@ description: Luban 全栈方案：验收以可交付页面与完整链路为准�
 
 **项目技术栈（方案中须默认以此为准，勿混用包管理器或错误栈假设）：**
 
-- **低代码引擎**：`packages/engine/luban` — **TypeScript**；引擎渲染与构建/E2E 门槛见 **`AGENTS.md`** 与 **`docs/LOWCODE_ENGINE_SPEC.md`**；包管理 **`pnpm`**。
-- **BFF**：`packages/bff/luban-bff` — **TypeScript / Node**；聚合后端（Java/Go）能力；包管理 **`pnpm`**。
-- **UI 物料库**：`packages/ui/luban-ui` — **Vue 3 / Vite**；物料 props schema 见 `.agents/rules/luban-material-schema.md`；包管理 **`pnpm`**。
-- **SSR 站点**：`packages/web/luban-website` — **TypeScript / SSR**；包管理 **`pnpm`**。
-- **后端 Java**：`packages/backend/luban-backend` — **Spring Boot / Maven**；**Flyway**、**`mvn -q verify`**（Surefire + Failsafe）；规范见 **`docs/dev/alibaba-java-development-manual.md`**。
-- **后端 Go**：`packages/backend/luban-backend-go` — **Go**；`go test ./... -race -cover`；与 Java 同接口须行为一致，见 **`docs/DUAL_BACKEND_PARITY.md`**。
+- **低代码引擎**：`apps/engine` — **TypeScript**；引擎渲染与构建/E2E 门槛见 **`AGENTS.md`** 与 **`docs/LOWCODE_ENGINE_SPEC.md`**；包管理 **`pnpm`**。
+- **BFF**：`apps/bff` — **TypeScript / Node**；聚合后端（Java/Go）能力；包管理 **`pnpm`**。
+- **UI 物料库**：`packages/ui` — **Vue 3 / Vite**；物料 props schema 见 `.agents/rules/luban-material-schema.md`；包管理 **`pnpm`**。
+- **SSR 站点**：`apps/website` — **TypeScript / SSR**；包管理 **`pnpm`**。
+- **后端 Java**：`apps/backend-java` — **Spring Boot / Maven**；**Flyway**、**`mvn -q verify`**（Surefire + Failsafe）；规范见 **`docs/dev/alibaba-java-development-manual.md`**。
+- **后端 Go**：`apps/backend-go` — **Go**；`go test ./... -race -cover`；与 Java 同接口须行为一致，见 **`docs/DUAL_BACKEND_PARITY.md`**。
 - **客户端**：`packages/client/*`（luban-electron / luban-flutter / luban-cross-plateform，部分规划态）。
 - **工作流与计划**：Superpowers plan 契约 **`docs/superpowers/PLAN_WRITING_CONTRACT.md`**；执行约束 **`docs/dev/AGENT_WORKFLOW_CONSTRAINTS.md`**；任务图 SSOT **`docs/dev/SSOT-TASK-GRAPH-PLAN.md`**。
 
@@ -31,12 +31,12 @@ description: Luban 全栈方案：验收以可交付页面与完整链路为准�
 
 | 子项目 | 路径 / 说明 | 定稿方案中须写清的能力增量 |
 |--------|-------------|------------------------------|
-| 低代码引擎 | `packages/engine/luban` | 引擎渲染、物料 schema 消费、构建与 E2E 门槛（见 `AGENTS.md`） |
-| BFF | `packages/bff/luban-bff` | 聚合后端字段、错误体、与后端契约 |
-| UI 物料库 | `packages/ui/luban-ui` | 新增物料 props schema、token 使用、注册 |
-| SSR 站点 | `packages/web/luban-website` | 列表/详情/筛选、SSR 渲染、E2E |
-| Java 后端 | `packages/backend/luban-backend` | API、领域与表、Flyway、单测/集成测与 `mvn verify` |
-| Go 后端 | `packages/backend/luban-backend-go` | 与 Java 同接口的双实现，`go test`，行为一致 |
+| 低代码引擎 | `apps/engine` | 引擎渲染、物料 schema 消费、构建与 E2E 门槛（见 `AGENTS.md`） |
+| BFF | `apps/bff` | 聚合后端字段、错误体、与后端契约 |
+| UI 物料库 | `packages/ui` | 新增物料 props schema、token 使用、注册 |
+| SSR 站点 | `apps/website` | 列表/详情/筛选、SSR 渲染、E2E |
+| Java 后端 | `apps/backend-java` | API、领域与表、Flyway、单测/集成测与 `mvn verify` |
+| Go 后端 | `apps/backend-go` | 与 Java 同接口的双实现，`go test`，行为一致 |
 | 客户端 | `packages/client/*` | electron/flutter/cross-platform，按规划态按需 |
 | 文档与任务图 | `.agents/plans/`、`docs/superpowers/tasks/` | 与 **PLAN 契约**、**SSOT 任务图**一致 |
 

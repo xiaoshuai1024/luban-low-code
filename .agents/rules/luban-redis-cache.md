@@ -1,6 +1,6 @@
 <!--
 description: 后端 Redis 缓存命名、TTL、失效与接入方式（Java / Go 双后端）
-globs: packages/backend/**/*.java, packages/backend/**/*.go, packages/bff/**/*.ts
+globs: apps/backend-java/**/*.java, apps/backend-go/**/*.go, apps/bff/**/*.ts
 alwaysApply: false
 -->
 

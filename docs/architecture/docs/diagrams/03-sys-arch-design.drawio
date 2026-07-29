@@ -1,0 +1,41 @@
+<mxfile host="app.diagrams.net" modified="2026-06-29T00:00:00.000Z" agent="ZCode" version="30.2.4">
+  <diagram name="总体架构（设计期，已修正）" id="sys-arch-design">
+    <mxGraphModel dx="1200" dy="760" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="560" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="luban · 总体架构（设计期蓝图）" style="text;html=1;align=center;fontSize=17;fontStyle=1;fontColor=#1a1a2e;" vertex="1" parent="1"><mxGeometry x="350" y="15" width="500" height="30" as="geometry"/></mxCell>
+
+        <mxCell id="g_client" value="客户端" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;verticalAlign=top;fontStyle=1;fontSize=12;" vertex="1" parent="1"><mxGeometry x="40" y="80" width="320" height="160" as="geometry"/></mxCell>
+        <mxCell id="c_ed" value="⚙️ Electron / engine&#10;低代码编辑器（PC）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=9;" vertex="1" parent="1"><mxGeometry x="55" y="120" width="140" height="50" as="geometry"/></mxCell>
+        <mxCell id="c_wb" value="🌐 website&#10;Web/H5 SSR" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=9;" vertex="1" parent="1"><mxGeometry x="205" y="120" width="140" height="50" as="geometry"/></mxCell>
+        <mxCell id="c_fl" value="📱 Flutter&#10;App 原生（🚧）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" vertex="1" parent="1"><mxGeometry x="55" y="180" width="140" height="50" as="geometry"/></mxCell>
+        <mxCell id="c_uni" value="💬 uniapp&#10;小程序（📋）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999;fontSize=9;" vertex="1" parent="1"><mxGeometry x="205" y="180" width="140" height="50" as="geometry"/></mxCell>
+
+        <mxCell id="g_bff" value="BFF（Next.js · API-only）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=top;fontStyle=1;fontSize=12;" vertex="1" parent="1"><mxGeometry x="420" y="80" width="340" height="160" as="geometry"/></mxCell>
+        <mxCell id="b_auth" value="鉴权/会话 JWT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;fontSize=9;" vertex="1" parent="1"><mxGeometry x="435" y="120" width="100" height="36" as="geometry"/></mxCell>
+        <mxCell id="b_agg" value="接口编排/聚合" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;fontSize=9;" vertex="1" parent="1"><mxGeometry x="545" y="120" width="100" height="36" as="geometry"/></mxCell>
+        <mxCell id="b_sub" value="表单提交/留资" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;fontSize=9;" vertex="1" parent="1"><mxGeometry x="655" y="120" width="95" height="36" as="geometry"/></mxCell>
+        <mxCell id="b_evt" value="埋点接收" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;fontSize=9;" vertex="1" parent="1"><mxGeometry x="435" y="175" width="100" height="36" as="geometry"/></mxCell>
+        <mxCell id="b_redir" value="短链重定向" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;fontSize=9;" vertex="1" parent="1"><mxGeometry x="545" y="175" width="100" height="36" as="geometry"/></mxCell>
+        <mxCell id="b_ai" value="AI 反代 ✨" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4ace4;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="1"><mxGeometry x="655" y="175" width="95" height="36" as="geometry"/></mxCell>
+
+        <mxCell id="g_be" value="后端（Java 单端权威）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;verticalAlign=top;fontStyle=1;fontSize=12;" vertex="1" parent="1"><mxGeometry x="820" y="80" width="340" height="160" as="geometry"/></mxCell>
+        <mxCell id="be_java" value="backend-java · 主后端&#10;（全量领域）✅" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#cdebcd;strokeColor=#2d6a2d;fontSize=10;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="850" y="125" width="160" height="55" as="geometry"/></mxCell>
+        <mxCell id="be_go" value="backend-go&#10;已放弃（Q4=C）❌" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontStyle=2;" vertex="1" parent="1"><mxGeometry x="1030" y="125" width="120" height="55" as="geometry"/></mxCell>
+
+        <mxCell id="g_st" value="存储" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;verticalAlign=top;fontStyle=1;fontSize=12;" vertex="1" parent="1"><mxGeometry x="420" y="290" width="340" height="80" as="geometry"/></mxCell>
+        <mxCell id="st_db" value="🐬 MySQL&#10;19 张表" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="1"><mxGeometry x="470" y="320" width="120" height="40" as="geometry"/></mxCell>
+        <mxCell id="st_rd" value="⚡ Redis&#10;缓存/限流" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1"><mxGeometry x="620" y="320" width="120" height="40" as="geometry"/></mxCell>
+
+        <mxCell id="ea1" style="rounded=1;html=1;strokeColor=#d79b00;strokeWidth=1.5;endArrow=classic;" edge="1" parent="1" source="c_ed" target="b_auth"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ea2" style="rounded=1;html=1;strokeColor=#d79b00;strokeWidth=1.5;endArrow=classic;" edge="1" parent="1" source="c_wb" target="b_agg"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ea3" style="rounded=1;html=1;strokeColor=#6c8ebf;strokeWidth=2;endArrow=classic;" edge="1" parent="1" source="g_bff" target="be_java"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ea4" style="rounded=1;html=1;strokeColor=#82b366;strokeWidth=2;endArrow=classic;" edge="1" parent="1" source="be_java" target="st_db"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ea5" style="rounded=1;html=1;strokeColor=#82b366;strokeWidth=2;endArrow=classic;" edge="1" parent="1" source="be_java" target="st_rd"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <mxCell id="note" value="⚠️ 与设计期蓝图的差异：Go 双后端已于 2026-06-28 放弃，Java 为唯一后端实现。实际落地架构详见 09-system-architecture-impl。" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;fontStyle=2;" vertex="1" parent="1"><mxGeometry x="40" y="420" width="1120" height="40" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

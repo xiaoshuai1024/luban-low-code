@@ -339,7 +339,7 @@ Wave 3:                          T6(客户端骨架)
 |------|------|------|
 | `docs/superpowers/PLAN_WRITING_CONTRACT.md` | 新建 | 补当前缺失的契约文件（§0-§8 必选章节） |
 | `docs/FEATURES.md` + `INIT-PLAN.md` | 新建 | 功能真相源 + 清 README 死链 |
-| `packages/docs/luban-architecture-design/**` | 新建 | 填充架构设计（当前 70B README） |
+| `docs/architecture/**` | 新建 | 填充架构设计（当前 70B README） |
 | `design-system/luban/MASTER.md` + `scripts/check-design-tokens.mjs` | 修改 | 设计 token 回填（当前占位 #2ECC71） |
 
 #### T5 — 测试门禁（全栈）

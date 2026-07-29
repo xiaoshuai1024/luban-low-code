@@ -1,0 +1,60 @@
+name: Test
+
+on:
+  pull_request:
+    branches: [master, main]
+  push:
+    branches: [master, main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build (nuxt)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build
+        run: pnpm run build
+
+  e2e:
+    name: E2E (Playwright SSR smoke)
+    runs-on: ubuntu-latest
+    # website 单仓 e2e 依赖 BFF 提供公开页数据；
+    # CI 此处仅验证 SSR 基础结构（HTML 注入/head），跨项目数据链路在 workspace e2e-cross。
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm run install:e2e:ci
+
+      - name: E2E SSR smoke
+        env:
+          LUBAN_E2E_USE_PLAYWRIGHT_CHROMIUM: "1"
+        run: pnpm exec playwright test ssr.spec.ts

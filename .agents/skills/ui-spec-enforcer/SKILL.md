@@ -8,12 +8,12 @@ description: Enforce luban UI implementation standards from luban-ui material li
 ## 规范来源（先读）
 
 1. `docs/UI_SPEC.md`（Agent 摘要）
-2. `packages/ui/luban-ui`（**可执行单源** — Vue 3 物料库 + token 定义）
+2. `packages/ui`（**可执行单源** — Vue 3 物料库 + token 定义）
 3. `design-system/luban/MASTER.md`（设计系统主文档，含 token / 色板 / 字体 / 组件规范）
 4. `scripts/check-design-tokens.mjs`（Token 合规自动扫描）
 
 **冲突优先级**：
-- 实现细节：`packages/ui/luban-ui` 源码（CSS 变量 / SCSS / design-tokens）
+- 实现细节：`packages/ui` 源码（CSS 变量 / SCSS / design-tokens）
 - Agent 摘要与策略：`docs/UI_SPEC.md`
 - 设计意图与背景：`design-system/luban/MASTER.md`
 
@@ -23,7 +23,7 @@ description: Enforce luban UI implementation standards from luban-ui material li
 
 任何 UI 代码改动前：
 - Read `docs/UI_SPEC.md` 相关章节。
-- 在 `packages/ui/luban-ui` 中定位对应组件 / token 定义。
+- 在 `packages/ui` 中定位对应组件 / token 定义。
 - 提取具体 token（color / radius / blur / spacing / icon size / typography）。
 
 实现过程中：

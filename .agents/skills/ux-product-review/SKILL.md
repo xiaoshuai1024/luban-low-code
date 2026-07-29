@@ -135,7 +135,7 @@ kangdou 原规则以 `miniprogram` / `operation-backend` 标注技术栈。luban
 
 **何时必须展开**：满足任一即视为「涉及低代码编辑器」，**不得**在 rubric 中省略本节（可逐条标「不适用」但须附理由）：
 
-- 变更或评审对象路径含 **`packages/engine/luban`** 或 **`packages/ui/luban-ui`**，或
+- 变更或评审对象路径含 **`apps/engine`** 或 **`packages/ui`**，或
 - 路由／菜单属于 luban **编辑器**（物料区 / 画布 / 属性面板 / 预览区 / 工具栏 / 发布），或
 - 方案／PRD 写明「编辑器」「低代码」「引擎」「物料」等同义范围。
 

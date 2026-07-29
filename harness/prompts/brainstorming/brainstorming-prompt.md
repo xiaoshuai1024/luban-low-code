@@ -31,7 +31,7 @@
 - < >
 
 ### 6. 涉及的子模块（粗判）
-- <packages/engine/luban | packages/ui/luban-ui | packages/bff/luban-bff | packages/backend/* | ...>
+- <apps/engine | packages/ui | apps/bff | apps/backend-java | ...>
 
 ## 收敛规则
 
@@ -42,5 +42,5 @@
 ## 硬约束
 
 - 信息与代码必须真实，不确定就说「不确定」。
-- 不编造 luban 引擎 / 物料的 API；不清楚的接口先去 `packages/engine/luban` / `packages/ui/luban-ui` 查代码。
+- 不编造 luban 引擎 / 物料的 API；不清楚的接口先去 `apps/engine` / `packages/ui` 查代码。
 - 文件 UTF-8 without BOM（如本轮确需写文件）。

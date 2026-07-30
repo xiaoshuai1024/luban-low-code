@@ -20,7 +20,7 @@
 
 - [x] 4.1 Create `.github/workflows/pages-deploy.yml` workflow
 - [x] 4.2 Verify workflow builds UI packages, generates static, deploys
-- [ ] 4.3 Confirm GitHub Pages source is set to "GitHub Actions" in repo Settings
+- [x] 4.3 Confirm GitHub Pages source is set to "GitHub Actions" in repo Settings
 
 ## 5. Validation
 

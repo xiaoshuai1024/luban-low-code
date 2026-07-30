@@ -8,6 +8,8 @@
     "test:apps": "pnpm --filter './apps/*' test",
     "dev:engine": "pnpm --filter ./apps/engine dev",
     "dev:bff": "pnpm --filter ./apps/bff dev",
-    "dev:website": "pnpm --filter ./apps/website dev"
+    "dev:website": "pnpm --filter ./apps/website dev",
+    "docs:dev": "pnpm --filter @luban/docs dev",
+    "docs:build": "pnpm --filter @luban/docs build"
   }
 }

@@ -3,6 +3,8 @@ import { fileURLToPath } from 'node:url'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
+  // GitHub Pages 子路径：https://user.github.io/luban-low-code/docs/
+  base: process.env.NODE_ENV === 'production' ? '/luban-low-code/docs/' : '/',
   lang: 'zh-CN',
   title: 'Luban',
   description: '开源低代码平台文档',

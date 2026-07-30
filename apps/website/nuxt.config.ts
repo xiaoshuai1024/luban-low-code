@@ -7,7 +7,9 @@ export default defineNuxtConfig({
   pages: true,
   modules: ["@pinia/nuxt"],
   typescript: { strict: true },
+  // GitHub Pages 子路径：https://user.github.io/luban-low-code/
   app: {
+    baseURL: process.env.NODE_ENV === 'production' ? '/luban-low-code/' : '/',
     head: {
       charset: "utf-8",
       viewport: "width=device-width, initial-scale=1",

@@ -50,11 +50,12 @@ jobs:
         working-directory: apps/website
         run: |
           pnpm install --frozen-lockfile
-          # 临时移除 SSR 自定义路由，使用 pages/index.vue 静态路由
           mv app/router.options.ts app/router.options.ts.bak 2>/dev/null || true
           mv router/routes.ts router/routes.ts.bak 2>/dev/null || true
           mv views/Home.vue views/Home.vue.bak 2>/dev/null || true
-          npx nuxi generate
+          NODE_ENV=production npx nuxi generate
+          # nuxi generate 有时不拷贝 _nuxt 客户端资源，手动补
+          cp -r .nuxt/dist/client/_nuxt .output/public/_nuxt 2>/dev/null || true
           mv app/router.options.ts.bak app/router.options.ts 2>/dev/null || true
           mv router/routes.ts.bak router/routes.ts 2>/dev/null || true
           mv views/Home.vue.bak views/Home.vue 2>/dev/null || true

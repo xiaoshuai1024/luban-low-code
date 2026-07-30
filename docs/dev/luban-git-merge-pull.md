@@ -67,3 +67,52 @@ git submodule update --init packages/ai-assistant
 ### 预防
 - 新 submodule 合入 main 后，各 feature 分支 rebase/merge main 即可自然获得；不必手动 checkout。
 - 若 feature 分支不方便 merge main，用上面的 `git checkout main --` 局部取件法（最小侵入）。
+
+---
+
+## 经验：子模块扁平化（submodule → flat monorepo）合并冲突处理
+
+### 场景
+需要将子模块（submodule）扁平化为 flat monorepo，但子模块仓库已删除/不可访问（`git ls-remote` 返回 `Repository not found`）。主仓库 master 分支仍持有 `160000 commit` 的 gitlink 条目，需要替换为实打实的文件树。
+
+### 根因
+1. 子模块仓库已独立删除（"不再有子仓库了，所有都是 pnpm monorepo"），但 master 分支的 `.gitmodules` 和 index 中的 gitlink 条目仍在。
+2. `git submodule deinit -f --all` 只清空工作目录，index 中的 `160000 commit` 条目不变。
+3. 从 submodule 切为 flat tree 时，git 将路径类型变更（160000 → 040000）视为 `modify/delete` 冲突。
+
+### 解决方案
+
+**前提**：已有另一个分支（如 `origin/feature/monorepo-migration`）持有扁平化后的文件树。
+
+```bash
+# 1. 重置到扁平分支（获得完整 flat 文件树）
+git reset --hard origin/feature/monorepo-migration
+
+# 2. 若有额外提交（如 landing page）cherry-pick
+git cherry-pick <commit-sha>
+
+# 3. 合并 master 解决冲突（取我们的版本覆盖子模块条目）
+git merge origin/master -s recursive -X theirs
+
+# 4. 解决残留冲突
+git rm .gitmodules                                    # 删除子模块配置
+git rm --cached packages/engine/luban ...             # 删除所有 gitlink 条目
+
+# 5. 提交合并
+git commit --no-edit
+git push origin HEAD:<branch>
+```
+
+**PR 合入后**验证 master 结构：
+```bash
+# 确认所有子目录是 tree（040000）而非 gitlink（160000）
+git ls-tree origin/master packages/
+# 确认 .gitmodules 不存在
+git cat-file -e origin/master:.gitmodules && echo "EXISTS" || echo "ABSENT"
+```
+
+### 预防
+- 子模块仓库删除前，确保有分支持有扁平后的文件树（如 `feature/monorepo-migration`）。
+- 扁平化后用 `git merge -s recursive -X theirs` 处理 modify/delete 冲突，不要手动逐个解。
+- PR 合并前先 `git merge base-branch` 本地测试，确认没有突。
+- `.claude/worktrees/` 等 agent 工作目录通过 `.gitignore` 排除并 `git rm --cached` 清理。

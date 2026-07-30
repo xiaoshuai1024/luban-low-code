@@ -5,7 +5,9 @@ on:
     branches: [master, main]
     paths:
       - 'apps/website/**'
+      - 'apps/docs/**'
       - 'packages/ui/**'
+      - '.github/workflows/pages-deploy.yml'
   workflow_dispatch:
 
 permissions:
@@ -36,21 +38,57 @@ jobs:
           node-version: 20
           cache: pnpm
 
-      - name: Install root dependencies
-        working-directory: ./
-        run: pnpm install --frozen-lockfile
-
-      - name: Build UI packages
+      # ===== 1. 构建 UI 物料库 =====
+      - name: Install & Build UI packages
         working-directory: packages/ui
         run: |
           pnpm install --frozen-lockfile
           pnpm exec nx run-many --target=build --projects=luban-base,luban-low-code
 
-      - name: Build website (static generate)
+      # ===== 2. 构建 Landing Page（Nuxt 静态） =====
+      - name: Build Landing Page
         working-directory: apps/website
         run: |
           pnpm install --frozen-lockfile
-          npx nuxi generate
+          mv app/router.options.ts app/router.options.ts.bak 2>/dev/null || true
+          mv router/routes.ts router/routes.ts.bak 2>/dev/null || true
+          mv views/Home.vue views/Home.vue.bak 2>/dev/null || true
+          NODE_ENV=production npx nuxi generate
+          # nuxi generate 有时不拷贝 _nuxt 客户端资源，手动补
+          cp -r .nuxt/dist/client/_nuxt .output/public/_nuxt 2>/dev/null || true
+          mv app/router.options.ts.bak app/router.options.ts 2>/dev/null || true
+          mv router/routes.ts.bak router/routes.ts 2>/dev/null || true
+          mv views/Home.vue.bak views/Home.vue 2>/dev/null || true
+
+      # ===== 3. 构建文档站（VitePress） =====
+      - name: Build Docs Site
+        working-directory: apps/docs
+        run: |
+          pnpm install --frozen-lockfile
+          NODE_ENV=production npx vitepress build
+
+      # ===== 4. 构建 Storybook（静态） =====
+      - name: Build Storybook
+        working-directory: packages/ui
+        run: |
+          NODE_ENV=production pnpm exec storybook build -o ../../storybook-static
+
+      # ===== 5. 合并到单一部署目录 =====
+      - name: Assemble deploy directory
+        run: |
+          mkdir -p _site
+          # Landing page → _site/
+          cp -r apps/website/.output/public/* _site/
+          # Docs → _site/docs/
+          mkdir -p _site/docs
+          cp -r apps/docs/.vitepress/dist/* _site/docs/
+          # Storybook → _site/storybook/
+          mkdir -p _site/storybook
+          cp -r storybook-static/* _site/storybook/
+          # .nojekyll to disable Jekyll processing
+          touch _site/.nojekyll
+          echo "Deploy directory assembled:"
+          du -sh _site/
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -58,7 +96,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: apps/website/.output/public
+          path: _site
 
       - name: Deploy to GitHub Pages
         id: deployment

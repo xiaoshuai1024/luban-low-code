@@ -8,6 +8,8 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
+    "dev:landing": "npx serve .output/public -p 3000",
+    "build:landing": "node -e \"var f=require('fs');['app/router.options.ts','router/routes.ts','views/Home.vue'].forEach(function(p){var s='app/'+p;if(f.existsSync(p)){f.renameSync(p,p+'.bak');console.log('moved',p)}});process.on('exit',function(){['app/router.options.ts','router/routes.ts','views/Home.vue'].forEach(function(p){var s='app/'+p;if(!f.existsSync(p)&&f.existsSync(p+'.bak')){f.renameSync(p+'.bak',p);console.log('restored',p)}})})\" && nuxt generate && npx serve .output/public -p 3000",
     "install:e2e": "playwright install chrome",
     "install:e2e:ci": "playwright install chromium",
     "test:e2e": "playwright test",

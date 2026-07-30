@@ -12,6 +12,10 @@ out/
 .nuxt/
 .output/
 .vercel/
+# 部署产物 / 构建中间目录
+_site/
+storybook-static/
+apps/docs/.vitepress/cache/
 
 # ---- Go ----
 *.exe

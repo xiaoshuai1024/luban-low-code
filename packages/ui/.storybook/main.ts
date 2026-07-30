@@ -15,8 +15,11 @@ const config: StorybookConfig = {
   docs: {
     autodocs: 'tag',
   },
+  // GitHub Pages 静态部署子路径
+  managerHead: process.env.NODE_ENV === 'production' ? [
+    (process.env.STORYBOOK_BASE_HREF || '/luban-low-code/storybook/')
+  ].map(() => '') : [],
   viteFinal(config) {
-    // Ensure Vue plugin runs so .vue files in packages are compiled (framework may not cover them)
     const pluginNames = new Set(
       (config.plugins ?? []).map((p) => p && typeof p === 'object' && 'name' in p ? (p as { name?: string }).name : '')
     );
@@ -24,7 +27,6 @@ const config: StorybookConfig = {
       config.plugins = config.plugins ?? [];
       config.plugins.unshift(vue());
     }
-    // Allow resolving workspace packages and app assets (e.g. preview.ts imports apps/luban-ui/src/styles.scss)
     config.server = config.server ?? {};
     config.server.fs = config.server.fs ?? {};
     const projectRoot = path.resolve(__dirname, '..');
@@ -33,6 +35,9 @@ const config: StorybookConfig = {
       path.resolve(projectRoot, 'packages'),
       path.resolve(projectRoot, 'apps'),
     ];
+    // 静态构建时设置 base path
+    const base = process.env.NODE_ENV === 'production' ? '/luban-low-code/storybook/' : '/';
+    config.base = base;
     return config;
   },
 };

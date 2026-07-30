@@ -160,3 +160,54 @@ git add src/views/ && git commit -m "lint: fix views dir"
 - lint 验证应在 commit **之前**单独跑通（`pnpm run lint`），而非依赖 hook 兜底
 - 后续小改动正常走 hook 即可
 - lint-staged 配置可加 `maxArgLength` 或用 `git:*` 模式分批
+
+---
+
+## 经验：npm publish 时 NPM_TOKEN 加载与 registry 冲突
+
+### 场景
+全局 npm 配置使用 `registry=https://registry.npmmirror.com`（国内镜像），但发布 npm 包需要 `registry=https://registry.npmjs.org/`。同时 workspace 子包的 `.npmrc` 会被 npm/pnpm 忽略。
+
+```
+npm publish → 404 (ENEEDAUTH) 
+# 原因：发布请求发到了 npmmirror.com，而非 npmjs.org
+```
+
+### 根因
+1. **npm workspace 子包 `.npmrc` 被忽略**：npm 9+ 只认项目根 `.npmrc` 和用户级 `.npmrc`，子包内的 `.npmrc` 不生效（`ls-session` scope 限制）。
+2. **全局 registry 覆盖**：用户级 `.npmrc` 配置了 `registry=https://registry.npmmirror.com`，publish 也用同一个 registry。
+3. **`${NPM_TOKEN}` 环境变量不生效**：当 `//registry.npmjs.org/:_authToken=${NPM_TOKEN}` 在忽略的子 `.npmrc` 中时，token 永远不会被读取。
+
+### 解决方案
+
+**根 `.npmrc`** 写入 token（不设 registry 避免覆盖全局）：
+```
+//registry.npmjs.org/:_authToken=${NPM_TOKEN}
+```
+
+**发布脚本**加载 root `.env` 并使用 `--registry` 参数：
+```javascript
+// scripts/publish.mjs
+import 'dotenv/config';  // 从根 .env 加载 NPM_TOKEN
+
+if (!process.env.NPM_TOKEN) {
+  console.error('❌ NPM_TOKEN not found in .env');
+  process.exit(1);
+}
+
+execSync(`npm publish --registry https://registry.npmjs.org/`, {
+  cwd: pkgDir,
+  stdio: 'inherit',
+});
+```
+
+或在用户级 `.npmrc` 单独认证（不设全局 registry）：
+```bash
+# 只设 npmjs.org 的 token，不覆盖全局 registry
+npm config set //registry.npmjs.org/:_authToken "$TOKEN" --location user
+```
+
+### 预防
+- 根 `.env` 存放 `NPM_TOKEN`，`.gitignore` 保护，发布脚本显式加载。
+- 发布脚本始终用 `--registry https://registry.npmjs.org/`，不依赖默认 registry。
+- 使用 `dotenv` + `git rev-parse --git-common-dir` 定位根 `.env`（兼容 git worktree 场景）。

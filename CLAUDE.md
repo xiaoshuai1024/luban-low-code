@@ -98,5 +98,17 @@ Edit/Write 任何文件前先 Read 确认当前状态，禁止凭记忆改。涉
 - 测试规范 `docs/TESTING_SPEC.md`
 - E2E 指南 `docs/E2E_AGENT_GUIDE.md` · 技术经验库 `docs/dev/`（见 `docs/dev/INDEX.md`）
 
+## 双工作流分治：OpenSpec（小任务）+ Superpowers（大任务）
+
+**小任务 → OpenSpec，大任务 → Superpowers。** 两者场景互补，非替代。
+
+| 场景 | 工作流 | 入口命令 |
+|------|--------|---------|
+| 小改动（≤3文件/单子系统/≤2h） | OpenSpec 轻量 SDD | `/opsx:propose "..." → apply → archive` |
+| 大特性（跨子系统/新实体/需E2E/涉安全） | Superpowers 重型契约 | `/plan-template` → 并行 subagent → G1-G4 |
+
+**判断标准**：满足任一"大任务"条件就用 Superpowers，全部满足"小任务"条件才用 OpenSpec。
+详见 `docs/OPENSPEC_WORKFLOW.md`（含完整决策树）。
+
 ## 启动检查（MUST）
 Agent 开始任何任务前，见 `AGENTS.md`「启动检查」（10 步）。

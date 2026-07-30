@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitepress'
+import { fileURLToPath } from 'node:url'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
@@ -7,11 +8,31 @@ export default defineConfig({
   description: '开源低代码平台文档',
   lastUpdated: true,
   cleanUrls: true,
-  // 忽略对外部服务地址（engine/bff/website/backend 本地端口）的死链校验
   ignoreDeadLinks: [/^https?:\/\/localhost/],
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/luban-logo.svg' }]
   ],
+
+  // Vite 配置：alias luban-base/luban-low-code 用于文档内组件实时预览
+  vite: {
+    resolve: {
+      alias: {
+        'luban-base': fileURLToPath(
+          new URL('../../../packages/ui/packages/luban-base/dist/index.js', import.meta.url),
+        ),
+        'luban-low-code': fileURLToPath(
+          new URL('../../../packages/ui/packages/luban-low-code/dist/index.js', import.meta.url),
+        ),
+      },
+    },
+    css: {
+      preprocessorOptions: {
+        scss: { additionalData: `@use "../../../../packages/ui/packages/luban-base/src/styles/_variables.scss" as *;` }
+      }
+    },
+  },
+
+  // 全局 CSS：luban 组件样式在 theme/index.ts 中导入
 
   themeConfig: {
     siteTitle: 'Luban',

@@ -36,7 +36,8 @@ const comps = [
         <div style="display:flex;gap:28px;align-items:center">
           <a href="#features" style="font-size:14px;font-weight:500;color:#64748b;text-decoration:none">Features</a>
           <a href="#components" style="font-size:14px;font-weight:500;color:#64748b;text-decoration:none">Components</a>
-          <a href="https://github.com" target="_blank" style="font-size:14px;font-weight:500;color:#64748b;text-decoration:none">GitHub</a>
+          <a href="https://github.com/xiaoshuai1024/luban-low-code#readme" target="_blank" style="font-size:14px;font-weight:500;color:#64748b;text-decoration:none">Docs</a>
+          <a href="https://github.com/xiaoshuai1024/luban-low-code" target="_blank" style="font-size:14px;font-weight:500;color:#64748b;text-decoration:none">GitHub</a>
         </div>
       </div>
     </nav>
@@ -94,8 +95,8 @@ const comps = [
         <h2 style="font-size:36px;font-weight:800;margin:0 0 16px;color:#fff">Ready to try?</h2>
         <p style="font-size:17px;color:rgba(255,255,255,.6);line-height:1.7;margin:0 0 32px">Star the repo, read the docs, or run locally in 2 minutes.</p>
         <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
-          <a href="https://github.com" target="_blank" style="padding:14px 32px;border-radius:10px;font-size:16px;font-weight:600;text-decoration:none;background:#fff;color:#4f46e5;transition:all .15s">⭐ Star on GitHub</a>
-          <a href="https://github.com" target="_blank" style="padding:14px 32px;border-radius:10px;font-size:16px;font-weight:600;text-decoration:none;background:transparent;border:1.5px solid rgba(255,255,255,.3);color:#fff;transition:all .15s">📖 Read the Docs</a>
+          <a href="https://github.com/xiaoshuai1024/luban-low-code#readme" target="_blank" style="padding:14px 32px;border-radius:10px;font-size:16px;font-weight:600;text-decoration:none;background:#fff;color:#4f46e5;transition:all .15s">📖 Read the Docs</a>
+          <a href="https://github.com/xiaoshuai1024/luban-low-code" target="_blank" style="padding:14px 32px;border-radius:10px;font-size:16px;font-weight:600;text-decoration:none;background:transparent;border:1.5px solid rgba(255,255,255,.3);color:#fff;transition:all .15s">⭐ Star on GitHub</a>
         </div>
       </div>
     </section>

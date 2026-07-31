@@ -18,57 +18,57 @@
  * @since 0.1.0
  */
 
-import { materialRegistry } from '../lib/material/registry';
-import type { MaterialDefinition } from '../lib/material/defineMaterial';
+import { materialRegistry } from '../lib/material/registry.js';
+import type { MaterialDefinition } from '../lib/material/defineMaterial.js';
 
 // === general 组 ===
-import { buttonMaterial } from './general/button/material';
+import { buttonMaterial } from './general/button/material.js';
 // === content 组 ===
-import { bannerMaterial } from './content/banner/material';
-import { contentListMaterial } from './content/content-list/material';
+import { bannerMaterial } from './content/banner/material.js';
+import { contentListMaterial } from './content/content-list/material.js';
 // === layout 组（含首次纳入的 SidePanel）===
-import { containerMaterial } from './layout/container/material';
-import { rowMaterial } from './layout/row/material';
-import { colMaterial } from './layout/col/material';
-import { sidePanelMaterial } from './layout/side-panel/material';
+import { containerMaterial } from './layout/container/material.js';
+import { rowMaterial } from './layout/row/material.js';
+import { colMaterial } from './layout/col/material.js';
+import { sidePanelMaterial } from './layout/side-panel/material.js';
 // === form 组 ===
-import { formMaterial } from './form/form/material';
-import { inputMaterial } from './form/input/material';
-import { textAreaMaterial } from './form/textarea/material';
-import { selectMaterial } from './form/select/material';
-import { checkboxMaterial } from './form/checkbox/material';
-import { radioGroupMaterial } from './form/radio-group/material';
-import { switchMaterial } from './form/switch/material';
+import { formMaterial } from './form/form/material.js';
+import { inputMaterial } from './form/input/material.js';
+import { textAreaMaterial } from './form/textarea/material.js';
+import { selectMaterial } from './form/select/material.js';
+import { checkboxMaterial } from './form/checkbox/material.js';
+import { radioGroupMaterial } from './form/radio-group/material.js';
+import { switchMaterial } from './form/switch/material.js';
 // === general/text（与 button 同组，import 分组保持文件来源可读）===
-import { textMaterial } from './general/text/material';
+import { textMaterial } from './general/text/material.js';
 // === data-display / navigation / feedback（W1-T6 第1波新增 6 物料）===
-import { tableMaterial } from './data-display/table/material';
-import { menuMaterial } from './navigation/menu/material';
-import { tabsMaterial } from './navigation/tabs/material';
-import { modalMaterial } from './feedback/modal/material';
-import { drawerMaterial } from './feedback/drawer/material';
-import { toastMaterial } from './feedback/toast/material';
+import { tableMaterial } from './data-display/table/material.js';
+import { menuMaterial } from './navigation/menu/material.js';
+import { tabsMaterial } from './navigation/tabs/material.js';
+import { modalMaterial } from './feedback/modal/material.js';
+import { drawerMaterial } from './feedback/drawer/material.js';
+import { toastMaterial } from './feedback/toast/material.js';
 // === marketing 组 ===
-import { heroMaterial } from './marketing/hero/material';
-import { ctaMaterial } from './marketing/cta/material';
-import { testimonialMaterial } from './marketing/testimonial/material';
-import { leadCaptureMaterial } from './marketing/lead-capture/material';
+import { heroMaterial } from './marketing/hero/material.js';
+import { ctaMaterial } from './marketing/cta/material.js';
+import { testimonialMaterial } from './marketing/testimonial/material.js';
+import { leadCaptureMaterial } from './marketing/lead-capture/material.js';
 // === marketing 组 D15-E1 新增 9 营销建站物料 ===
-import { navbarMaterial } from './marketing/navbar/material';
-import { footerMaterial } from './marketing/footer/material';
-import { featureGridMaterial } from './marketing/feature-grid/material';
-import { statsMaterial } from './marketing/stats/material';
-import { faqMaterial } from './marketing/faq/material';
-import { pricingMaterial } from './marketing/pricing/material';
-import { testimonialCarouselMaterial } from './marketing/testimonial-carousel/material';
-import { galleryMaterial } from './marketing/gallery/material';
-import { logoCloudMaterial } from './marketing/logo-cloud/material';
+import { navbarMaterial } from './marketing/navbar/material.js';
+import { footerMaterial } from './marketing/footer/material.js';
+import { featureGridMaterial } from './marketing/feature-grid/material.js';
+import { statsMaterial } from './marketing/stats/material.js';
+import { faqMaterial } from './marketing/faq/material.js';
+import { pricingMaterial } from './marketing/pricing/material.js';
+import { testimonialCarouselMaterial } from './marketing/testimonial-carousel/material.js';
+import { galleryMaterial } from './marketing/gallery/material.js';
+import { logoCloudMaterial } from './marketing/logo-cloud/material.js';
 // === 新物料（D14 鲁班官网）===
-import { markdownMaterial } from './content/markdown/material';
-import { stepsMaterial } from './content/steps/material';
-import { codeBlockMaterial } from './data-display/code-block/material';
-import { alertMaterial } from './feedback/alert/material';
-import { backToTopMaterial } from './navigation/back-to-top/material';
+import { markdownMaterial } from './content/markdown/material.js';
+import { stepsMaterial } from './content/steps/material.js';
+import { codeBlockMaterial } from './data-display/code-block/material.js';
+import { alertMaterial } from './feedback/alert/material.js';
+import { backToTopMaterial } from './navigation/back-to-top/material.js';
 
 /**
  * 全部 20 物料定义（注册顺序：general → content → layout → form
@@ -142,45 +142,45 @@ function registerAll(): void {
 registerAll();
 
 // === re-export 各 material 常量（下游可按需引用具体物料）===
-export { buttonMaterial } from './general/button/material';
-export { textMaterial } from './general/text/material';
-export { bannerMaterial } from './content/banner/material';
-export { contentListMaterial } from './content/content-list/material';
-export { containerMaterial } from './layout/container/material';
-export { rowMaterial } from './layout/row/material';
-export { colMaterial } from './layout/col/material';
-export { sidePanelMaterial } from './layout/side-panel/material';
-export { formMaterial } from './form/form/material';
-export { inputMaterial } from './form/input/material';
-export { textAreaMaterial } from './form/textarea/material';
-export { selectMaterial } from './form/select/material';
-export { checkboxMaterial } from './form/checkbox/material';
-export { radioGroupMaterial } from './form/radio-group/material';
-export { switchMaterial } from './form/switch/material';
+export { buttonMaterial } from './general/button/material.js';
+export { textMaterial } from './general/text/material.js';
+export { bannerMaterial } from './content/banner/material.js';
+export { contentListMaterial } from './content/content-list/material.js';
+export { containerMaterial } from './layout/container/material.js';
+export { rowMaterial } from './layout/row/material.js';
+export { colMaterial } from './layout/col/material.js';
+export { sidePanelMaterial } from './layout/side-panel/material.js';
+export { formMaterial } from './form/form/material.js';
+export { inputMaterial } from './form/input/material.js';
+export { textAreaMaterial } from './form/textarea/material.js';
+export { selectMaterial } from './form/select/material.js';
+export { checkboxMaterial } from './form/checkbox/material.js';
+export { radioGroupMaterial } from './form/radio-group/material.js';
+export { switchMaterial } from './form/switch/material.js';
 // === W1-T6 第1波新增 6 物料 re-export ===
-export { tableMaterial } from './data-display/table/material';
-export { menuMaterial } from './navigation/menu/material';
-export { tabsMaterial } from './navigation/tabs/material';
-export { modalMaterial } from './feedback/modal/material';
-export { drawerMaterial } from './feedback/drawer/material';
-export { toastMaterial } from './feedback/toast/material';
+export { tableMaterial } from './data-display/table/material.js';
+export { menuMaterial } from './navigation/menu/material.js';
+export { tabsMaterial } from './navigation/tabs/material.js';
+export { modalMaterial } from './feedback/modal/material.js';
+export { drawerMaterial } from './feedback/drawer/material.js';
+export { toastMaterial } from './feedback/toast/material.js';
 // === marketing 组 re-export ===
-export { heroMaterial } from './marketing/hero/material';
-export { ctaMaterial } from './marketing/cta/material';
-export { testimonialMaterial } from './marketing/testimonial/material';
-export { leadCaptureMaterial } from './marketing/lead-capture/material';
+export { heroMaterial } from './marketing/hero/material.js';
+export { ctaMaterial } from './marketing/cta/material.js';
+export { testimonialMaterial } from './marketing/testimonial/material.js';
+export { leadCaptureMaterial } from './marketing/lead-capture/material.js';
 // === marketing D15-E1 新增 9 物料 re-export ===
-export { navbarMaterial } from './marketing/navbar/material';
-export { footerMaterial } from './marketing/footer/material';
-export { featureGridMaterial } from './marketing/feature-grid/material';
-export { statsMaterial } from './marketing/stats/material';
-export { faqMaterial } from './marketing/faq/material';
-export { pricingMaterial } from './marketing/pricing/material';
-export { testimonialCarouselMaterial } from './marketing/testimonial-carousel/material';
-export { galleryMaterial } from './marketing/gallery/material';
-export { logoCloudMaterial } from './marketing/logo-cloud/material';
-export { markdownMaterial } from './content/markdown/material';
-export { stepsMaterial } from './content/steps/material';
-export { codeBlockMaterial } from './data-display/code-block/material';
-export { alertMaterial } from './feedback/alert/material';
-export { backToTopMaterial } from './navigation/back-to-top/material';
+export { navbarMaterial } from './marketing/navbar/material.js';
+export { footerMaterial } from './marketing/footer/material.js';
+export { featureGridMaterial } from './marketing/feature-grid/material.js';
+export { statsMaterial } from './marketing/stats/material.js';
+export { faqMaterial } from './marketing/faq/material.js';
+export { pricingMaterial } from './marketing/pricing/material.js';
+export { testimonialCarouselMaterial } from './marketing/testimonial-carousel/material.js';
+export { galleryMaterial } from './marketing/gallery/material.js';
+export { logoCloudMaterial } from './marketing/logo-cloud/material.js';
+export { markdownMaterial } from './content/markdown/material.js';
+export { stepsMaterial } from './content/steps/material.js';
+export { codeBlockMaterial } from './data-display/code-block/material.js';
+export { alertMaterial } from './feedback/alert/material.js';
+export { backToTopMaterial } from './navigation/back-to-top/material.js';

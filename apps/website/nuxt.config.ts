@@ -27,6 +27,15 @@ export default defineNuxtConfig({
       defaultSiteSlug: process.env.NUXT_PUBLIC_DEFAULT_SITE_SLUG || "default",
     },
   },
+  nitro: {
+    prerender: {
+      // /docs/ 与 /storybook/ 是部署后由独立静态目录提供的外部站点路径，
+      // Nuxt 爬虫不应预渲染它们（否则 404 会中断 nuxi generate）
+      ignore: ["/docs", "/storybook"],
+      // 兜底：多站点合并部署时，任何残留外部链接 404 不应阻断生成
+      failOnError: false,
+    },
+  },
   css: [
     fileURLToPath(new URL("../../packages/ui/packages/luban-low-code/dist/index.css", import.meta.url)),
   ],

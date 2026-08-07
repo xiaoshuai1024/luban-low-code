@@ -16,6 +16,10 @@ export default defineConfig({
       ),
       // luban-low-code 源码依赖 sortablejs，跨 monorepo 解析须指向 engine 的副本
       sortablejs: fileURLToPath(new URL('./node_modules/sortablejs/modular/sortable.esm.js', import.meta.url)),
+      // highlight.js（LubanCodeBlock 用，import 多个 /lib/* 子路径；string find 前缀匹配全部）
+      'highlight.js': fileURLToPath(new URL('./node_modules/highlight.js', import.meta.url)),
+      // markdown-it（LubanMarkdown 用）
+      'markdown-it': fileURLToPath(new URL('./node_modules/markdown-it', import.meta.url)),
     },
   },
   preview: {

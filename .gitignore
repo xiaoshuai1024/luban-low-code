@@ -49,6 +49,7 @@ secrets/
 .claude/projects/
 .claude/memory/*.jsonl
 .worktrees/
+.claude/worktrees/
 .reasonix/
 
 # ---- Artifacts ----

@@ -1,0 +1,19 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/session/in-progress-summary.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node scripts/session/sprint-summary.mjs"
+          }
+        ]
+      }
+    ]
+  }
+}

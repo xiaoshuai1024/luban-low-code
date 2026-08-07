@@ -1,0 +1,174 @@
+# =====================================================================
+# luban 生产编排 — 共存模式（与 gudu 业务同机 49.232.3.201）
+# ---------------------------------------------------------------------
+# 设计要点（不动 gudu 现有服务）：
+#   1. 零 host 端口：所有 luban 服务仅内网，不抢 gudu 的 80/443/3306/6379。
+#   2. 自带 MySQL+Redis（luban_net 内网），绝不连 gudu 的库。
+#   3. 公共服务(backend/bff/website/manage) 挂到既有外部网络 gudu_default，
+#      供 gudu-nginx 按容器名(luban-*)反代（见 deploy/luban.conf）。
+#   4. 内存硬限 mem_limit + Java -Xmx512m：luban 即便 OOM 也只殃及自己，不碰 gudu。
+#   5. 无 Traefik：边缘由既有 gudu-nginx 担任（已占 80/443 + certbot）。
+#
+# 用法：deploy-prod.sh 会把本文件 + deploy/luban.conf 推到远端并 up --build。
+# 校验：docker compose -f docker-compose.prod.yml --env-file .env.prod config -q
+# =====================================================================
+name: luban-prod
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: luban-mysql
+    restart: unless-stopped
+    mem_limit: 512m
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-luban_root_prod}
+      MYSQL_DATABASE: ${MYSQL_DB:-luban_prod}
+      MYSQL_USER: ${MYSQL_USER:-luban}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?在 .env.prod 设置 MYSQL_PASSWORD}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --innodb-buffer-pool-size=128M
+    volumes:
+      - luban_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u$$MYSQL_USER", "-p$$MYSQL_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    networks:
+      - luban_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: luban-redis
+    restart: unless-stopped
+    mem_limit: 96m
+    command: ["redis-server", "--maxmemory", "64mb", "--maxmemory-policy", "allkeys-lru"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - luban_net
+
+  backend:
+    build:
+      context: apps/backend-java
+      dockerfile: Dockerfile
+    image: luban-backend:prod
+    container_name: luban-backend
+    restart: unless-stopped
+    mem_limit: 900m
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      APP_PORT: "8080"
+      MYSQL_HOST: mysql            # luban_net 内解析到 luban 自带 mysql
+      MYSQL_PORT: "3306"
+      MYSQL_DB: ${MYSQL_DB:-luban_prod}
+      MYSQL_USER: ${MYSQL_USER:-luban}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_CHARSET: ${MYSQL_CHARSET:-utf8mb4}
+      REDIS_HOST: redis            # luban_net 内解析到 luban 自带 redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      LEAD_ENC_KEY: ${LEAD_ENC_KEY:?在 .env.prod 设置 LEAD_ENC_KEY}
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?在 .env.prod 设置 AUTH_JWT_SECRET}
+      JAVA_TOOL_OPTIONS: "-Xmx512m"   # JVM 自动读取；叠 mem_limit 900m 防 OOM 殃及 gudu
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/backend/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 90s
+    networks:
+      - luban_net
+      - gudu_default
+
+  bff:
+    build:
+      context: apps/bff
+      dockerfile: Dockerfile
+    image: luban-bff:prod
+    container_name: luban-bff
+    restart: unless-stopped
+    mem_limit: 256m
+    depends_on:
+      backend:
+        condition: service_started
+    environment:
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      BACKEND_BASE_URL: http://luban-backend:8080/backend   # gudu_default 内按容器名寻址
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET}
+      NODE_ENV: production
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    networks:
+      - luban_net
+      - gudu_default
+
+  website:
+    build:
+      context: .
+      dockerfile: apps/website/Dockerfile
+    image: luban-website:prod
+    container_name: luban-website
+    restart: unless-stopped
+    mem_limit: 256m
+    depends_on:
+      bff:
+        condition: service_started
+    ports:
+      # 直接 IP:端口访问（域名未备案，IP 访问绕开腾讯拦截）。8081 避让 gudu 占用端口。
+      - "8081:4173"
+    environment:
+      NITRO_PORT: "4173"
+      PORT: "4173"
+      HOST: "0.0.0.0"
+      # SSR 走内网调 BFF（避免公网 HTTPS 回环：xiaoshuai1024.top 未备案会被腾讯 443 拦截返备案页）
+      NUXT_PUBLIC_BFF_BASE_URL: "http://luban-bff:3000"
+      NUXT_PUBLIC_DEFAULT_SITE_SLUG: "default"
+      NODE_ENV: production
+    networks:
+      - luban_net
+      - gudu_default
+
+  manage:
+    # manage = 低代码引擎/设计器（apps/engine），容器内 nginx 监听 4200，/api 反代到 luban-bff:3000
+    build:
+      context: .
+      dockerfile: apps/engine/Dockerfile
+    image: luban-manage:prod
+    container_name: luban-manage
+    restart: unless-stopped
+    mem_limit: 96m
+    depends_on:
+      bff:
+        condition: service_started
+    ports:
+      # 直接 IP:端口访问设计器（/api 经容器内 nginx 反代到 luban-bff:3000，内部通）
+      - "8082:4200"
+    networks:
+      - luban_net
+      - gudu_default
+
+networks:
+  luban_net:
+    name: luban-prod_luban_net
+  gudu_default:
+    external: true                # 既有 gudu 网络；gudu-nginx 据此反代到 luban-* 容器
+
+volumes:
+  luban_mysql_data:
+    driver: local

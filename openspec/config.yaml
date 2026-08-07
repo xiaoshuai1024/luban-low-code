@@ -1,0 +1,47 @@
+schema: spec-driven
+
+# Project context — injected into all AI prompts when creating artifacts
+context: |
+  Project: luban-low-code — 低代码平台 monorepo
+  Tech stack: TypeScript (engine/bff/ui/website), Vue 3/Vite (UI), Java/Spring Boot/Maven (backend), pnpm monorepo
+  Architecture: 低代码引擎(luban) → BFF(luban-bff) → Java 后端
+  Sub-projects:
+    - engine: packages/engine/luban
+    - bff: packages/bff/luban-bff
+    - ui: packages/ui/luban-ui
+    - website: packages/web/luban-website
+    - backend-java: packages/backend/luban-backend
+  Branch strategy: feature/* branches, no direct push to master/main
+  Testing: pnpm test (TS), pnpm run build (TS), mvn -q verify (Java)
+  E2E: Playwright, no *.skip, no fake green
+  Go backend deprecated (single Java backend authority)
+
+# Per-artifact rules
+rules:
+  proposal:
+    - Keep proposals under 300 words for small changes
+    - Always include acceptance criteria
+    - Link to related openspec/specs/ domain if applicable
+    - If this task touches >3 files or crosses subsystems, consider using Superpowers instead
+  design:
+    - Keep lightweight — a few sentences or a short list
+    - No need for ASCII diagrams unless the change is complex
+  tasks:
+    - Each task should be completable in one Claude Code turn
+    - Max 5 tasks per change (else use Superpowers)
+    - Include verification steps in each task
+    - Must include build/test verification: pnpm run build && pnpm test (TS) or mvn -q verify (Java)
+
+# Per-operation guidance
+operations:
+  apply:
+    guidance:
+      - Apply changes incrementally, one task at a time
+      - After each task, run compile check (pnpm run build or mvn compile) before moving on
+      - For engine/ui changes, also verify rendering consistency
+      - No fake green — tests must actually pass
+  archive:
+    guidance:
+      - Summarize what was implemented
+      - Note any deviations from the proposal
+      - Mention specs/ files that were updated

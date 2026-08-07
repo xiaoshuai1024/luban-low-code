@@ -1,0 +1,28 @@
+# =====================================================================
+# luban 生产域名 — 本地验证 hosts 模板（共存模式，初期 HTTP）
+# ---------------------------------------------------------------------
+# 用途：DNS 正式解析前，先把四个子域绑到生产公网 IP，经 gudu-nginx 以 HTTP 验证。
+#       （TLS 后续由 gudu-certbot/DNS-01 签发后再改 https）
+#
+# 用法：
+#   Windows: 追加到 C:\Windows\System32\drivers\etc\hosts （需管理员）
+#   macOS/Linux: 追加到 /etc/hosts
+#   将 <PROD_IP> 替换为 .env.prod 中的 SSH_HOST（当前 49.232.3.201）。
+# =====================================================================
+
+<PROD_IP>  luban.xiaoshuai1024.top
+<PROD_IP>  manage.xiaoshuai1024.top
+<PROD_IP>  api.xiaoshuai1024.top
+<PROD_IP>  luban-bff.xiaoshuai1024.top
+
+# 示例（替换为你的真实公网 IP）：
+# 49.232.3.201  luban.xiaoshuai1024.top
+# 49.232.3.201  manage.xiaoshuai1024.top
+# 49.232.3.201  api.xiaoshuai1024.top
+# 49.232.3.201  luban-bff.xiaoshuai1024.top
+
+# 验证（部署 + edge 步骤完成后）：
+#   curl http://luban.xiaoshuai1024.top/            # website 首页
+#   curl http://manage.xiaoshuai1024.top/healthz    # engine
+#   curl http://api.xiaoshuai1024.top/healthz       # backend → /backend/healthz
+#   curl http://luban-bff.xiaoshuai1024.top/healthz # bff

@@ -83,9 +83,13 @@ public class LeadService {
             throw BusinessException.leadDuplicate();
         }
 
-        // MERGE：命中窗口内同指纹线索时合并到现有 lead（update），避免 insert 触发 uk_form_dedup 冲突
-        if (policy == DedupService.Policy.MERGE && exists > 0) {
-            return mergeExistingLead(form, req, hash, dedupThreshold);
+        // MERGE：全局查同指纹线索（uk_form_dedup 唯一；含窗口外——窗口过期后同 phone 提交若 insert 会撞全局 uk 500），
+        // 命中则 update 合并，未命中（从未提交过）才走 insert
+        if (policy == DedupService.Policy.MERGE) {
+            Lead existing = leadMapper.findLatestByFormHash(req.formId(), hash);
+            if (existing != null) {
+                return mergeExistingLead(form, req, hash, existing);
+            }
         }
 
         // 3. 加密 contact + 构建 lead
@@ -117,14 +121,10 @@ public class LeadService {
     /**
      * MERGE 去重：命中窗口内同指纹线索时，合并新 contact 到现有 lead（update）而非 insert。
      * 合并语义：新 contact 字段覆盖同名旧字段，旧独有字段保留。contact 合并后重新加密。
-     * 乐观锁 updated_at：并发重复提交影响 0 行则返回当前态（保证幂等，不抛 500）。MERGE 不重复触发通知。
+     * 乐观锁 updated_at：并发重复提交影响 0 行则返回当前态（last-writer-wins，后到提交独有字段可能丢失，保证幂等不抛 500）。
+     * MERGE 不重复触发通知。existing 由调用方全局查询传入（含窗口外，避免 uk 冲突）。
      */
-    private LeadSubmitResult mergeExistingLead(Form form, LeadSubmitRequest req, String hash, Instant threshold) {
-        Lead existing = leadMapper.findLatestByFormHashInWindow(form.getId(), hash, threshold);
-        if (existing == null) {
-            // 极端：刚判 exists>0 却查不到（并发删除等），保守按重复拒绝
-            throw BusinessException.leadDuplicate();
-        }
+    private LeadSubmitResult mergeExistingLead(Form form, LeadSubmitRequest req, String hash, Lead existing) {
         Map<String, String> merged = new LinkedHashMap<>(decryptContact(existing));
         if (req.contact() != null) {
             merged.putAll(req.contact()); // 新字段覆盖同名，旧独有字段保留

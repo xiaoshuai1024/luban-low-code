@@ -14,9 +14,12 @@ import com.luban.backend.mapper.SiteMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -28,8 +31,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * 覆盖留资提交→入库→加密、去重拒绝。@Transactional 自动回滚 DB；Redis 用唯一 IP 规避计数残留。
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@ActiveProfiles("test")
 @Transactional
 class LeadServiceIntegrationTest {
+
+    /** AntiSpamService 经 Redis 频控；test profile 无 Redis，mock 放行避免连接失败。 */
+    @MockBean
+    private AntiSpamService antiSpamService;
 
     @Autowired private LeadService leadService;
     @Autowired private FormMapper formMapper;
@@ -82,6 +90,26 @@ class LeadServiceIntegrationTest {
         return "10.0.0." + (UUID.randomUUID().hashCode() & 0x7F);
     }
 
+    /** 在已有 site/page 上建指定 dedupPolicy 的 form（供 merge/others 策略测试）。 */
+    private String seedForm(String siteId, String pageId, String dedupPolicy) {
+        Instant now = Instant.now();
+        Form form = new Form();
+        form.setId(UUID.randomUUID().toString());
+        form.setSiteId(siteId);
+        form.setPageId(pageId);
+        form.setName("form-" + dedupPolicy);
+        form.setFieldSchemaJson("[]");
+        form.setSubmitConfigJson("{}");
+        form.setDedupKeysJson("[\"phone\"]");
+        form.setDedupWindow(86400);
+        form.setDedupPolicy(dedupPolicy);
+        form.setStatus("active");
+        form.setCreatedAt(now);
+        form.setUpdatedAt(now);
+        formMapper.insert(form);
+        return form.getId();
+    }
+
     @Test
     void submitPersistsLeadAndEncryptsContact() {
         String formId = seed();
@@ -121,6 +149,33 @@ class LeadServiceIntegrationTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getCode())
                 .isEqualTo("LEAD_DUPLICATE");
+    }
+
+    @Test
+    void submitMergesIntoExistingLeadOnH2() {
+        // seed() 建 site/page（reject form 仅占位，用其 siteId/pageId 建 merge form）
+        String rejectFormId = seed();
+        Form rejectForm = formMapper.getById(rejectFormId);
+        String mergeFormId = seedForm(rejectForm.getSiteId(), rejectForm.getPageId(), "merge");
+        String phone = "137" + String.format("%08d", UUID.randomUUID().hashCode() & 0x7FFFFFFF);
+        String ip = uniqueIp();
+
+        // 第一次提交（insert 新 lead）
+        LeadSubmitResult r1 = leadService.submit(new LeadSubmitRequest(
+                mergeFormId, Map.of("phone", phone, "name", "原始"), null, null, null, ip, "v1", null));
+        assertThat(r1.status()).isEqualTo("new");
+        assertThat(r1.dedup()).isFalse();
+
+        // 第二次提交（同 phone → MERGE 全局查命中 → update 合并，不 insert 撞 uk_form_dedup）
+        LeadSubmitResult r2 = leadService.submit(new LeadSubmitRequest(
+                mergeFormId, Map.of("phone", phone, "name", "更新", "email", "merge@x.com"),
+                null, null, null, ip, "v2", null));
+        assertThat(r2.dedup()).isTrue();
+        assertThat(r2.leadId()).isEqualTo(r1.leadId()); // 复用同一 lead
+
+        // H2 验证：merge→update 路径（findLatestByFormHash + updateContactByDedup SQL 跑通），无第二条 lead
+        List<Lead> leads = leadMapper.listByQuery(rejectForm.getSiteId(), null, mergeFormId, null, 0, 10);
+        assertThat(leads).hasSize(1); // 若误 insert 会撞 uk_form_dedup 抛异常或产生 2 行
     }
 
     @Test

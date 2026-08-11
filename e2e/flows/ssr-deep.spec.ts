@@ -39,7 +39,9 @@ test.beforeAll(async () => {
     headers: authHeaders(token),
     data: { name: `${RUN_ID}-ssr`, slug: siteSlug, status: 'active' },
   });
+  expect(siteRes.status(), `建站失败: ${siteRes.status()}`).toBeLessThan(300);
   const siteId = (await siteRes.json()).id;
+  expect(siteId, 'siteId 应非空').toBeTruthy();
   pagePath = `/ssr-${Date.now()}`;
   const pageRes = await apiCtx.post(`${BFF_BASE}/api/sites/${siteId}/pages`, {
     headers: authHeaders(token),
@@ -48,8 +50,11 @@ test.beforeAll(async () => {
       schema: { root: { id: 'root', type: 'LubanHero', props: { title: 'SSR 可见文本' } } },
     },
   });
+  expect(pageRes.status(), `建页失败: ${pageRes.status()}`).toBeLessThan(300);
   const pageId = (await pageRes.json()).id;
-  await apiCtx.post(`${BFF_BASE}/api/sites/${siteId}/pages/${pageId}/publish`, { headers: authHeaders(token) });
+  expect(pageId, 'pageId 应非空').toBeTruthy();
+  const publishRes = await apiCtx.post(`${BFF_BASE}/api/sites/${siteId}/pages/${pageId}/publish`, { headers: authHeaders(token) });
+  expect(publishRes.status(), `发布失败: ${publishRes.status()}`).toBeLessThan(300);
 });
 
 test.afterAll(async () => {
@@ -74,6 +79,7 @@ test.describe('Website SSR 深度 @J-ssr', () => {
     expect(html).toContain('<head');
     expect(html).toMatch(/<meta[^>]*charset/i);
     expect(html).toMatch(/<meta[^>]*viewport/i);
+    expect(html).toContain('SSR 可见文本'); // published 页 schema 内容（LubanHero title），证明非空壳
   });
 
   test('SSR2: SSR 渲染 schema 内容（非 client-only）', async () => {
@@ -81,6 +87,7 @@ test.describe('Website SSR 深度 @J-ssr', () => {
     const html = await r.text();
     // 应含 __nuxt 挂载点 + SSR payload（非空壳）
     expect(html).toMatch(/__nuxt|__NUXT__/i);
+    expect(html).toContain('SSR 可见文本'); // 服务端确实渲染了 schema 内容，非 client-only 空壳
   });
 
   test('SSR3: 硬 404 — 不存在路径返回 HTTP 404', async () => {

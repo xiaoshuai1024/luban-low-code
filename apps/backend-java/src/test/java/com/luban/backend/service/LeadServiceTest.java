@@ -138,7 +138,7 @@ class LeadServiceTest {
         existing.setContactJson(existingEncrypted);
         existing.setStatus("new");
         existing.setUpdatedAt(java.time.Instant.now());
-        when(leadMapper.findLatestByFormHashInWindow(eq("form-1"), anyString(), any())).thenReturn(existing);
+        when(leadMapper.findLatestByFormHash(eq("form-1"), anyString())).thenReturn(existing);
         when(leadMapper.updateContactByDedup(eq("form-1"), anyString(), anyString(), any(), any())).thenReturn(1);
 
         // 新提交：同 phone（命中去重）+ name 覆盖旧值；email 旧值应保留
@@ -149,6 +149,7 @@ class LeadServiceTest {
         assertThat(result.leadId()).isEqualTo("lead-existing");
         assertThat(result.status()).isEqualTo("new");
         verify(leadMapper, never()).insert(any());
+        verify(notifyService, never()).notifyNewLead(any(), any()); // MERGE 不重复通知
 
         org.mockito.ArgumentCaptor<String> contactCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(leadMapper).updateContactByDedup(eq("form-1"), anyString(), contactCaptor.capture(), any(), any());
@@ -171,14 +172,16 @@ class LeadServiceTest {
         existing.setContactJson(new LeadCryptoService("").encrypt("{\"phone\":\"13800000001\"}"));
         existing.setStatus("new");
         existing.setUpdatedAt(java.time.Instant.now());
-        when(leadMapper.findLatestByFormHashInWindow(eq("form-1"), anyString(), any())).thenReturn(existing);
+        when(leadMapper.findLatestByFormHash(eq("form-1"), anyString())).thenReturn(existing);
         when(leadMapper.updateContactByDedup(anyString(), anyString(), anyString(), any(), any())).thenReturn(0); // 乐观锁冲突
 
         LeadSubmitResult result = service.submit(req("13800000001"));
 
         assertThat(result.dedup()).isTrue();
         assertThat(result.leadId()).isEqualTo("lead-existing"); // 返回当前态，不抛 500
+        assertThat(result.status()).isEqualTo("new");
         verify(leadMapper, never()).insert(any());
+        verify(notifyService, never()).notifyNewLead(any(), any()); // MERGE 不重复通知
     }
 
     @Test

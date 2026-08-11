@@ -65,6 +65,8 @@ services:
     ports:
       - "8080:8080"
     healthcheck:
+      # 容忍 busybox wget exit 1（generic error）：healthz 某些 4xx 返回 exit 1 但服务可用；
+      # exit 4(网络)/8(5xx) 仍判负。与 bff 的 `|| exit 1` 风格差异系历史兼容，非回归。
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/backend/healthz; [ $$? -lt 2 ]"]
       interval: 15s
       timeout: 5s

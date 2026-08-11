@@ -59,7 +59,11 @@ watch([page, error], () => {
   sitePageStore.setPage(siteSlug.value, path.value, page.value ?? null, error.value ?? null);
   // client-side 路由切换：error 时抛 404（SSR 已由上方 setup 顶层同步处理）
   if (import.meta.client && error.value) {
-    throw createError({ statusCode: 404, statusMessage: "Page not found", fatal: true });
+    throw createError({
+        statusCode: error.value.statusCode || 404,
+        statusMessage: error.value.statusMessage || "Page not found",
+        fatal: true,
+      });
   }
 }, { immediate: true });
 

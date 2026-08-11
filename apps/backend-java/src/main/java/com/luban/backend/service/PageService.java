@@ -1,5 +1,6 @@
 package com.luban.backend.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.luban.backend.dto.PageResponse;
@@ -95,9 +96,10 @@ public class PageService {
         return PageResponse.fromEntity(page);
     }
 
-    /** 发布页面：draft→published。发布时生成"发布"快照（审计/回滚基线），解析失败不阻塞发布。 */
-    @Transactional
-    public PageResponse publish(String siteId, String pageId) {
+    /** 发布页面：置为 published（幂等，重复发布不阻断）。发布时生成"发布"快照（审计/回滚基线）。
+     * 仅 JsonProcessingException 不阻塞发布；DB 异常（createSnapshot 同事务）正常传播回滚，避免宽 catch 吞异常致事务 rollback-only 陷阱。 */
+    @Transactional(rollbackFor = Exception.class)
+    public PageResponse publish(String siteId, String pageId, String actorId) {
         Page page = pageMapper.getByIdAndSiteId(pageId, siteId);
         if (page == null) throw BusinessException.pageNotFound();
         Instant now = Instant.now();
@@ -106,8 +108,10 @@ public class PageService {
         page.setStatus("published");
         page.setUpdatedAt(now);
         try {
-            versionService.createSnapshot(pageId, objectMapper.readTree(page.getSchemaJson()), "发布", null);
-        } catch (Exception ignored) { }
+            versionService.createSnapshot(pageId, objectMapper.readTree(page.getSchemaJson()), "发布", actorId);
+        } catch (JsonProcessingException ignored) {
+            // 仅 JSON 解析失败不阻塞发布
+        }
         return PageResponse.fromEntity(page);
     }
 

@@ -62,11 +62,9 @@ public interface LeadMapper {
                      @Param("status") String status, @Param("assigneeId") String assigneeId,
                      @Param("convertedAt") Instant convertedAt, @Param("updatedAt") Instant updatedAt);
 
-    /** MERGE 去重：取窗口内同 form + dedup_hash 的最新一条线索（uk_form_dedup 全局唯一保证命中）。 */
-    @Select("SELECT " + COLS + " FROM leads WHERE form_id = #{formId} AND dedup_hash = #{hash} "
-            + "AND created_at >= #{threshold} ORDER BY created_at DESC LIMIT 1")
-    Lead findLatestByFormHashInWindow(@Param("formId") String formId, @Param("hash") String hash,
-                                      @Param("threshold") Instant threshold);
+    /** MERGE 去重：取同 form + dedup_hash 的最新一条（全局；uk_form_dedup 唯一保证命中，含窗口外避免 insert 撞 uk 500）。 */
+    @Select("SELECT " + COLS + " FROM leads WHERE form_id = #{formId} AND dedup_hash = #{hash} ORDER BY created_at DESC LIMIT 1")
+    Lead findLatestByFormHash(@Param("formId") String formId, @Param("hash") String hash);
 
     /** MERGE 去重：合并 contact 后按 form + dedup_hash 更新（乐观锁 updated_at；影响 0 行=并发冲突）。 */
     @Update("UPDATE leads SET contact_json = #{contactJson}, updated_at = #{newUpdatedAt} "

@@ -94,7 +94,8 @@ test.describe('Website SSR 深度 @J-ssr', () => {
   });
 
   test('SSR5: 公开 by-path 端点返回发布页', async () => {
-    const r = await apiCtx.get(`${BFF_BASE}/api/public/sites/${siteSlug}/pages/by-path?path=${pagePath}`);
+    // T1: usePageByPath 端点对齐后端 PublicController（/pages?path=，无 by-path 段）；spec 同步
+    const r = await apiCtx.get(`${BFF_BASE}/api/public/sites/${siteSlug}/pages?path=${pagePath}`);
     expect(r.status()).toBe(200);
     const page = await r.json();
     expect(page.status).toBe('published');

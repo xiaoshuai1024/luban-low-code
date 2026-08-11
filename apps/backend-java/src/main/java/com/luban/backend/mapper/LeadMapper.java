@@ -24,11 +24,11 @@ public interface LeadMapper {
     @Select("SELECT " + COLS + " FROM leads WHERE id = #{id} AND site_id = #{siteId}")
     Lead getByIdAndSiteId(@Param("id") String id, @Param("siteId") String siteId);
 
-    /** 去重查询：窗口内同 form + dedup_hash 的线索数。 */
+    /** 去重查询：窗口内同 form + dedup_hash 的线索数。threshold 由调用方算（跨 H2/MySQL 兼容）。 */
     @Select("SELECT COUNT(*) FROM leads WHERE form_id = #{formId} AND dedup_hash = #{hash} "
-            + "AND created_at >= DATE_SUB(NOW(), INTERVAL #{windowSeconds} SECOND)")
+            + "AND created_at >= #{threshold}")
     int countByFormHashInWindow(@Param("formId") String formId, @Param("hash") String hash,
-                                @Param("windowSeconds") int windowSeconds);
+                                @Param("threshold") Instant threshold);
 
     @Select("<script>"
             + "SELECT " + COLS + " FROM leads WHERE site_id = #{siteId}"
@@ -61,6 +61,20 @@ public interface LeadMapper {
     int updateStatus(@Param("id") String id, @Param("siteId") String siteId,
                      @Param("status") String status, @Param("assigneeId") String assigneeId,
                      @Param("convertedAt") Instant convertedAt, @Param("updatedAt") Instant updatedAt);
+
+    /** MERGE 去重：取窗口内同 form + dedup_hash 的最新一条线索（uk_form_dedup 全局唯一保证命中）。 */
+    @Select("SELECT " + COLS + " FROM leads WHERE form_id = #{formId} AND dedup_hash = #{hash} "
+            + "AND created_at >= #{threshold} ORDER BY created_at DESC LIMIT 1")
+    Lead findLatestByFormHashInWindow(@Param("formId") String formId, @Param("hash") String hash,
+                                      @Param("threshold") Instant threshold);
+
+    /** MERGE 去重：合并 contact 后按 form + dedup_hash 更新（乐观锁 updated_at；影响 0 行=并发冲突）。 */
+    @Update("UPDATE leads SET contact_json = #{contactJson}, updated_at = #{newUpdatedAt} "
+            + "WHERE form_id = #{formId} AND dedup_hash = #{hash} AND updated_at = #{expectedUpdatedAt}")
+    int updateContactByDedup(@Param("formId") String formId, @Param("hash") String hash,
+                             @Param("contactJson") String contactJson,
+                             @Param("expectedUpdatedAt") Instant expectedUpdatedAt,
+                             @Param("newUpdatedAt") Instant newUpdatedAt);
 
     @Select("SELECT " + COLS + " FROM leads WHERE site_id = #{siteId} ORDER BY created_at DESC")
     List<Lead> listAllForExport(@Param("siteId") String siteId);

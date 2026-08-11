@@ -19,7 +19,7 @@ export function usePageByPath(siteSlug: MaybeRefOrGetter<string>, path: MaybeRef
     const slug = toValue(siteSlug);
     const p = toValue(path);
     const pathNorm = p.startsWith("/") ? p : `/${p}`;
-    return `${bffBase}/api/public/sites/${encodeURIComponent(slug)}/pages/by-path?path=${encodeURIComponent(pathNorm)}`;
+    return `${bffBase}/api/public/sites/${encodeURIComponent(slug)}/pages?path=${encodeURIComponent(pathNorm)}`;
   });
   return useFetch<PublicPagePayload>(url, {
     key,

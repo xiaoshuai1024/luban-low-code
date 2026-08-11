@@ -51,6 +51,10 @@ const schema = computed<PageSchema | null>(() => page.value?.schema ?? null);
 
 watch([page, error], () => {
   sitePageStore.setPage(siteSlug.value, path.value, page.value ?? null, error.value ?? null);
+  // 公开页不存在（BFF /public/pages?path= 返回 error）→ SSR 404，避免 200 渲染空页（SEO/正确性）
+  if (error.value) {
+    throw createError({ statusCode: 404, statusMessage: "Page not found", fatal: true });
+  }
 }, { immediate: true });
 
 onBeforeUnmount(() => {

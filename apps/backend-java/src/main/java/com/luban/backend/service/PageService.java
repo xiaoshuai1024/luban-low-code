@@ -1,5 +1,6 @@
 package com.luban.backend.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.luban.backend.dto.PageResponse;
@@ -9,6 +10,7 @@ import com.luban.backend.mapper.PageMapper;
 import com.luban.backend.mapper.SiteMapper;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
@@ -91,6 +93,25 @@ public class PageService {
         }
         // V2-T8：保存后生成快照（每次保存一条版本）
         versionService.createSnapshot(page.getId(), schema, "保存", null);
+        return PageResponse.fromEntity(page);
+    }
+
+    /** 发布页面：置为 published（幂等，重复发布不阻断）。发布时生成"发布"快照（审计/回滚基线）。
+     * 仅 JsonProcessingException 不阻塞发布；DB 异常（createSnapshot 同事务）正常传播回滚，避免宽 catch 吞异常致事务 rollback-only 陷阱。 */
+    @Transactional(rollbackFor = Exception.class)
+    public PageResponse publish(String siteId, String pageId, String actorId) {
+        Page page = pageMapper.getByIdAndSiteId(pageId, siteId);
+        if (page == null) throw BusinessException.pageNotFound();
+        Instant now = Instant.now();
+        int n = pageMapper.updateStatus(pageId, siteId, "published", now);
+        if (n == 0) throw BusinessException.pageNotFound();
+        page.setStatus("published");
+        page.setUpdatedAt(now);
+        try {
+            versionService.createSnapshot(pageId, objectMapper.readTree(page.getSchemaJson()), "发布", actorId);
+        } catch (JsonProcessingException ignored) {
+            // 仅 JSON 解析失败不阻塞发布
+        }
         return PageResponse.fromEntity(page);
     }
 

@@ -41,7 +41,7 @@ services:
 
   backend:
     build:
-      context: packages/backend/luban-backend
+      context: apps/backend-java
       dockerfile: Dockerfile
     image: luban-backend:dev
     container_name: luban-backend
@@ -65,7 +65,9 @@ services:
     ports:
       - "8080:8080"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/backend/healthz || exit 1"]
+      # 容忍 busybox wget exit 1（generic error）：healthz 某些 4xx 返回 exit 1 但服务可用；
+      # exit 4(网络)/8(5xx) 仍判负。与 bff 的 `|| exit 1` 风格差异系历史兼容，非回归。
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/backend/healthz; [ $$? -lt 2 ]"]
       interval: 15s
       timeout: 5s
       retries: 10
@@ -73,7 +75,7 @@ services:
 
   bff:
     build:
-      context: packages/bff/luban-bff
+      context: apps/bff
       dockerfile: Dockerfile
     image: luban-bff:dev
     container_name: luban-bff
@@ -95,10 +97,10 @@ services:
       start_period: 40s
 
   engine:
-    # build context = workspace root, so vite.config.ts alias to packages/ui/luban-ui resolves.
+    # build context = workspace root, so vite.config.ts alias to packages/ui resolves.
     build:
       context: .
-      dockerfile: packages/engine/luban/Dockerfile
+      dockerfile: apps/engine/Dockerfile
     image: luban-engine:dev
     container_name: luban-engine
     restart: unless-stopped
@@ -108,13 +110,13 @@ services:
     environment:
       VITE_API_BASE_URL: /api
     ports:
-      # engine nginx serves on container port 4200 (see packages/engine/luban/Dockerfile)
+      # engine nginx serves on container port 4200 (see apps/engine/Dockerfile)
       - "5173:4200"
 
   website:
     build:
-      context: packages/web/luban-website
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/website/Dockerfile
     image: luban-website:dev
     container_name: luban-website
     restart: unless-stopped
@@ -122,7 +124,7 @@ services:
       bff:
         condition: service_started
     environment:
-      NUXT_PUBLIC_BFF_BASE_URL: http://localhost:3000
+      NUXT_PUBLIC_BFF_BASE_URL: http://bff:3000
       NUXT_PUBLIC_DEFAULT_SITE_SLUG: default
       NODE_ENV: production
     ports:

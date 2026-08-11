@@ -1,0 +1,15 @@
+{
+  "featureId": "residual-lead-website",
+  "title": "修复剩余 lead/website 问题（website SSR 404 + merge 合并）",
+  "status": "done",
+  "completedAt": "2026-08-11",
+  "tasks": [
+    { "id": "T1", "title": "website usePageByPath 端点路径对齐：/pages/by-path?path= → /pages?path=", "group": "website", "dependsOn": [], "status": "done" },
+    { "id": "T2", "title": "e2e WEBSITE_BASE 加 production basePath /luban-low-code/", "group": "e2e", "dependsOn": [], "status": "done" },
+    { "id": "T3", "title": "createError 404 production 生效（setup 顶层 throw 修复 watch SSR 时序 bug）", "group": "website", "dependsOn": ["T1"], "status": "done" },
+    { "id": "T4", "title": "LeadService merge → update 合并 contact（乐观锁）+ LeadMapper updateContactByDedup", "group": "backend-java", "dependsOn": [], "status": "done" },
+    { "id": "T5", "title": "验证：ssr-deep SSR1-5 + lead-variants LV1-5 全绿 12/12", "group": "cross", "dependsOn": ["T1", "T2", "T3", "T4"], "status": "done" }
+  ],
+  "result": "e2e 12/12 全绿；扩展完成 publish(T24) 端点 + 修复 248 dev 栈 BFF_BASE_URL 配置 bug（localhost→bff）",
+  "extraScope": "用户选择扩展：publish(T24) backend 端点+service+mapper + bff route；docker-compose 路径迁移 packages/*→apps/*"
+}

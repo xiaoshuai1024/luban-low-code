@@ -61,6 +61,12 @@ public class PageController {
         );
     }
 
+    @PostMapping("/{pageId}/publish")
+    public PageResponse publish(@PathVariable("id") String siteId, @PathVariable String pageId,
+                                @RequestHeader(value = "X-User-ID", required = false) String actorId) {
+        return pageService.publish(siteId, pageId, actorId);
+    }
+
     @DeleteMapping("/{pageId}")
     public ResponseEntity<Void> delete(@PathVariable("id") String siteId, @PathVariable String pageId) {
         pageService.delete(siteId, pageId);

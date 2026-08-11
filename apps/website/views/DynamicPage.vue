@@ -45,12 +45,26 @@ const path = computed(() => {
   return joined.startsWith("/") ? joined : `/${joined}`;
 });
 
-const { data: page, error, status } = usePageByPath(siteSlug, path);
+const { data: page, error, status } = await usePageByPath(siteSlug, path);
 
 const schema = computed<PageSchema | null>(() => page.value?.schema ?? null);
 
+// SSR 404：watch callback 内 throw createError 不被 Nuxt SSR 错误边界捕获（实测会软 404 返回 200 空壳）。
+// 必须 setup 顶层 await usePageByPath 后同步 throw，SSR 才能正确返回 404 状态码。
+if (error.value) {
+  throw createError({ statusCode: 404, statusMessage: "Page not found", fatal: true });
+}
+
 watch([page, error], () => {
   sitePageStore.setPage(siteSlug.value, path.value, page.value ?? null, error.value ?? null);
+  // client-side 路由切换：error 时抛 404（SSR 已由上方 setup 顶层同步处理）
+  if (import.meta.client && error.value) {
+    throw createError({
+        statusCode: error.value.statusCode || 404,
+        statusMessage: error.value.statusMessage || "Page not found",
+        fatal: true,
+      });
+  }
 }, { immediate: true });
 
 onBeforeUnmount(() => {

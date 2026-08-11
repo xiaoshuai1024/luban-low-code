@@ -3,6 +3,7 @@ package com.luban.backend.mapper;
 import com.luban.backend.entity.Page;
 import org.apache.ibatis.annotations.*;
 
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -26,6 +27,11 @@ public interface PageMapper {
 
     @Update("UPDATE pages SET name=#{name}, path=#{path}, status=#{status}, schema_json=#{schemaJson}, seo_json=#{seoJson}, updated_at=#{updatedAt} WHERE id=#{id} AND site_id=#{siteId}")
     int update(Page page);
+
+    /** 发布/状态流转：单字段更新 status（如 draft→published）。 */
+    @Update("UPDATE pages SET status = #{status}, updated_at = #{updatedAt} WHERE id = #{pageId} AND site_id = #{siteId}")
+    int updateStatus(@Param("pageId") String pageId, @Param("siteId") String siteId,
+                     @Param("status") String status, @Param("updatedAt") Instant updatedAt);
 
     @Delete("DELETE FROM pages WHERE id = #{pageId} AND site_id = #{siteId}")
     int deleteByIdAndSiteId(@Param("pageId") String pageId, @Param("siteId") String siteId);

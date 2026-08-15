@@ -26,7 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *   PUT    /backend/datasources/:id       → 200 | 404 | 409
  *   DELETE /backend/datasources/:id       → 204 | 404
  *   POST   /backend/datasources/:id/test  → 200 {ok,message,latencyMs}
- *   Write ops are RequireAdmin (POST/PUT/DELETE); GET and /test are RequireUser.
+ *   Write ops (POST/PUT/DELETE) and /test are RequireAdmin; GET is RequireUser.
  *
  * <p>Seed is deterministic — every test recomputes a fresh world in @BeforeEach.
  */
@@ -338,8 +338,8 @@ class DatasourceContractTest {
         seedDatasource("ds-t", SITE_A, "static-cfg", "static", "{\"rows\":[]}");
         mockMvc.perform(post("/backend/datasources/ds-t/test")
                         .contextPath("/backend")
-                        .header("X-User-ID", "user-001")
-                        .header("X-User-Role", "user"))
+                        .header("X-User-ID", "admin-001")
+                        .header("X-User-Role", "admin"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ok").value(true))
                 .andExpect(jsonPath("$.latencyMs").value(0));
@@ -350,8 +350,8 @@ class DatasourceContractTest {
         seedDatasource("ds-t", SITE_A, "api-no-url", "api", "{\"headers\":{}}");
         mockMvc.perform(post("/backend/datasources/ds-t/test")
                         .contextPath("/backend")
-                        .header("X-User-ID", "user-001")
-                        .header("X-User-Role", "user"))
+                        .header("X-User-ID", "admin-001")
+                        .header("X-User-Role", "admin"))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.code").value("DATASOURCE_CONNECTION_FAILED"));
     }
@@ -360,10 +360,22 @@ class DatasourceContractTest {
     void testMissingReturns404() throws Exception {
         mockMvc.perform(post("/backend/datasources/no-such/test")
                         .contextPath("/backend")
-                        .header("X-User-ID", "user-001")
-                        .header("X-User-Role", "user"))
+                        .header("X-User-ID", "admin-001")
+                        .header("X-User-Role", "admin"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("DATASOURCE_NOT_FOUND"));
+    }
+
+    @Test
+    void testAsNonAdminReturns403PermissionDenied() throws Exception {
+        // 连接探测会从服务端发起出网请求（SSRF 面），收紧为 admin-only。
+        seedDatasource("ds-t", SITE_A, "static-cfg", "static", "{\"rows\":[]}");
+        mockMvc.perform(post("/backend/datasources/ds-t/test")
+                        .contextPath("/backend")
+                        .header("X-User-ID", "user-001")
+                        .header("X-User-Role", "user"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PERMISSION_DENIED"));
     }
 
     // ---- helper ----

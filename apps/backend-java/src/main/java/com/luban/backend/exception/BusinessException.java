@@ -100,6 +100,14 @@ public class BusinessException extends RuntimeException {
         return new BusinessException(HttpStatus.FORBIDDEN, "LEAD_FORBIDDEN", "无权操作此线索");
     }
 
+    public static BusinessException pageHasLeads() {
+        return new BusinessException(HttpStatus.CONFLICT, "PAGE_HAS_LEADS", "页面下表单已收集线索，无法删除");
+    }
+
+    public static BusinessException formHasLeads() {
+        return new BusinessException(HttpStatus.CONFLICT, "FORM_HAS_LEADS", "表单已收集线索，无法删除");
+    }
+
     public static BusinessException captchaInvalid() {
         return new BusinessException(HttpStatus.BAD_REQUEST, "LEAD_CAPTCHA_INVALID", "验证码错误");
     }

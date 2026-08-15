@@ -77,6 +77,10 @@ public interface LeadMapper {
     @Select("SELECT " + COLS + " FROM leads WHERE site_id = #{siteId} ORDER BY created_at DESC")
     List<Lead> listAllForExport(@Param("siteId") String siteId);
 
+    /** 删除前置检查：该表单名下线索数（>0 时表单不可删，409 FORM_HAS_LEADS） */
+    @Select("SELECT COUNT(*) FROM leads WHERE form_id = #{formId}")
+    int countByFormId(@Param("formId") String formId);
+
     /** V2 级联删除：删站点时先清 leads */
     @Delete("DELETE FROM leads WHERE site_id = #{siteId}")
     int deleteBySiteId(@Param("siteId") String siteId);

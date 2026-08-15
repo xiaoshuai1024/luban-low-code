@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.luban.backend.dto.PageResponse;
 import com.luban.backend.entity.Page;
 import com.luban.backend.exception.BusinessException;
+import com.luban.backend.mapper.FormMapper;
 import com.luban.backend.mapper.PageMapper;
 import com.luban.backend.mapper.SiteMapper;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -22,12 +23,15 @@ public class PageService {
 
     private final PageMapper pageMapper;
     private final SiteMapper siteMapper;
+    private final FormMapper formMapper;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final PageVersionService versionService;
 
-    public PageService(PageMapper pageMapper, SiteMapper siteMapper, PageVersionService versionService) {
+    public PageService(PageMapper pageMapper, SiteMapper siteMapper, FormMapper formMapper,
+                       PageVersionService versionService) {
         this.pageMapper = pageMapper;
         this.siteMapper = siteMapper;
+        this.formMapper = formMapper;
         this.versionService = versionService;
     }
 
@@ -115,7 +119,20 @@ public class PageService {
         return PageResponse.fromEntity(page);
     }
 
+    /**
+     * 删除页面（事务内级联删表单）。forms.page_id FK（RESTRICT，无 CASCADE）：
+     * 若表单下已有 leads，删 forms 被 fk_leads_form 阻止（DataIntegrityViolationException）
+     * → 409 PAGE_HAS_LEADS（不再冒泡为 500）。page_versions 由 FK CASCADE 自动清理。
+     */
+    @Transactional(rollbackFor = Exception.class)
     public void delete(String siteId, String pageId) {
+        if (pageMapper.getByIdAndSiteId(pageId, siteId) == null) throw BusinessException.pageNotFound();
+        try {
+            formMapper.deleteByPageId(pageId);
+        } catch (DataIntegrityViolationException e) {
+            // 与 SiteService 级联删除同型处理：FK 阻止 → 业务 409，事务回滚
+            throw BusinessException.pageHasLeads();
+        }
         int n = pageMapper.deleteByIdAndSiteId(pageId, siteId);
         if (n == 0) throw BusinessException.pageNotFound();
     }

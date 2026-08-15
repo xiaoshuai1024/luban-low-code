@@ -27,3 +27,24 @@ export function unauthenticated() {
     { status: 401 }
   );
 }
+
+/**
+ * 客户端可伪造的内部信任头（小写）。
+ * X-User-ID/X-User-Role 只能由 BFF 在 JWT 校验后注入（authHeaders），
+ * X-Internal-Auth 只能由 backendClient 按 env 密钥注入；
+ * 客户端传入的一律在请求入口剥离（见 src/middleware.ts）。
+ */
+export const UNTRUSTED_INTERNAL_HEADERS = [
+  "x-user-id",
+  "x-user-role",
+  "x-internal-auth",
+] as const;
+
+/** 返回剥离内部信任头后的新 Headers（不修改入参）。 */
+export function stripUntrustedHeaders(headers: Headers): Headers {
+  const cleaned = new Headers(headers);
+  for (const h of UNTRUSTED_INTERNAL_HEADERS) {
+    cleaned.delete(h);
+  }
+  return cleaned;
+}

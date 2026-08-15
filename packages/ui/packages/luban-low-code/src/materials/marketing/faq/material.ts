@@ -1,6 +1,6 @@
 import type { MaterialDefinition } from '../../../lib/material/defineMaterial';
 import { defineMaterial } from '../../../lib/material/defineMaterial';
-import { LubanFAQ } from 'luban-base';
+import { LubanFAQ } from '@luban-low-code/luban-base';
 
 export const faqMaterial: MaterialDefinition = defineMaterial({
   name: 'LubanFAQ',

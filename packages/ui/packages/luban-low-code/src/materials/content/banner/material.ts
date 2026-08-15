@@ -21,7 +21,7 @@
 
 import type { MaterialDefinition } from '../../../lib/material/defineMaterial';
 import { defineMaterial } from '../../../lib/material/defineMaterial';
-import { LubanBanner } from 'luban-base';
+import { LubanBanner } from '@luban-low-code/luban-base';
 
 /**
  * 横幅（图片）物料。

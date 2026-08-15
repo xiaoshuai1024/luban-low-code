@@ -1,6 +1,6 @@
 import type { MaterialDefinition } from '../../../lib/material/defineMaterial';
 import { defineMaterial } from '../../../lib/material/defineMaterial';
-import { LubanFeatureGrid } from 'luban-base';
+import { LubanFeatureGrid } from '@luban-low-code/luban-base';
 
 export const featureGridMaterial: MaterialDefinition = defineMaterial({
   name: 'LubanFeatureGrid',

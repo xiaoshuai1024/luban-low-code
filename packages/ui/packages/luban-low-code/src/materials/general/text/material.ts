@@ -16,7 +16,7 @@
 
 import type { MaterialDefinition } from '../../../lib/material/defineMaterial';
 import { defineMaterial } from '../../../lib/material/defineMaterial';
-import { LubanText } from 'luban-base';
+import { LubanText } from '@luban-low-code/luban-base';
 
 /**
  * 文本物料。

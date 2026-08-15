@@ -1,6 +1,6 @@
 import type { MaterialDefinition } from '../../../lib/material/defineMaterial';
 import { defineMaterial } from '../../../lib/material/defineMaterial';
-import { LubanTestimonialCarousel } from 'luban-base';
+import { LubanTestimonialCarousel } from '@luban-low-code/luban-base';
 
 export const testimonialCarouselMaterial: MaterialDefinition = defineMaterial({
   name: 'LubanTestimonialCarousel',

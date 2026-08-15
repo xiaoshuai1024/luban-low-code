@@ -18,7 +18,7 @@
 
 import type { MaterialDefinition } from '../../../lib/material/defineMaterial';
 import { defineMaterial } from '../../../lib/material/defineMaterial';
-import { LubanLeadCapture } from 'luban-base';
+import { LubanLeadCapture } from '@luban-low-code/luban-base';
 
 export const leadCaptureMaterial: MaterialDefinition = defineMaterial({
   name: 'LubanLeadCapture',

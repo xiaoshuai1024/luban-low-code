@@ -12,7 +12,7 @@
 
 import type { MaterialDefinition } from '../../../lib/material/defineMaterial';
 import { defineMaterial } from '../../../lib/material/defineMaterial';
-import { LubanTestimonial } from 'luban-base';
+import { LubanTestimonial } from '@luban-low-code/luban-base';
 
 export const testimonialMaterial: MaterialDefinition = defineMaterial({
   name: 'LubanTestimonial',

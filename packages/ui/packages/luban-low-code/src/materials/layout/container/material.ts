@@ -6,7 +6,7 @@
  * @since 0.1.0
  */
 
-import { LubanContainer } from 'luban-base';
+import { LubanContainer } from '@luban-low-code/luban-base';
 import { defineMaterial } from '../../../lib/material/defineMaterial';
 
 export const containerMaterial = defineMaterial({

@@ -1,6 +1,6 @@
 import type { MaterialDefinition } from '../../../lib/material/defineMaterial';
 import { defineMaterial } from '../../../lib/material/defineMaterial';
-import { LubanLogoCloud } from 'luban-base';
+import { LubanLogoCloud } from '@luban-low-code/luban-base';
 
 export const logoCloudMaterial: MaterialDefinition = defineMaterial({
   name: 'LubanLogoCloud',

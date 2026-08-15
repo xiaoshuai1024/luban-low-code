@@ -10,7 +10,7 @@
  * @since 0.1.0
  */
 
-import { LubanSidePanel } from 'luban-base';
+import { LubanSidePanel } from '@luban-low-code/luban-base';
 import { defineMaterial } from '../../../lib/material/defineMaterial';
 
 export const sidePanelMaterial = defineMaterial({

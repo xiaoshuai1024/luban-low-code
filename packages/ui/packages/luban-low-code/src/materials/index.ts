@@ -1,8 +1,8 @@
 /**
- * materials barrel — 24 物料统一注册入口（聚合收口层）。
+ * materials barrel — 39 物料统一注册入口（聚合收口层）。
  *
  * 职责：
- *  1. import 全部 24 个 material 定义（side-effect + re-export）；
+ *  1. import 全部 39 个 material 定义（side-effect + re-export）；
  *  2. 调用 `materialRegistry.register(...)` 将每个物料纳入 registry；
  *  3. 导出 `materials` 数组与各 material 常量，供下游（registry/palette/
  *     componentMeta）经 registry 派生旧 ComponentMeta。
@@ -10,10 +10,11 @@
  * 注册容错：重复注册（如热重载/测试隔离多次 import 本模块）会先 unregister
  * 再 register，避免 MaterialRegistry.register 抛 "duplicate name"。
  *
- * 物料构成：14 基础物料（general/content/layout/form）+ W1-T6 第1波新增
+ * 物料构成：15 基础物料（general/content/layout/form）+ W1-T6 第1波新增
  * 6 物料（data-display/table · navigation/menu,tabs · feedback/modal,
- * drawer,toast）。后 6 物料的 category 不在旧 palette「信息/表单」映射集，
- * 由 PropertyPanel/registry 直接消费，不影响旧 palette 分组计数。
+ * drawer,toast）+ marketing 13 物料（4 首批 + D15-E1 9 营销建站）+
+ * D14 鲁班官网 5 物料（markdown/steps/code-block/alert/back-to-top），
+ * 共 39。
  *
  * @since 0.1.0
  */
@@ -71,8 +72,8 @@ import { alertMaterial } from './feedback/alert/material.js';
 import { backToTopMaterial } from './navigation/back-to-top/material.js';
 
 /**
- * 全部 20 物料定义（注册顺序：general → content → layout → form
- * → data-display/navigation/feedback）。
+ * 全部 39 物料定义（注册顺序：general → content → layout → form
+ * → data-display/navigation/feedback → marketing）。
  *
  * 顺序仅影响 palette 默认展示顺序的稳定性，不影响 registry 行为
  *（registry 内部用 Map，按 name 索引）。

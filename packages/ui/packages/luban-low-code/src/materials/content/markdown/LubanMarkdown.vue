@@ -18,6 +18,10 @@ import python from 'highlight.js/lib/languages/python';
 import java from 'highlight.js/lib/languages/java';
 import sql from 'highlight.js/lib/languages/sql';
 import yaml from 'highlight.js/lib/languages/yaml';
+// 代码块高亮主题（hljs token class 着色；浅色 github 主题与本物料浅色
+// pre 背景协调，构建时被提取进包级 index.css，随包分发给消费方）。
+// 深色 token（--simple 主题）在下方 style 中按主题覆盖，避免与浅色全局规则冲突。
+import 'highlight.js/styles/github.css';
 
 hljs.registerLanguage('javascript', javascript);
 hljs.registerLanguage('typescript', typescript);
@@ -142,6 +146,26 @@ const html = computed(() => md.value.render(props.content));
   &--simple {
     font-size: 16px;
     :deep(pre) { background: #1e1e1e; color: #d4d4d4; }
+    // 深色 pre 上的 token 反色（覆盖全局 github.css 浅色 token）
+    :deep(.hljs-comment),
+    :deep(.hljs-quote) { color: #8b949e; }
+    :deep(.hljs-keyword),
+    :deep(.hljs-selector-tag),
+    :deep(.hljs-deletion) { color: #ff7b72; }
+    :deep(.hljs-string),
+    :deep(.hljs-regexp),
+    :deep(.hljs-addition) { color: #a5d6ff; }
+    :deep(.hljs-title),
+    :deep(.hljs-section) { color: #d2a8ff; }
+    :deep(.hljs-number),
+    :deep(.hljs-literal),
+    :deep(.hljs-type) { color: #79c0ff; }
+    :deep(.hljs-name),
+    :deep(.hljs-tag) { color: #7ee787; }
+    :deep(.hljs-attr),
+    :deep(.hljs-attribute),
+    :deep(.hljs-variable),
+    :deep(.hljs-template-variable) { color: #ffa657; }
   }
 }
 </style>

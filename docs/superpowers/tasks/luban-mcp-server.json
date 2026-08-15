@@ -6,23 +6,26 @@
     {
       "id": "T1",
       "title": "项目脚手架：package.json / tsconfig / 构建配置 / 依赖安装 (@modelcontextprotocol/sdk)",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [],
       "group": "A",
-      "subsystem": "mcp"
+      "subsystem": "mcp",
+      "note": "2026-08-15 对账：packages/mcp 已完整实现并发布 npm（commit 80cdfb1），engine ApiKeysTab.vue 存在；原全 pending 失真"
     },
     {
       "id": "T2",
       "title": "BFF HTTP 客户端：callBff + 鉴权头注入 + 错误处理 + 支持 API Key 启动验证",
-      "status": "pending",
-      "dependsOn": ["T1"],
+      "status": "done",
+      "dependsOn": [
+        "T1"
+      ],
       "group": "A",
       "subsystem": "mcp"
     },
     {
       "id": "T20",
       "title": "Java 后端：api_keys 表 Flyway 迁移 + ApiKey Entity/Mapper/Service/Controller + validate 端点",
-      "status": "pending",
+      "status": "done",
       "dependsOn": [],
       "group": "H",
       "subsystem": "backend-java"
@@ -30,152 +33,192 @@
     {
       "id": "T21",
       "title": "BFF：API Key 验证路由 + CRUD 代理路由 + 校验中间件",
-      "status": "pending",
-      "dependsOn": ["T20"],
+      "status": "done",
+      "dependsOn": [
+        "T20"
+      ],
       "group": "H",
       "subsystem": "bff"
     },
     {
       "id": "T22",
       "title": "引擎 Engine：Settings 页新增 API Key 管理 Tab（创建/列表/撤销）",
-      "status": "pending",
-      "dependsOn": ["T21"],
+      "status": "done",
+      "dependsOn": [
+        "T21"
+      ],
       "group": "I",
       "subsystem": "engine"
     },
     {
       "id": "T3",
       "title": "MCP 鉴权模块：API Key 启动验证 → 获取 JWT → 自动续期 + 缓存",
-      "status": "pending",
-      "dependsOn": ["T2", "T21"],
+      "status": "done",
+      "dependsOn": [
+        "T2",
+        "T21"
+      ],
       "group": "B",
       "subsystem": "mcp"
     },
     {
       "id": "T4",
       "title": "站点管理工具：sites_list / get / create / update / delete",
-      "status": "pending",
-      "dependsOn": ["T3"],
+      "status": "done",
+      "dependsOn": [
+        "T3"
+      ],
       "group": "C",
       "subsystem": "mcp"
     },
     {
       "id": "T5",
       "title": "页面管理工具：pages_list / get / create / update / delete / publish + templates",
-      "status": "pending",
-      "dependsOn": ["T3"],
+      "status": "done",
+      "dependsOn": [
+        "T3"
+      ],
       "group": "C",
       "subsystem": "mcp"
     },
     {
       "id": "T6",
       "title": "版本历史工具：versions_list / get / rollback",
-      "status": "pending",
-      "dependsOn": ["T5"],
+      "status": "done",
+      "dependsOn": [
+        "T5"
+      ],
       "group": "D",
       "subsystem": "mcp"
     },
     {
       "id": "T7",
       "title": "表单管理工具：forms_list / get / create / update",
-      "status": "pending",
-      "dependsOn": ["T3"],
+      "status": "done",
+      "dependsOn": [
+        "T3"
+      ],
       "group": "C",
       "subsystem": "mcp"
     },
     {
       "id": "T8",
       "title": "线索管理工具：leads_list / get / transit_status / export",
-      "status": "pending",
-      "dependsOn": ["T3"],
+      "status": "done",
+      "dependsOn": [
+        "T3"
+      ],
       "group": "D",
       "subsystem": "mcp"
     },
     {
       "id": "T9",
       "title": "CMS 集合工具：collections CRUD + collection_items CRUD",
-      "status": "pending",
-      "dependsOn": ["T3"],
+      "status": "done",
+      "dependsOn": [
+        "T3"
+      ],
       "group": "D",
       "subsystem": "mcp"
     },
     {
       "id": "T10",
       "title": "数据源工具：datasources CRUD + test_connection + query",
-      "status": "pending",
-      "dependsOn": ["T3"],
+      "status": "done",
+      "dependsOn": [
+        "T3"
+      ],
       "group": "D",
       "subsystem": "mcp"
     },
     {
       "id": "T11",
       "title": "用户管理工具：users_list / get / create / update / update_status（admin only）",
-      "status": "pending",
-      "dependsOn": ["T3"],
+      "status": "done",
+      "dependsOn": [
+        "T3"
+      ],
       "group": "E",
       "subsystem": "mcp"
     },
     {
       "id": "T12",
       "title": "系统设置工具：settings_get / update（admin only）",
-      "status": "pending",
-      "dependsOn": ["T3"],
+      "status": "done",
+      "dependsOn": [
+        "T3"
+      ],
       "group": "E",
       "subsystem": "mcp"
     },
     {
       "id": "T13",
       "title": "公开 API 工具：public_get_page / get_site_config / get_collection_items",
-      "status": "pending",
-      "dependsOn": ["T3"],
+      "status": "done",
+      "dependsOn": [
+        "T3"
+      ],
       "group": "C",
       "subsystem": "mcp"
     },
     {
       "id": "T14",
       "title": "MCP Resources：schema-rules / material-catalog / page-templates / best-practices / site-analytics-guide",
-      "status": "pending",
-      "dependsOn": ["T5"],
+      "status": "done",
+      "dependsOn": [
+        "T5"
+      ],
       "group": "F",
       "subsystem": "mcp"
     },
     {
       "id": "T15",
       "title": "System Prompt：Agent 使用指引 + 页面创建规则 + 角色设定",
-      "status": "pending",
-      "dependsOn": ["T14"],
+      "status": "done",
+      "dependsOn": [
+        "T14"
+      ],
       "group": "F",
       "subsystem": "mcp"
     },
     {
       "id": "T16",
       "title": "Schema 校验工具：schema_validate tool（复用 page_schema 验证逻辑）",
-      "status": "pending",
-      "dependsOn": ["T5"],
+      "status": "done",
+      "dependsOn": [
+        "T5"
+      ],
       "group": "F",
       "subsystem": "mcp"
     },
     {
       "id": "T17",
       "title": "单元测试：工具层单测 + BFF 客户端单测 + schema 校验单测 + API Key 单元测试",
-      "status": "pending",
-      "dependsOn": ["T16", "T22"],
+      "status": "done",
+      "dependsOn": [
+        "T16",
+        "T22"
+      ],
       "group": "G",
       "subsystem": "mcp"
     },
     {
       "id": "T18",
       "title": "集成测试：模拟 MCP 客户端调用全链路 smoke test + API Key 全流程集成测试",
-      "status": "pending",
-      "dependsOn": ["T17"],
+      "status": "done",
+      "dependsOn": [
+        "T17"
+      ],
       "group": "G",
       "subsystem": "mcp"
     },
     {
       "id": "T19",
       "title": "文档：README / 安装指南 / 使用示例 / MCP 配置模板（含 API Key 配置）",
-      "status": "pending",
-      "dependsOn": ["T18"],
+      "status": "done",
+      "dependsOn": [
+        "T18"
+      ],
       "group": "G",
       "subsystem": "mcp"
     }

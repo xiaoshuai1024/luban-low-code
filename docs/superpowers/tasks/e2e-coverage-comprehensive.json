@@ -402,7 +402,7 @@
     {
       "id": "T22",
       "title": "【功能接线】协作 CRDT：ui DesignerToolbar 彩色头像组 + engine PageEditor 桥接 useCollab（双向 schema 同步防回环）",
-      "status": "in_progress",
+      "status": "todo",
       "group": "engine",
       "subsystem": "engine",
       "dependsOn": [],
@@ -410,12 +410,13 @@
       "notes": [
         "2026-07-05: 功能接线 in_progress，E2E 依赖这些功能落地后才能写对应 UI spec",
         "2026-07-05: 功能接线 in_progress，E2E spec 依赖功能落地"
-      ]
+      ],
+      "note": "2026-08-15 对账：全仓无 collab/crdt/useCollab/DesignerToolbar 代码，未开工；原 in_progress 失真"
     },
     {
       "id": "T23",
       "title": "【功能接线】datasource 管理弹窗：engine src/api/datasource.ts + DatasourceManageDialog.vue + PageEditor 触发点",
-      "status": "in_progress",
+      "status": "done",
       "group": "engine",
       "subsystem": "engine",
       "dependsOn": [],
@@ -423,7 +424,8 @@
       "notes": [
         "2026-07-05: 功能接线 in_progress，E2E 依赖这些功能落地后才能写对应 UI spec",
         "2026-07-05: 功能接线 in_progress，E2E spec 依赖功能落地"
-      ]
+      ],
+      "note": "2026-08-15 对账：engine api/datasource.ts + DatasourceManageDialog + PageEditor 触发点 + BFF 路由齐备（review 证实）"
     },
     {
       "id": "T24",

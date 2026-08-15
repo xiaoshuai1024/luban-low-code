@@ -48,7 +48,6 @@ push_all_scope_for_label() {
     packages/bff/*)     echo "bff" ;;
     packages/ui/*)      echo "ui" ;;
     packages/web/*)     echo "website" ;;
-    apps/backend-go) echo "backend-go" ;;
     apps/backend-java)    echo "backend" ;;
     packages/backend/*) echo "backend" ;;
     packages/docs/*)    echo "docs" ;;

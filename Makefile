@@ -12,19 +12,14 @@
 #   bff       :3100   (next dev -p 3100; 显式 3100 避免与 website 3000 冲突)
 #   website   :3000   (nuxt dev; bffBaseUrl env 修正为 3100)
 #   Java      :8080   (mvn spring-boot:run; actuator health 无 context-path)
-#   Go        :8081   (可选; 双后端契约测试)
 #   MySQL     :13306  (远端 192.168.100.248)
 #   Redis     :16379  (远端 192.168.100.248)
 # 本机禁起 docker / 中间件。
 #
 # monorepo 结构（原 git submodule 已合并为单一仓库）：
-#   apps/{engine,bff,website,backend-java,backend-go}   可部署应用
-#   packages/{ui,ai-assistant}                           库（ui 含独立 nx workspace）
+#   apps/{engine,bff,website,backend-java,docs}          可部署应用（Java 为单端权威后端）
+#   packages/{ui,ai-assistant,mcp,sprint-mcp,client}     库（ui 含独立 nx workspace）
 #   docs/architecture                                    架构文档
-
-BRANCH ?= main
-PKG_DIRS := packages/engine/luban packages/bff/luban-bff packages/ui/luban-ui packages/web/luban-website \
-            packages/backend/luban-backend
 
 .PHONY: clone-all pull-all push-all pr-all sync-submodules \
         test test-coverage journey-coverage verify-plan lint \
@@ -110,7 +105,7 @@ test-coverage:
 
 # ============================================================
 # 本地开发启动（单服务 / 全栈）—— 见 docs/SYSTEM_ARCHITECTURE.md
-# 端口：engine 5173 / bff 3100 / website 3000 / Java 8080 / Go 8081
+# 端口：engine 5173 / bff 3100 / website 3000 / Java 8080
 # 中间件 MySQL 13306 / Redis 16379 在远端 192.168.100.248
 # ============================================================
 

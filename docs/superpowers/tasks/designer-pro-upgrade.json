@@ -50,7 +50,8 @@
       "dependsOn": [
         "T-ui-d24"
       ],
-      "status": "done"
+      "status": "todo",
+      "note": "2026-08-15 对账：DesignerToolbar.vue 从未存在（git log --all 证实），原 done 为假完成；与 e2e-coverage T22 合并跟踪"
     },
     {
       "id": "T-ui-d7",

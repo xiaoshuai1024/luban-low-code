@@ -2,42 +2,42 @@
 
 ## 1. 生产配置入库（先收漂移）
 
-- [ ] 1.1 `.env.example` 移除明文 `SSH_PASS`，改注释说明 SSH key 方式；补 `INTERNAL_AUTH_SECRET`/`AUTH_JWT_SECRET` 条目
-- [ ] 1.2 将 10 个未提交修改文件 + 5 个 openspec 归档目录一次 commit（消息注明"生产配置与近期修复入库"），push feature 分支
+- [x] 1.1 `.env.example` 移除明文 `SSH_PASS`，改注释说明 SSH key 方式；补 `INTERNAL_AUTH_SECRET`/`AUTH_JWT_SECRET` 条目
+- [x] 1.2 将 10 个未提交修改文件 + 5 个 openspec 归档目录一次 commit（消息注明"生产配置与近期修复入库"），push feature 分支
 
 ## 2. Java 后端：安全
 
-- [ ] 2.1 AuthFilter 增加 `X-Internal-Auth` 共享密钥校验（env `INTERNAL_AUTH_SECRET`；未配置 fail-open + WARN；public/auth/healthz 路径跳过）
-- [ ] 2.2 Spring Security/过滤器链放行 `/backend/healthz` 匿名访问，返回 200
-- [ ] 2.3 LeadController export 与 DatasourceController testConnection 增加 admin 角色校验（403）
-- [ ] 2.4 单测：伪造头直连 401 / BFF 带密钥通过 / healthz 200 / 非 admin 403（两个端点）
+- [x] 2.1 AuthFilter 增加 `X-Internal-Auth` 共享密钥校验（env `INTERNAL_AUTH_SECRET`；未配置 fail-open + WARN；public/auth/healthz 路径跳过）
+- [x] 2.2 Spring Security/过滤器链放行 `/backend/healthz` 匿名访问，返回 200
+- [x] 2.3 LeadController export 与 DatasourceController testConnection 增加 admin 角色校验（403）
+- [x] 2.4 单测：伪造头直连 401 / BFF 带密钥通过 / healthz 200 / 非 admin 403（两个端点）
 
 ## 3. Java 后端：删除与去重
 
-- [ ] 3.1 PageService.delete 事务化 + 级联删除 forms；表单含 leads 时返回 409 `PAGE_HAS_LEADS`（不再 500）
-- [ ] 3.2 SiteService 级联删除加 `@Transactional`
-- [ ] 3.3 LeadService.submit 捕获 `uk_form_dedup` 唯一键冲突，按去重策略返回（消除并发 500）
-- [ ] 3.4 新增 `DELETE /forms/{id}`：FormController `@DeleteMapping` + FormService.delete（含 leads → 409 `FORM_HAS_LEADS`）+ FormMapper.deleteById
-- [ ] 3.5 集成测试：删带表单页面 / 删站点原子性 / 并发重复提交 / form DELETE 204 与 409 分支
-- [ ] 3.6 H2 测试迁移目录与 `db/migration` 对齐（补缺的 2 个迁移，脱离废弃 schema.sql 兜底）
+- [x] 3.1 PageService.delete 事务化 + 级联删除 forms；表单含 leads 时返回 409 `PAGE_HAS_LEADS`（不再 500）
+- [x] 3.2 SiteService 级联删除加 `@Transactional`
+- [x] 3.3 LeadService.submit 捕获 `uk_form_dedup` 唯一键冲突，按去重策略返回（消除并发 500）
+- [x] 3.4 新增 `DELETE /forms/{id}`：FormController `@DeleteMapping` + FormService.delete（含 leads → 409 `FORM_HAS_LEADS`）+ FormMapper.deleteById
+- [x] 3.5 集成测试：删带表单页面 / 删站点原子性 / 并发重复提交 / form DELETE 204 与 409 分支
+- [x] 3.6 H2 测试迁移目录与 `db/migration` 对齐（补缺的 2 个迁移，脱离废弃 schema.sql 兜底）
 
 ## 4. BFF
 
-- [ ] 4.1 backendClient 注入 `X-Internal-Auth` 头；apiHandler 剥离客户端传入的 `X-User-*`/`X-Internal-Auth` 头
-- [ ] 4.2 `auth/login` 与 `auth/api-key/login` 加按 IP 速率限制（内存窗口即可，超限 429）
-- [ ] 4.3 新增 `apps/bff/src/app/api/forms/[id]/route.ts` DELETE handler（透传 204/409/403）
-- [ ] 4.4 docker-compose.e2e.yml 注入 `AUTH_JWT_SECRET` 与 `INTERNAL_AUTH_SECRET`
-- [ ] 4.5 单测：登录限流 429 / DELETE 代理透传 / 内部头剥离
+- [x] 4.1 backendClient 注入 `X-Internal-Auth` 头；apiHandler 剥离客户端传入的 `X-User-*`/`X-Internal-Auth` 头
+- [x] 4.2 `auth/login` 与 `auth/api-key/login` 加按 IP 速率限制（内存窗口即可，超限 429）
+- [x] 4.3 新增 `apps/bff/src/app/api/forms/[id]/route.ts` DELETE handler（透传 204/409/403）
+- [x] 4.4 docker-compose.e2e.yml 注入 `AUTH_JWT_SECRET` 与 `INTERNAL_AUTH_SECRET`
+- [x] 4.5 单测：登录限流 429 / DELETE 代理透传 / 内部头剥离
 
 ## 5. engine
 
-- [ ] 5.1 修复 usePageEditorApi.ts GBK 乱码 → UTF-8（内容语义不变），合并双份测试文件（`__tests__` 版为准）
-- [ ] 5.2 PropertyPanel props/style/events 改为 emit 变更（不直改 props.node），PageEditor 应用变更前 `history.push()`（撤销生效）
-- [ ] 5.3 `loadPage` 成功后调用 `history.reset()`（撤销栈页面隔离）
-- [ ] 5.4 PageEditor.loadDatasources 接入 `normalizeDatasourceError`（错误可见）
-- [ ] 5.5 api/form.ts 增加 `deleteForm`；FormList.handleDelete 真实调用并按 `FORM_HAS_LEADS` 409 分支提示
-- [ ] 5.6 Dashboard 页面数改真实 API 统计，移除 console.log 与 mock 注释
-- [ ] 5.7 单测更新：撤销时序（改后可撤销/undo 恢复旧值）、切页 reset、deleteForm API mock
+- [x] 5.1 修复 usePageEditorApi.ts GBK 乱码 → UTF-8（内容语义不变），合并双份测试文件（`__tests__` 版为准）
+- [x] 5.2 PropertyPanel props/style/events 改为 emit 变更（不直改 props.node），PageEditor 应用变更前 `history.push()`（撤销生效）
+- [x] 5.3 `loadPage` 成功后调用 `history.reset()`（撤销栈页面隔离）
+- [x] 5.4 PageEditor.loadDatasources 接入 `normalizeDatasourceError`（错误可见）
+- [x] 5.5 api/form.ts 增加 `deleteForm`；FormList.handleDelete 真实调用并按 `FORM_HAS_LEADS` 409 分支提示
+- [x] 5.6 Dashboard 页面数改真实 API 统计，移除 console.log 与 mock 注释
+- [x] 5.7 单测更新：撤销时序（改后可撤销/undo 恢复旧值）、切页 reset、deleteForm API mock
 
 ## 6. UI 物料库
 
@@ -50,18 +50,18 @@
 
 ## 7. CI 门禁
 
-- [ ] 7.1 重写 e2e-cross.yml：去 `continue-on-error`/`|| echo`/`submodules: recursive`/`LUBAN_E2E_GO_API`
-- [ ] 7.2 新增 ci-test.yml：engine/bff/ui `pnpm test`+`build` 分 job + backend-java `mvn -q verify`（node 22 对齐）
+- [x] 7.1 重写 e2e-cross.yml：去 `continue-on-error`/`|| echo`/`submodules: recursive`/`LUBAN_E2E_GO_API`
+- [x] 7.2 新增 ci-test.yml：engine/bff/ui `pnpm test`+`build` 分 job + backend-java `mvn -q verify`（node 22 对齐）
 - [ ] 7.3 push 后观察一次真实运行，确认失败可阻断（人为验证或核对 job 状态语义）
 
 ## 8. 工程对账与清理
 
-- [ ] 8.1 删除 `apps/backend-go/`；清理 Makefile、run-per-pkg.sh、push-all-commit-msg.lib.sh、scripts/README.md、`.claude` pr-backend-go 中的 Go 引用
-- [ ] 8.2 CLAUDE.md 项目表改为实际路径（apps/*、packages/*，收录 mcp/ai-assistant/sprint-mcp，移除不存在的 electron/cross-platform）
-- [ ] 8.3 任务图对账：e2e-coverage T24→done（完成后）、T22 还原真实 todo；luban-mcp-server 22 条→done；journey-registry DELETE covered 声明核实
-- [ ] 8.4 TODO.md 失效条目更新（Flutter 已实现、Go 放弃、BFF 已有测试）
-- [ ] 8.5 根目录 stub 脚本处理：verify-production.sh / flyway-squash-local.sh / scripts/feishu/* 删除或输出明确"未实现"提示
-- [ ] 8.6 归档 openspec 已完成的 luban-website-landing 与 docs-site-vitepress change
+- [x] 8.1 删除 `apps/backend-go/`；清理 Makefile、run-per-pkg.sh、push-all-commit-msg.lib.sh、scripts/README.md、`.claude` pr-backend-go 中的 Go 引用
+- [x] 8.2 CLAUDE.md 项目表改为实际路径（apps/*、packages/*，收录 mcp/ai-assistant/sprint-mcp，移除不存在的 electron/cross-platform）
+- [x] 8.3 任务图对账：e2e-coverage T24→done（完成后）、T22 还原真实 todo；luban-mcp-server 22 条→done；journey-registry DELETE covered 声明核实
+- [x] 8.4 TODO.md 失效条目更新（Flutter 已实现、Go 放弃、BFF 已有测试）
+- [x] 8.5 根目录 stub 脚本处理：verify-production.sh / flyway-squash-local.sh / scripts/feishu/* 删除或输出明确"未实现"提示
+- [x] 8.6 归档 openspec 已完成的 luban-website-landing 与 docs-site-vitepress change
 - [ ] 8.7 分栈验证收口：`make test-coverage` 汇总 + dev 栈（248）部署冒烟（鉴权/删除/form DELETE 链路）
 
 ## 9. 收口

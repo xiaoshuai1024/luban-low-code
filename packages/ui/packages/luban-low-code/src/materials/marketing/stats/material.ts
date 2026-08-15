@@ -20,6 +20,7 @@ export const statsMaterial: MaterialDefinition = defineMaterial({
             value: { type: 'string', label: '数值' },
             label: { type: 'string', label: '标签' },
             suffix: { type: 'string', label: '后缀' },
+            icon: { type: 'string', label: '图标（emoji）' },
           },
         },
       },

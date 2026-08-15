@@ -17,6 +17,8 @@ export async function POST(
   try {
     const { id } = await params;
     const body = await req.json();
+    // 注入 path formId 到 body（后端 LeadSubmitRequest.formId @NotBlank，前端/e2e 只传 contact）
+    body.formId = id;
     const headers = {
       "X-Forwarded-For": req.headers.get("x-forwarded-for") || "",
       "X-Visitor-ID": req.headers.get("x-visitor-id") || "",

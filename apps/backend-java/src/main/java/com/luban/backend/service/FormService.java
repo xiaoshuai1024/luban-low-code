@@ -48,7 +48,7 @@ public class FormService {
         f.setSiteId(req.siteId());
         f.setPageId(req.pageId());
         f.setName(req.name());
-        f.setFieldSchemaJson(toJson(req.fieldSchema()));
+        f.setFieldSchemaJson(req.fieldSchema() != null ? toJson(req.fieldSchema()) : "[]");
         f.setSubmitConfigJson(req.submitConfig() != null ? toJson(req.submitConfig()) : "{}");
         f.setDedupKeysJson(toJson(req.dedupKeys()));
         f.setDedupWindow(req.dedupWindow() != null ? req.dedupWindow() : 86400);

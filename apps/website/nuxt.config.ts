@@ -7,9 +7,10 @@ export default defineNuxtConfig({
   pages: true,
   modules: ["@pinia/nuxt"],
   typescript: { strict: true },
-  // GitHub Pages 子路径：https://user.github.io/luban-low-code/
+  // baseURL：NUXT_APP_BASE_URL 显式优先（Docker 生产构建传 /，根域名部署）。
+  // 未设置时保留 GitHub Pages 子路径默认（https://user.github.io/luban-low-code/）。
   app: {
-    baseURL: process.env.NODE_ENV === 'production' ? '/luban-low-code/' : '/',
+    baseURL: process.env.NUXT_APP_BASE_URL || (process.env.NODE_ENV === 'production' ? '/luban-low-code/' : '/'),
     head: {
       charset: "utf-8",
       viewport: "width=device-width, initial-scale=1",

@@ -1,7 +1,8 @@
 /**
  * useHistory.spec.ts — 撤销/重做栈单测。
  *
- * 覆盖：push/undo/redo/clear、容量上限、source 标记、AI 改动可撤销。
+ * 覆盖：push/undo/redo/reset、容量上限、snapshot+pushSnapshot 模式、深拷贝快照。
+ * 适配新 API：useHistory(current, opts)，方法无参，undo/redo 返回 boolean。
  */
 import { describe, it, expect } from 'vitest'
 import { ref } from 'vue'
@@ -14,82 +15,92 @@ function schema(id: string, type = 'LubanPage'): PageSchema {
 
 describe('useHistory', () => {
   it('初始态不可 undo/redo', () => {
-    const h = useHistory()
+    const cur = ref<PageSchema>(schema('v1'))
+    const h = useHistory(cur)
     expect(h.canUndo.value).toBe(false)
     expect(h.canRedo.value).toBe(false)
-    expect(h.size.value).toBe(0)
   })
 
-  it('push 后可 undo，undo 返回上一态', () => {
-    const h = useHistory()
-    const cur = ref(schema('v1'))
-    h.push(cur.value)
+  it('push 后可 undo，undo 回退 current', () => {
+    const cur = ref<PageSchema>(schema('v1'))
+    const h = useHistory(cur)
+    h.push() // 压入 v1
     cur.value = schema('v2')
-    const prev = h.undo(cur.value)
-    expect(prev).not.toBeNull()
-    expect(prev?.root.id).toBe('v1')
+    expect(h.undo()).toBe(true)
+    expect(cur.value.root.id).toBe('v1')
     expect(h.canRedo.value).toBe(true)
   })
 
   it('redo 恢复', () => {
-    const h = useHistory()
-    const cur = ref(schema('v1'))
-    h.push(cur.value)
+    const cur = ref<PageSchema>(schema('v1'))
+    const h = useHistory(cur)
+    h.push()
     cur.value = schema('v2')
-    const prev = h.undo(cur.value)
-    expect(prev?.root.id).toBe('v1')
-    const next = h.redo(prev!)
-    expect(next?.root.id).toBe('v2')
+    h.undo()
+    expect(cur.value.root.id).toBe('v1')
+    expect(h.redo()).toBe(true)
+    expect(cur.value.root.id).toBe('v2')
   })
 
   it('新 push 清空 redo 栈', () => {
-    const h = useHistory()
-    const cur = ref(schema('v1'))
-    h.push(cur.value)
+    const cur = ref<PageSchema>(schema('v1'))
+    const h = useHistory(cur)
+    h.push()
     cur.value = schema('v2')
-    h.undo(cur.value)
+    h.undo()
     expect(h.canRedo.value).toBe(true)
-    // 新变更
-    h.push(schema('v1'), 'manual')
+    h.push() // 新变更清空 redo
     expect(h.canRedo.value).toBe(false)
   })
 
   it('容量上限 50 丢最旧', () => {
-    const h = useHistory()
-    for (let i = 0; i < 55; i++) h.push(schema(`v${i}`))
-    expect(h.size.value).toBe(50)
+    const cur = ref<PageSchema>(schema('v0'))
+    const h = useHistory(cur, { limit: 50 })
+    for (let i = 0; i < 55; i++) {
+      cur.value = schema(`v${i}`)
+      h.push()
+    }
+    // past 截断到 50；可 undo 50 次，第 51 次返回 false
+    let undoCount = 0
+    while (h.undo()) undoCount++
+    expect(undoCount).toBe(50)
   })
 
-  it('AI 改动 source 标记', () => {
-    const h = useHistory()
-    const cur = ref(schema('v1'))
-    h.push(cur.value, 'ai', 'AI 生成页面')
+  it('snapshot + pushSnapshot 记录变更前快照', () => {
+    const cur = ref<PageSchema>(schema('v1'))
+    const h = useHistory(cur)
+    const prev = h.snapshot() // 捕获 v1
     cur.value = schema('v2')
-    h.undo(cur.value)
-    expect(h.lastUndoneSource.value).toBe('ai')
+    h.pushSnapshot(prev) // 压入 v1（mutate 后落栈）
+    expect(h.canUndo.value).toBe(true)
+    h.undo()
+    expect(cur.value.root.id).toBe('v1')
   })
 
-  it('clear 清空', () => {
-    const h = useHistory()
-    h.push(schema('v1'))
-    h.push(schema('v2'))
-    h.clear()
+  it('reset 清空', () => {
+    const cur = ref<PageSchema>(schema('v1'))
+    const h = useHistory(cur)
+    h.push()
+    cur.value = schema('v2')
+    h.push()
+    h.reset()
     expect(h.canUndo.value).toBe(false)
-    expect(h.size.value).toBe(0)
+    expect(h.canRedo.value).toBe(false)
   })
 
-  it('undo 无栈返回 null', () => {
-    const h = useHistory()
-    expect(h.undo(schema('v1'))).toBeNull()
+  it('undo/redo 无栈返回 false', () => {
+    const cur = ref<PageSchema>(schema('v1'))
+    const h = useHistory(cur)
+    expect(h.undo()).toBe(false)
+    expect(h.redo()).toBe(false)
   })
 
   it('快照深拷贝（不串扰）', () => {
-    const h = useHistory()
-    const cur = ref(schema('v1'))
-    h.push(cur.value)
+    const cur = ref<PageSchema>(schema('v1'))
+    const h = useHistory(cur)
+    h.push() // 压入 v1 的 clone
     cur.value.root.id = 'mutated'
-    const prev = h.undo(cur.value)
-    // 推入的快照应保持原值，不受后续 mutation 影响
-    expect(prev?.root.id).toBe('v1')
+    h.undo() // 回退到压入的快照
+    expect(cur.value.root.id).toBe('v1')
   })
 })

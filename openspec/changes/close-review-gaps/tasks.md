@@ -41,12 +41,12 @@
 
 ## 6. UI 物料库
 
-- [ ] 6.1 material-parity.spec.ts 计数 34→39（实跑 `pnpm test` 全绿）
-- [ ] 6.2 全量替换 `'luban-base'` → `'@luban-low-code/luban-base'`（源码 + rollup external + vite alias + tsconfig paths），全仓 grep 断言零残留
-- [ ] 6.3 引入 highlight.js 主题 CSS（Markdown/CodeBlock 生效）
-- [ ] 6.4 BackToTop 实装 `duration` 滚动动画；CodeBlock maxHeight 区域改 `overflow-y: auto`
-- [ ] 6.5 materials/index.ts 陈旧注释计数修正（39）
-- [ ] 6.6 三包 build + test 验证（luban-base → luban-low-code → engine 消费链）
+- [x] 6.1 material-parity.spec.ts 计数 34→39（实跑 `pnpm test` 全绿）
+- [x] 6.2 全量替换 `'luban-base'` → `'@luban-low-code/luban-base'`（源码 + rollup external + vite alias + tsconfig paths），全仓 grep 断言零残留
+- [x] 6.3 引入 highlight.js 主题 CSS（Markdown/CodeBlock 生效）
+- [x] 6.4 BackToTop 实装 `duration` 滚动动画；CodeBlock maxHeight 区域改 `overflow-y: auto`
+- [x] 6.5 materials/index.ts 陈旧注释计数修正（39）
+- [x] 6.6 三包 build + test 验证（luban-base → luban-low-code → engine 消费链）
 
 ## 7. CI 门禁
 
@@ -63,8 +63,14 @@
 - [x] 8.5 根目录 stub 脚本处理：verify-production.sh / flyway-squash-local.sh / scripts/feishu/* 删除或输出明确"未实现"提示
 - [x] 8.6 归档 openspec 已完成的 luban-website-landing 与 docs-site-vitepress change
 - [ ] 8.7 分栈验证收口：`make test-coverage` 汇总 + dev 栈（248）部署冒烟（鉴权/删除/form DELETE 链路）
+  - 2026-08-15 部分完成：本地四栈测试全绿（engine 209 / bff 73 / ui 299 / java 101，build 全过）
+  - ⛔ 已知债务（超出本 change 范围，如实记录）：
+    1) 各包 vitest 未配 json-summary reporter、Java jacoco 未启用 → coverage-summary 实际值全为 `-`（该门禁因旧路径从未真正生效，本次修复路径后暴露）
+    2) website 零测试（本 change 明确排除官网范围）
+    3) journey 门禁 7 个 P0 旅程无 spec 绑定（存量注册表债务）
+    4) dev 栈 248 部署冒烟待执行（需 SSH 部署 + INTERNAL_AUTH_SECRET 注入）
 
 ## 9. 收口
 
 - [ ] 9.1 全部任务完成后 `/opsx:archive` 归档本 change（含 specs 同步）
-- [ ] 9.2 生成本 change 的 commit（按子系统分 commit，feature 分支 PR，禁止直推 master）
+- [x] 9.2 生成本 change 的 commit（按子系统分 commit，feature 分支 PR，禁止直推 master）

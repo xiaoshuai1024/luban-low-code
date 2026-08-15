@@ -105,21 +105,12 @@ const schemaEntries = computed<Array<[string, PropSchemaItem]>>(() => {
 
 /**
  * 节点 props 容器：保证返回非空对象（若 node.props 缺失则用空对象视图层兜底，
- * 不在此处产生写副作用）。真正写入在 handleInput 时进行（含惰性初始化）。
+ * 不在此处产生写副作用）。
  */
 const nodeProps = computed<Record<string, unknown>>(() => {
   if (!props.node) return {}
   return props.node.props ?? {}
 })
-
-/** 确保节点有 props 容器并返回其引用（写操作入口）。 */
-function ensureProps(): Record<string, unknown> | null {
-  if (!props.node) return null
-  if (!props.node.props) {
-    props.node.props = {}
-  }
-  return props.node.props
-}
 
 function getValue(key: string, item: PropSchemaItem): unknown {
   const v = nodeProps.value[key]
@@ -127,13 +118,15 @@ function getValue(key: string, item: PropSchemaItem): unknown {
   return v
 }
 
+/**
+ * props 分区输入：不直改 props.node（撤销时序修复）。
+ * 只 emit update:prop（nodeId/key/value），由 PageEditor.onUpdateProp 先
+ * history.push() 再写入 schema —— 保证快照是变更前状态，属性修改可撤销。
+ * emit 是同步的，父组件写回后响应式更新本面板的读取，双向绑定行为不变。
+ */
 function handleInput(key: string, value: unknown): void {
-  const target = ensureProps()
-  if (!target) return
-  target[key] = value
-  if (props.node) {
-    emit('update:prop', props.node.id, key, value)
-  }
+  if (!props.node) return
+  emit('update:prop', props.node.id, key, value)
 }
 
 // === options 类型：选项列表（{ label, value }[]）的内联编辑 ===
@@ -290,28 +283,6 @@ function isSafeCssValue(value: string): boolean {
   return true
 }
 
-/**
- * V2-T4：按当前断点定位样式源对象。
- * desktop → node.style（基础）；tablet/mobile → node.responsive[bp]（惰性初始化）。
- * 返回引用，调用方直接写键值；新增的对象会挂回 node.responsive。
- */
-function resolveStyleTarget(): Record<string, string> | null {
-  if (!props.node) return null;
-  if (props.breakpoint === 'desktop') {
-    if (!props.node.style) props.node.style = {};
-    return props.node.style;
-  }
-  // tablet/mobile
-  if (!props.node.responsive) props.node.responsive = {};
-  const bp = props.breakpoint;
-  if (bp === 'tablet') {
-    if (!props.node.responsive.tablet) props.node.responsive.tablet = {};
-    return props.node.responsive.tablet;
-  }
-  if (!props.node.responsive.mobile) props.node.responsive.mobile = {};
-  return props.node.responsive.mobile;
-}
-
 /** 读取节点某 CSS 属性值（按当前断点：desktop=style，其它=responsive[bp]）。 */
 function getStyleValue(key: string): string {
   if (!props.node) return '';
@@ -325,20 +296,15 @@ function getStyleValue(key: string): string {
 }
 
 /**
- * 写入节点 CSS 属性（按当前断点）：安全过滤后写，emit update:style。
- * desktop → node.style；tablet/mobile → node.responsive[bp]。
- * 危险值静默丢弃（不写不 emit）。
+ * 样式分区输入（撤销时序修复）：不直改 props.node.style/responsive。
+ * 安全过滤后仅 emit update:style（nodeId/key/value），由 PageEditor.
+ * onUpdateStyle 按 currentBreakpoint 先 history.push() 再写入（desktop →
+ * node.style；tablet/mobile → node.responsive[bp]；空值删键）。
+ * 危险值静默丢弃（不 emit）。
  */
 function handleStyleInput(key: string, value: string): void {
   if (!props.node) return;
   if (value && !isSafeCssValue(value)) return; // 危险值拒绝
-  const target = resolveStyleTarget();
-  if (!target) return;
-  if (value === '') {
-    delete target[key];
-  } else {
-    target[key] = value;
-  }
   emit('update:style', props.node.id, key, value);
 }
 
@@ -442,10 +408,12 @@ function getEventAction(eventName: string): string {
   return props.node.events[eventName] ?? ''
 }
 
+/**
+ * 事件分区输入（撤销时序修复）：不直改 props.node.events，仅 emit
+ * update:event，由 PageEditor.onUpdateEvent 先 history.push() 再写入。
+ */
 function handleEventInput(eventName: string, actionExpr: string): void {
   if (!props.node) return
-  if (!props.node.events) props.node.events = {}
-  props.node.events[eventName] = actionExpr
   emit('update:event', props.node.id, eventName, actionExpr)
 }
 

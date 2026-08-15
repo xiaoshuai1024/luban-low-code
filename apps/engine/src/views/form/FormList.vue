@@ -18,7 +18,7 @@ import {
   ElTag,
   ElEmpty,
 } from 'element-plus'
-import { getForms, type FormResponse } from '@/api/form'
+import { getForms, deleteForm, type FormResponse } from '@/api/form'
 
 const route = useRoute()
 const router = useRouter()
@@ -64,12 +64,18 @@ async function handleDelete(row: FormResponse) {
   } catch {
     return
   }
-  // 复用 form api（delete 由后端提供；此处用 updateForm status=archived 软删兜底）
   try {
-    // 注意：form.ts 暂无 deleteForm；这里仅提示（后端按需扩展）
-    ElMessage.info('表单删除需后端支持 DELETE /forms/:id（如已实现请补充 api）')
+    await deleteForm(currentSiteId.value, row.id)
+    ElMessage.success('删除成功')
+    fetchForms()
   } catch (e) {
-    ElMessage.error((e as Error).message || '删除失败')
+    const status = (e as { response?: { status?: number } })?.response?.status
+    const code = (e as { response?: { data?: { code?: string } } })?.response?.data?.code
+    if (status === 409 || code === 'FORM_HAS_LEADS') {
+      ElMessage.warning('表单已有线索数据，不可删除')
+    } else {
+      ElMessage.error((e as Error)?.message || '删除失败')
+    }
   }
 }
 
@@ -109,14 +115,14 @@ onMounted(() => {
       </ElTableColumn>
       <ElTableColumn label="去重规则" min-width="180">
         <template #default="{ row }">
-          {{ dedupSummary(row) }}
+          {{ dedupSummary(row as FormResponse) }}
         </template>
       </ElTableColumn>
       <ElTableColumn prop="createdAt" label="创建时间" width="180" />
       <ElTableColumn label="操作" width="160" fixed="right">
         <template #default="{ row }">
-          <ElButton link type="primary" @click="goEdit(row)">编辑</ElButton>
-          <ElButton link type="danger" @click="handleDelete(row)">删除</ElButton>
+          <ElButton link type="primary" @click="goEdit(row as FormResponse)">编辑</ElButton>
+          <ElButton link type="danger" @click="handleDelete(row as FormResponse)">删除</ElButton>
         </template>
       </ElTableColumn>
     </ElTable>

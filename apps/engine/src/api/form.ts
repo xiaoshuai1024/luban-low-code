@@ -44,3 +44,11 @@ export function createForm(data: FormSavePayload) {
 export function updateForm(siteId: string, id: string, data: Partial<FormSavePayload>) {
   return request.patch<FormResponse>(`/forms/${id}`, data, { params: { siteId } })
 }
+
+/**
+ * DELETE /api/forms/:id?siteId= → 204 | 409 FORM_HAS_LEADS（名下有线索数据）| 403 | 404。
+ * BFF（apps/bff forms/[id]/route.ts DELETE）透传后端状态码。
+ */
+export function deleteForm(siteId: string, id: string) {
+  return request.delete<void>(`/forms/${id}`, { params: { siteId } })
+}

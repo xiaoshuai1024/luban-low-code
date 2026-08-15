@@ -18,7 +18,11 @@
     "noUncheckedSideEffectImports": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      // 与 vite.config.ts alias 对应：vite 用 src，类型走已构建 dist 的 .d.ts，
+      // 避免把包源码拉进本工程 strict 编译
+      "luban-low-code": ["../../packages/ui/packages/luban-low-code/dist/index.d.ts"],
+      "@luban-low-code/luban-base": ["../../packages/ui/packages/luban-base/dist/index.d.ts"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"],

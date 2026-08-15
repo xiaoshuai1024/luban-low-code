@@ -3,25 +3,37 @@ import { ref, onMounted } from 'vue'
 import { ElRow, ElCol, ElCard, ElStatistic } from 'element-plus'
 import { getSites } from '@/api/site'
 import { getUsers } from '@/api/user'
+import { getPages } from '@/api/page'
 
 const siteCount = ref(0)
 const userCount = ref(0)
+const pageCount = ref(0)
+
+/**
+ * 页面数统计：无专用 count 端点（BFF/后端均未提供 stats API），采用
+ * sites → getPages(siteId) 聚合求和的最小方案（站点数量级小，N+1 可接受；
+ * 单站点失败不拖垮整体，仅按 0 计入）。
+ */
+async function countPages(siteIds: string[]): Promise<number> {
+  const results = await Promise.all(
+    siteIds.map((id) =>
+      getPages(id)
+        .then((r) => (Array.isArray(r.data) ? r.data.length : 0))
+        .catch(() => 0),
+    ),
+  )
+  return results.reduce((sum, n) => sum + n, 0)
+}
 
 onMounted(async () => {
-    console.log('[Dashboard] onMounted')
-
-  try {
-    const [sitesRes, usersRes] = await Promise.all([
-      getSites().catch(() => ({ data: [] })),
-      getUsers().catch(() => ({ data: { list: [], total: 0 } })),
-    ])
-    siteCount.value = Array.isArray(sitesRes.data) ? sitesRes.data.length : 0
-    userCount.value = usersRes.data?.total ?? 0
-  } catch {
-    // mock for demo
-    siteCount.value = 0
-    userCount.value = 0
-  }
+  const [sitesRes, usersRes] = await Promise.all([
+    getSites().catch(() => ({ data: [] as { id: string }[] })),
+    getUsers().catch(() => ({ data: { list: [], total: 0 } })),
+  ])
+  const sites = Array.isArray(sitesRes.data) ? sitesRes.data : []
+  siteCount.value = sites.length
+  userCount.value = usersRes.data?.total ?? 0
+  pageCount.value = await countPages(sites.map((s) => s.id))
 })
 </script>
 
@@ -40,7 +52,7 @@ onMounted(async () => {
       </ElCol>
       <ElCol :span="8">
         <ElCard shadow="hover" class="dashboard__card">
-          <ElStatistic title="页面数" :value="0" />
+          <ElStatistic title="页面数" :value="pageCount" />
         </ElCard>
       </ElCol>
     </ElRow>

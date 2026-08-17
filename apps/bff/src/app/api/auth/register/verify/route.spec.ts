@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import jwt from "jsonwebtoken";
 import { POST } from "./route";
 import { resetRateLimiterForTests } from "@/lib/rateLimit";
 
@@ -71,6 +72,53 @@ describe("POST /api/auth/register/verify", () => {
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toContain("/auth/register/verify");
     expect((init as RequestInit).method).toBe("POST");
+  });
+
+  it("token 接线钉死：signToken 同一 secret 可 jwt.verify 解码，sub/username/role 与后端 user 一致", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue(backendOk());
+
+    const res = await POST(makeReq());
+    const body = await res.json();
+    const secret = process.env.AUTH_JWT_SECRET || "dev-secret-change-me-in-prod";
+    const decoded = jwt.verify(body.token, secret) as {
+      sub: string;
+      username: string;
+      role: string;
+    };
+    expect(decoded.sub).toBe("u-1");
+    expect(decoded.username).toBe("alice");
+    expect(decoded.role).toBe("user");
+  });
+
+  it("客户端坏 JSON body → 400 BAD_REQUEST，且不请求后端", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    const req = new Request("http://localhost/api/auth/register/verify", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-forwarded-for": "6.6.6.6" },
+      body: "not-json",
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.code).toBe("BAD_REQUEST");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("后端 200 但响应体非法 JSON（SyntaxError 来自后端）→ 500 INTERNAL，不再误归因为 400 BAD_REQUEST", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({ "content-type": "application/json" }),
+      json: async () => JSON.parse("not-json"),
+    } as unknown as Response);
+
+    const res = await POST(makeReq());
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.code).toBe("INTERNAL");
   });
 
   it("后端 400 VERIFY_CODE_INVALID → 透传 400 与 code/message/details", async () => {

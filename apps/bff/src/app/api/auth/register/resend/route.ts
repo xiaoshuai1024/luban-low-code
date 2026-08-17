@@ -19,7 +19,15 @@ export async function POST(req: Request) {
   if (isRateLimited(ip, Date.now(), "resend")) return rateLimited();
 
   try {
-    const body = (await req.json()) as ResendPayload;
+    const body = (await req.json().catch(() => null)) as ResendPayload | null;
+    if (body === null) {
+      // 客户端坏 JSON：对齐 login，计入限流窗口后直接 400
+      recordFailure(ip, Date.now(), "resend");
+      return NextResponse.json(
+        { code: "BAD_REQUEST", message: "Invalid JSON body" },
+        { status: 400 }
+      );
+    }
 
     const result = await callBackend<ResendResult>("/auth/register/resend", {
       method: "POST",
@@ -28,14 +36,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json(result);
   } catch (e) {
-    // 重发失败（冷却/日限/503、body 非法）计入限流窗口
+    // 重发失败（冷却/日限/503）计入限流窗口；
+    // 后端坏响应体的 SyntaxError 也会落到这里，经 toBackendResponse 归为 500 INTERNAL
     recordFailure(ip, Date.now(), "resend");
-    if (e instanceof SyntaxError) {
-      return NextResponse.json(
-        { code: "BAD_REQUEST", message: "Invalid JSON body" },
-        { status: 400 }
-      );
-    }
     return toBackendResponse(e);
   }
 }

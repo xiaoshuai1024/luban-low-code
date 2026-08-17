@@ -22,7 +22,15 @@ export async function POST(req: Request) {
   if (isRateLimited(ip, Date.now(), "register")) return rateLimited();
 
   try {
-    const body = (await req.json()) as RegisterPayload;
+    const body = (await req.json().catch(() => null)) as RegisterPayload | null;
+    if (body === null) {
+      // 客户端坏 JSON：对齐 login，计入限流窗口后直接 400
+      recordFailure(ip, Date.now(), "register");
+      return NextResponse.json(
+        { code: "BAD_REQUEST", message: "Invalid JSON body" },
+        { status: 400 }
+      );
+    }
 
     const result = await callBackend<RegisterResult>("/auth/register", {
       method: "POST",
@@ -31,14 +39,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json(result, { status: 201 });
   } catch (e) {
-    // 注册失败（后端 409/400/503/5xx、body 非法）计入限流窗口
+    // 注册失败（后端 409/400/503/5xx）计入限流窗口；
+    // 后端坏响应体的 SyntaxError 也会落到这里，经 toBackendResponse 归为 500 INTERNAL
     recordFailure(ip, Date.now(), "register");
-    if (e instanceof SyntaxError) {
-      return NextResponse.json(
-        { code: "BAD_REQUEST", message: "Invalid JSON body" },
-        { status: 400 }
-      );
-    }
     return toBackendResponse(e);
   }
 }

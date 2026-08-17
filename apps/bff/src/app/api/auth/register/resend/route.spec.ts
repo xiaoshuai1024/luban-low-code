@@ -71,6 +71,21 @@ describe("POST /api/auth/register/resend", () => {
     expect(body.error).toBeUndefined();
   });
 
+  it("客户端坏 JSON body → 400 BAD_REQUEST，且不请求后端", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    const req = new Request("http://localhost/api/auth/register/resend", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-forwarded-for": "6.6.6.6" },
+      body: "not-json",
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.code).toBe("BAD_REQUEST");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("同一 IP 10 次失败后第 11 次 BFF 自身限流 429（code=RATE_LIMITED）", async () => {
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
     fetchMock.mockResolvedValue(backendCooldown());

@@ -47,7 +47,7 @@ describe('官网主页 schema 渲染', () => {
     expect(hero.text()).toContain('免费注册');
     const cta = hero.findAll('a').find((a) => a.text().includes('免费注册'));
     expect(cta, 'hero 主 CTA 未渲染为「免费注册」链接').toBeTruthy();
-    expect(cta?.attributes('href')).toContain('/register');
+    expect(cta?.attributes('href')).toBe('https://manage.xiaoshuai1024.top/register');
   });
 
   it('特性卡片与组件墙数量正确（6 特性 / 30 组件）', () => {

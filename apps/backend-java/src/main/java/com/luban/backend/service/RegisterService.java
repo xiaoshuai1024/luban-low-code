@@ -23,7 +23,7 @@ import java.util.UUID;
  *  - register：服务层白名单校验 → users INSERT(status=pending_verification) → 发码；
  *  - activateVerifiedUser（verify 第二步，事务）：user→active + email_verified_at +
  *    默认订阅 Free + 消费验证码，单事务失败整体回滚（plan §3.3）；
- *  - resend：仅对存在且未激活的用户重发（防枚举：未知邮箱回 200 掩码、不发码）。
+ *  - resend：仅对 status=pending_verification 的用户发码（防枚举：未知/active/disabled 一律 200 掩码、不发码）。
  *
  * verify 拆两步的原因：失败计数（attempts+1）必须独立于激活事务提交，
  * 否则验证失败抛异常会连失败计数一起回滚（见 EmailVerificationService.verify javadoc）。
@@ -88,8 +88,14 @@ public class RegisterService {
             throw e;
         }
         EmailVerificationService.IssuedCode issued = emailVerificationService.issue(email);
-        // fail-closed：SMTP 未配置且非 dev-echo → 503 EMAIL_SERVICE_UNAVAILABLE（用户行保留 pending，可经 resend 恢复）
-        mailService.sendVerificationCode(email, issued.code(), EmailVerificationService.CODE_TTL_MINUTES);
+        try {
+            // fail-closed：SMTP 未配置且非 dev-echo → 503 EMAIL_SERVICE_UNAVAILABLE（用户行保留 pending，可经 resend 恢复）
+            mailService.sendVerificationCode(email, issued.code(), EmailVerificationService.CODE_TTL_MINUTES);
+        } catch (RuntimeException e) {
+            // 发信失败不烧额度：回滚验证码行，冷却/日限只对成功发信计数
+            emailVerificationService.discardIssued(issued.verification().getId());
+            throw e;
+        }
         String devCode = mailService.devEchoEnabled() ? issued.code() : null;
         return new RegisterResponse(username, MailService.maskEmail(email), devCode);
     }
@@ -105,9 +111,23 @@ public class RegisterService {
             // 验证码已校验通过但用户行不存在（注册后管理员删除等）→ 按无效收敛
             throw BusinessException.verifyCodeInvalid(0);
         }
+        if ("disabled".equals(u.getStatus())) {
+            // 封禁绕过防御：持有有效验证码的 disabled 用户也拒绝激活
+            throw BusinessException.userDisabled();
+        }
         Instant now = Instant.now();
         if (!"active".equals(u.getStatus())) {
-            userMapper.verifyEmail(u.getId(), now, now);
+            // SQL 守卫 AND status='pending_verification'：并发封禁/状态漂移时影响行数=0 → 回读判状态给错
+            if (userMapper.verifyEmail(u.getId(), now, now) == 0) {
+                User fresh = userMapper.getById(u.getId());
+                if (fresh == null) {
+                    throw BusinessException.verifyCodeInvalid(0);
+                }
+                if (!"active".equals(fresh.getStatus())) {
+                    // disabled（或其它不可激活态）→ 403；并发已激活（active）→ 幂等继续
+                    throw BusinessException.userDisabled();
+                }
+            }
         }
         subscriptionService.bindDefaultFree(u.getId());
         emailVerificationService.markConsumed(verificationId);
@@ -116,14 +136,20 @@ public class RegisterService {
         return new RegisterVerifyResponse(UserResponse.fromEntity(fresh != null ? fresh : u));
     }
 
-    /** 重发验证码：未知/已激活邮箱回 200 掩码不发码（防枚举）；pending 用户走冷却/日限。 */
+    /** 重发验证码：仅 pending_verification 用户发码；未知/active/disabled 邮箱一律 200 掩码不发（防枚举）。 */
     public RegisterResendResponse resend(String email) {
         User u = userMapper.findByEmail(email);
-        if (u == null || "active".equals(u.getStatus())) {
+        if (u == null || !"pending_verification".equals(u.getStatus())) {
             return new RegisterResendResponse(MailService.maskEmail(email), null);
         }
         EmailVerificationService.IssuedCode issued = emailVerificationService.issue(email);
-        mailService.sendVerificationCode(email, issued.code(), EmailVerificationService.CODE_TTL_MINUTES);
+        try {
+            mailService.sendVerificationCode(email, issued.code(), EmailVerificationService.CODE_TTL_MINUTES);
+        } catch (RuntimeException e) {
+            // 发信失败不烧额度：回滚验证码行，冷却/日限只对成功发信计数
+            emailVerificationService.discardIssued(issued.verification().getId());
+            throw e;
+        }
         String devCode = mailService.devEchoEnabled() ? issued.code() : null;
         return new RegisterResendResponse(MailService.maskEmail(email), devCode);
     }

@@ -62,6 +62,8 @@ services:
       REDIS_PORT: "6379"
       LEAD_ENC_KEY: ${LEAD_ENC_KEY}
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET}
+      # 本地 dev 保留内置体验账号（application.yml 缺省已反转为关闭）
+      APP_DEMO_ACCOUNT_ENABLED: "true"
     ports:
       - "8080:8080"
     healthcheck:

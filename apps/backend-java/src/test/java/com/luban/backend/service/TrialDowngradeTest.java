@@ -6,7 +6,6 @@ import com.luban.backend.mapper.TrialRecordMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -18,7 +17,6 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -28,8 +26,8 @@ import static org.mockito.Mockito.when;
 
 /**
  * trial 到期降级单测（plan §8.1 T-be-7，时钟注入）：
- * 扫描条件取 Clock.instant() / 到期 → active(Free) + trial_records.converted_to=free /
- * 单条失败不阻断批 / 无到期不动。
+ * 扫描条件取 Clock.instant() / 到期 → 守卫式 UPDATE 降 free/active（清 trial 字段，仅命中 1 行
+ * 才回填 trial_records.converted_to=free）/ 单条失败不阻断批 / 守卫 0 行跳过 / 无到期不动。
  */
 @ExtendWith(MockitoExtension.class)
 class TrialDowngradeTest {
@@ -68,24 +66,32 @@ class TrialDowngradeTest {
         job.downgradeExpiredTrials();
 
         verify(subscriptionMapper).listExpiredTrialing(NOW);
-        verify(subscriptionMapper, never()).update(any());
+        verify(subscriptionMapper, never()).guardDowngradeToFree(any(), any());
     }
 
     @Test
     void expiredTrialDowngradedToFreeActiveWithConvertedRecord() {
         Subscription sub = trialing("user-1", "starter", NOW.minusSeconds(3600));
         when(subscriptionMapper.listExpiredTrialing(NOW)).thenReturn(List.of(sub));
+        when(subscriptionMapper.guardDowngradeToFree("user-1", NOW)).thenReturn(1);
 
         job.downgradeExpiredTrials();
 
-        ArgumentCaptor<Subscription> captor = ArgumentCaptor.forClass(Subscription.class);
-        verify(subscriptionMapper).update(captor.capture());
-        Subscription updated = captor.getValue();
-        assertThat(updated.getPlanCode()).isEqualTo("free");
-        assertThat(updated.getStatus()).isEqualTo("active");
-        assertThat(updated.getUpdatedAt()).isEqualTo(NOW);
+        // 守卫式更新命中 1 行（SQL 内落 free/active 并清 trial 字段）
+        verify(subscriptionMapper).guardDowngradeToFree("user-1", NOW);
         // trial_records 按原试用档回填（不是 free）
         verify(trialRecordMapper).markConverted("user-1", "starter", "free");
+    }
+
+    @Test
+    void guardMissSkipsConvertedBackfill() {
+        Subscription sub = trialing("user-1", "starter", NOW.minusSeconds(3600));
+        when(subscriptionMapper.listExpiredTrialing(NOW)).thenReturn(List.of(sub));
+        when(subscriptionMapper.guardDowngradeToFree("user-1", NOW)).thenReturn(0); // 并发已降级/状态已变
+
+        job.downgradeExpiredTrials();
+
+        verify(trialRecordMapper, never()).markConverted(any(), any(), any());
     }
 
     @Test
@@ -93,12 +99,12 @@ class TrialDowngradeTest {
         Subscription first = trialing("user-1", "starter", NOW.minusSeconds(3600));
         Subscription second = trialing("user-2", "starter", NOW.minusSeconds(7200));
         when(subscriptionMapper.listExpiredTrialing(NOW)).thenReturn(List.of(first, second));
+        when(subscriptionMapper.guardDowngradeToFree("user-2", NOW)).thenReturn(1);
         doThrow(new RuntimeException("row locked"))
-                .when(subscriptionMapper).update(org.mockito.ArgumentMatchers.argThat(s -> "user-1".equals(s.getUserId())));
+                .when(subscriptionMapper).guardDowngradeToFree("user-1", NOW);
 
         job.downgradeExpiredTrials(); // user-1 失败仅告警，user-2 继续处理
 
-        verify(subscriptionMapper).update(org.mockito.ArgumentMatchers.argThat(s -> "user-2".equals(s.getUserId())));
         verify(trialRecordMapper).markConverted("user-2", "starter", "free");
         verify(trialRecordMapper, never()).markConverted(org.mockito.ArgumentMatchers.eq("user-1"),
                 any(), any());
@@ -108,7 +114,7 @@ class TrialDowngradeTest {
     void noExpiredTrialsIsNoop() {
         when(subscriptionMapper.listExpiredTrialing(NOW)).thenReturn(List.of());
         job.downgradeExpiredTrials();
-        verify(subscriptionMapper, never()).update(any());
+        verify(subscriptionMapper, never()).guardDowngradeToFree(any(), any());
         verify(trialRecordMapper, never()).markConverted(any(), any(), any());
     }
 }

@@ -18,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
@@ -26,8 +27,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * 配额单测（plan §8.1 T-be-5）：先查限后累加、quota=0 不限、超限 429 details{metric,limit,used}、
- * 无订阅回退 free 档、周期格式 yyyy-MM（UTC）。
+ * 配额单测（plan §8.1 T-be-5）：占位 + 原子条件累加（count<quota 才 +1，0 行=超限）、
+ * quota=0 不限、超限 429 details{metric,limit,used}、无订阅回退 free 档、周期格式 yyyy-MM（UTC）。
  */
 @ExtendWith(MockitoExtension.class)
 class QuotaServiceTest {
@@ -68,13 +69,17 @@ class QuotaServiceTest {
         seedPlan("growth", 10000, 50, 0); // quota_visits=0 → 不查限直接累加
 
         assertThatCode(() -> service.checkAndIncrement(USER_ID, "visits")).doesNotThrowAnyException();
-        verify(usageCounterMapper).increment(anyString(), eq(USER_ID), eq(PERIOD), eq("visits"), any());
+        verify(usageCounterMapper).insertPlaceholder(anyString(), eq(USER_ID), eq(PERIOD), eq("visits"), any());
+        verify(usageCounterMapper).incrementUnconditional(eq(USER_ID), eq(PERIOD), eq("visits"), any());
+        verify(usageCounterMapper, never()).incrementIfBelowQuota(anyString(), anyString(), anyString(), anyLong(), any());
     }
 
     @Test
     void overQuotaThrows429WithDetailsAndSkipsIncrement() {
         seedSubscription("e2e-tiny");
         seedPlan("e2e-tiny", 1, 1, 0);
+        // 条件累加 0 行（count 已达 quota=1）→ 429，used 取当前计数
+        when(usageCounterMapper.incrementIfBelowQuota(eq(USER_ID), eq(PERIOD), eq("pages"), eq(1L), any())).thenReturn(0);
         when(usageCounterMapper.getCount(USER_ID, PERIOD, "pages")).thenReturn(1L);
 
         assertThatThrownBy(() -> service.checkAndIncrement(USER_ID, "pages"))
@@ -83,24 +88,25 @@ class QuotaServiceTest {
                     assertThat(e.getHttpStatus().value()).isEqualTo(429);
                     assertThat(e.getDetails()).isEqualTo(Map.of("metric", "pages", "limit", 1L, "used", 1L));
                 });
-        verify(usageCounterMapper, never()).increment(anyString(), anyString(), anyString(), anyString(), any());
+        verify(usageCounterMapper, never()).incrementUnconditional(anyString(), anyString(), anyString(), any());
     }
 
     @Test
     void underQuotaIncrements() {
         seedSubscription("free");
         seedPlan("free", 100, 3, 0);
-        when(usageCounterMapper.getCount(USER_ID, PERIOD, "leads")).thenReturn(99L);
+        when(usageCounterMapper.incrementIfBelowQuota(eq(USER_ID), eq(PERIOD), eq("leads"), eq(100L), any())).thenReturn(1);
 
         service.checkAndIncrement(USER_ID, "leads");
 
-        verify(usageCounterMapper).increment(anyString(), eq(USER_ID), eq(PERIOD), eq("leads"), any());
+        verify(usageCounterMapper).incrementIfBelowQuota(eq(USER_ID), eq(PERIOD), eq("leads"), eq(100L), any());
     }
 
     @Test
     void noSubscriptionFallsBackToFreeQuota() {
         when(subscriptionMapper.getByUserId(USER_ID)).thenReturn(null);
         seedPlan("free", 100, 3, 0);
+        when(usageCounterMapper.incrementIfBelowQuota(eq(USER_ID), eq(PERIOD), eq("pages"), eq(3L), any())).thenReturn(0);
         when(usageCounterMapper.getCount(USER_ID, PERIOD, "pages")).thenReturn(3L);
 
         assertThatThrownBy(() -> service.checkAndIncrement(USER_ID, "pages"))
@@ -114,7 +120,7 @@ class QuotaServiceTest {
         when(planMapper.getByCode("ghost-plan")).thenReturn(null);
 
         assertThatCode(() -> service.checkAndIncrement(USER_ID, "leads")).doesNotThrowAnyException();
-        verify(usageCounterMapper).increment(anyString(), eq(USER_ID), anyString(), eq("leads"), any());
+        verify(usageCounterMapper).incrementUnconditional(eq(USER_ID), anyString(), eq("leads"), any());
     }
 
     @Test

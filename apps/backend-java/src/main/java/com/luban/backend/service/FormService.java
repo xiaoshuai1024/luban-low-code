@@ -8,7 +8,6 @@ import com.luban.backend.entity.Form;
 import com.luban.backend.exception.BusinessException;
 import com.luban.backend.mapper.FormMapper;
 import com.luban.backend.mapper.LeadMapper;
-import com.luban.backend.mapper.SiteMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,25 +23,24 @@ import java.util.stream.Collectors;
 public class FormService {
 
     private final FormMapper formMapper;
-    private final SiteMapper siteMapper;
     private final LeadMapper leadMapper;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final SiteOwnershipGuard ownershipGuard;
 
-    public FormService(FormMapper formMapper, SiteMapper siteMapper, LeadMapper leadMapper,
+    public FormService(FormMapper formMapper, LeadMapper leadMapper,
                        SiteOwnershipGuard ownershipGuard) {
         this.formMapper = formMapper;
-        this.siteMapper = siteMapper;
         this.leadMapper = leadMapper;
         this.ownershipGuard = ownershipGuard;
     }
 
     public List<FormResponse> list(String siteId) {
-        if (siteMapper.getById(siteId) == null) throw BusinessException.siteNotFound();
+        ownershipGuard.assertVisible(siteId);
         return formMapper.listBySiteId(siteId).stream().map(FormResponse::fromEntity).collect(Collectors.toList());
     }
 
     public FormResponse get(String siteId, String id) {
+        ownershipGuard.assertVisible(siteId);
         Form f = formMapper.getByIdAndSiteId(id, siteId);
         if (f == null) throw BusinessException.formNotFound();
         return FormResponse.fromEntity(f);

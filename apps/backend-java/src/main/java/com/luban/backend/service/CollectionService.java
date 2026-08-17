@@ -39,12 +39,13 @@ public class CollectionService {
     // === Collection ===
 
     public List<CollectionResponse> list(String siteId) {
-        if (siteMapper.getById(siteId) == null) throw BusinessException.siteNotFound();
+        ownershipGuard.assertVisible(siteId);
         return collectionMapper.listBySiteId(siteId).stream()
             .map(CollectionResponse::fromEntity).collect(Collectors.toList());
     }
 
     public CollectionResponse get(String siteId, String id) {
+        ownershipGuard.assertVisible(siteId);
         ContentCollection c = collectionMapper.getByIdAndSiteId(id, siteId);
         if (c == null) throw BusinessException.collectionNotFound();
         return CollectionResponse.fromEntity(c);
@@ -103,6 +104,7 @@ public class CollectionService {
     // === CollectionItem ===
 
     public List<CollectionItemResponse> listItems(String siteId, String collectionId) {
+        ownershipGuard.assertVisible(siteId);
         // 校验 collection 属于该 site
         ContentCollection c = collectionMapper.getByIdAndSiteId(collectionId, siteId);
         if (c == null) throw BusinessException.collectionNotFound();
@@ -111,6 +113,7 @@ public class CollectionService {
     }
 
     public CollectionItemResponse getItem(String siteId, String collectionId, String itemId) {
+        ownershipGuard.assertVisible(siteId);
         ContentCollection c = collectionMapper.getByIdAndSiteId(collectionId, siteId);
         if (c == null) throw BusinessException.collectionNotFound();
         ContentCollectionItem it = collectionMapper.getItemByIdAndCollectionId(itemId, collectionId);

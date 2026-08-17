@@ -7,7 +7,9 @@ import com.luban.backend.exception.BusinessException;
 import com.luban.backend.mapper.PlanMapper;
 import com.luban.backend.mapper.SubscriptionMapper;
 import com.luban.backend.mapper.TrialRecordMapper;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -20,8 +22,9 @@ import java.util.UUID;
  *                        └─ Starter 首次（无 trial_records）→ trialing + trial_ends=+trialDays + 插 trial_records
  *   trialing --到期(@Scheduled)--> active(Free)               [TrialDowngradeJob]
  *
- * applyPlan 无独立事务边界：由调用方的事务包裹（OrderService 0 元支付事务 / verify 激活事务），
- * 保证「订单置 paid + 订阅生效」原子（plan §3.3）。
+ * applyPlan 自带事务边界（REQUIRED）：被 OrderService 0 元支付事务调用时加入外层，
+ * 「订单置 paid + 订阅生效」原子（plan §3.3）；subscribe 独立调用时自成一个事务
+ * （订阅行更新 + trial_records 插入同生共死）。
  */
 @Service
 public class SubscriptionService {
@@ -49,6 +52,7 @@ public class SubscriptionService {
      *
      * @return 生效后的订阅
      */
+    @Transactional(rollbackFor = Exception.class)
     public Subscription applyPlan(String userId, String planCode) {
         Plan plan = planMapper.getByCode(planCode);
         if (plan == null) {
@@ -95,7 +99,7 @@ public class SubscriptionService {
         return sub;
     }
 
-    /** verify 激活默认绑定 Free（幂等：已有订阅不动）。 */
+    /** verify 激活默认绑定 Free（幂等：已有订阅不动；并发双 verify 撞 user_id 主键时静默收敛为已绑定）。 */
     public void bindDefaultFree(String userId) {
         Subscription existing = subscriptionMapper.getByUserId(userId);
         if (existing != null) {
@@ -109,7 +113,49 @@ public class SubscriptionService {
         sub.setStartedAt(now);
         sub.setCreatedAt(now);
         sub.setUpdatedAt(now);
-        subscriptionMapper.insert(sub);
+        try {
+            subscriptionMapper.insert(sub);
+        } catch (DataIntegrityViolationException e) {
+            if (isUniqueViolation(e)) {
+                // 并发 verify 的赢家已绑定（subscriptions.user_id 主键）→ 幂等返回
+                return;
+            }
+            throw e;
+        }
+    }
+
+    /**
+     * 订阅写入串行化点：锁定该用户 subscriptions 行（SELECT ... FOR UPDATE），
+     * 供 OrderService 0 元下单在 paid 幂等判定前排队同用户并发请求。
+     * 行不存在（存量用户 / 测试直插 seed）时先插 free/active 占位抢 user_id 主键锁；
+     * 并发输家撞主键唯一冲突后重查 FOR UPDATE 收敛到赢家行。
+     */
+    public void lockForMutation(String userId) {
+        if (subscriptionMapper.selectForUpdate(userId) != null) {
+            return;
+        }
+        Instant now = Instant.now();
+        Subscription placeholder = new Subscription();
+        placeholder.setUserId(userId);
+        placeholder.setPlanCode(DEFAULT_PLAN);
+        placeholder.setStatus(STATUS_ACTIVE);
+        placeholder.setStartedAt(now);
+        placeholder.setCreatedAt(now);
+        placeholder.setUpdatedAt(now);
+        try {
+            subscriptionMapper.insert(placeholder);
+        } catch (DataIntegrityViolationException e) {
+            if (!isUniqueViolation(e) || subscriptionMapper.selectForUpdate(userId) == null) {
+                throw e;
+            }
+        }
+    }
+
+    /** 与 RegisterService/SiteService 同口径：MySQL "Duplicate entry" / H2 "Unique index or primary key violation"。 */
+    private static boolean isUniqueViolation(DataIntegrityViolationException e) {
+        if (e == null || e.getMessage() == null) return false;
+        String m = e.getMessage();
+        return m.contains("Duplicate") || m.contains("Unique index") || m.contains("primary key violation");
     }
 
     /** 当前订阅；无订阅回退合成 free/active（不落库，展示用）。 */

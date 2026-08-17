@@ -166,4 +166,15 @@ class OrderServiceTest {
         service.listOrders(USER_ID, 0, 999);
         verify(orderMapper).listByUserId(eq(USER_ID), eq(0), eq(100));
     }
+
+    @Test
+    void listOrdersClampsHugePageToPreventOffsetOverflow() {
+        when(orderMapper.listByUserId(eq(USER_ID), eq(9_999_900), eq(100))).thenReturn(java.util.List.of());
+        when(orderMapper.countByUserId(USER_ID)).thenReturn(0L);
+
+        service.listOrders(USER_ID, Integer.MAX_VALUE, 100);
+
+        // page clamp ≤ 100000 → offset 上限 (1e5-1)*100，int 不溢出
+        verify(orderMapper).listByUserId(eq(USER_ID), eq(9_999_900), eq(100));
+    }
 }

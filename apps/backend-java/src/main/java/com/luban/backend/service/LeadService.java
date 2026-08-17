@@ -130,7 +130,13 @@ public class LeadService {
             // 并发竞态（如双击双发）：check-then-insert 之间另一请求已插入同指纹 lead，
             // insert 撞 uk_form_dedup 唯一键 → 按去重策略收敛为幂等结果，不再冒泡 500
             if (!isUniqueViolation(e)) throw e;
-            return onConcurrentDuplicate(form, req, hash, policy);
+            LeadSubmitResult converged = onConcurrentDuplicate(form, req, hash, policy);
+            // 收敛路径复用既有 lead，未产生新行：回退第 3 步的 leads 配额累加
+            //（REJECT 抛 409 LEAD_DUPLICATE 时不会走到这里，事务整体回滚同样不残留计数）
+            if (quotaOwner != null) {
+                quotaService.decrement(quotaOwner, QuotaService.METRIC_LEADS);
+            }
+            return converged;
         }
 
         // 4. 通知（失败不阻塞主流程）
@@ -189,8 +195,9 @@ public class LeadService {
         return new LeadSubmitResult(existing.getId(), existing.getStatus(), true);
     }
 
-    /** 线索中心：列表（分页 + 筛选，contact 脱敏）。 */
+    /** 线索中心：列表（分页 + 筛选，contact 脱敏）。读入口守卫：仅站点 owner/admin 可见。 */
     public Map<String, Object> list(String siteId, String status, String formId, String assigneeId, int page, int size) {
+        ownershipGuard.assertVisible(siteId);
         int offset = Math.max(0, (page - 1) * size);
         List<Lead> leads = leadMapper.listByQuery(siteId, status, formId, assigneeId, offset, size);
         int total = leadMapper.countByQuery(siteId, status, formId, assigneeId);
@@ -199,6 +206,7 @@ public class LeadService {
     }
 
     public LeadResponse get(String siteId, String leadId) {
+        ownershipGuard.assertVisible(siteId);
         return toResponse(getOrThrow(siteId, leadId));
     }
 

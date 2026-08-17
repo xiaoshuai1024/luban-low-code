@@ -8,7 +8,6 @@ import com.luban.backend.entity.Page;
 import com.luban.backend.exception.BusinessException;
 import com.luban.backend.mapper.FormMapper;
 import com.luban.backend.mapper.PageMapper;
-import com.luban.backend.mapper.SiteMapper;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,18 +21,16 @@ import java.util.stream.Collectors;
 public class PageService {
 
     private final PageMapper pageMapper;
-    private final SiteMapper siteMapper;
     private final FormMapper formMapper;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final PageVersionService versionService;
     private final SiteOwnershipGuard ownershipGuard;
     private final QuotaService quotaService;
 
-    public PageService(PageMapper pageMapper, SiteMapper siteMapper, FormMapper formMapper,
+    public PageService(PageMapper pageMapper, FormMapper formMapper,
                        PageVersionService versionService, SiteOwnershipGuard ownershipGuard,
                        QuotaService quotaService) {
         this.pageMapper = pageMapper;
-        this.siteMapper = siteMapper;
         this.formMapper = formMapper;
         this.versionService = versionService;
         this.ownershipGuard = ownershipGuard;
@@ -41,16 +38,19 @@ public class PageService {
     }
 
     public List<PageResponse> list(String siteId) {
-        if (siteMapper.getById(siteId) == null) throw BusinessException.siteNotFound();
+        ownershipGuard.assertVisible(siteId);
         return pageMapper.listBySiteId(siteId).stream().map(PageResponse::fromEntity).collect(Collectors.toList());
     }
 
     public PageResponse get(String siteId, String pageId) {
+        ownershipGuard.assertVisible(siteId);
         Page p = pageMapper.getByIdAndSiteId(pageId, siteId);
         if (p == null) throw BusinessException.pageNotFound();
         return PageResponse.fromEntity(p);
     }
 
+    /** 事务：配额累加 + insert + 首版快照原子（path 冲突 409 时回滚已累加的 pages 计数）。 */
+    @Transactional(rollbackFor = Exception.class)
     public PageResponse create(String siteId, String name, String path, String status, JsonNode schema, JsonNode seo) {
         // T-be-6 写守卫 + T-be-5 配额：按 site→owner 计 pages 配额（owner=NULL 平台站点不限）
         com.luban.backend.entity.Site site = ownershipGuard.assertCanWrite(siteId);

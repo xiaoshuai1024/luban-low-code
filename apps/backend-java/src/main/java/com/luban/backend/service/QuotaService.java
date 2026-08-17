@@ -10,16 +10,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 /**
- * 配额服务（T-be-5）：先查限后累加（拦截在累加前，宁少计不超放）。
+ * 配额服务（T-be-5）：原子条件累加（判限与计数同一条 UPDATE，无先查后加的超放窗口）。
  *
- *  - 累加：INSERT ... ON DUPLICATE KEY UPDATE count = count + 1（MySQL 原子，uk_usage 唯一键）；
- *  - quota = 0 表示不限（quota_visits 本期全 0，见 plan §10.2），仍累加计数供用量展示；
+ *  - 占位：INSERT IGNORE 预落 count=0 行（撞 uk_usage 静默跳过，MySQL / H2 MODE=MySQL）；
+ *  - 累加：quota>0 → UPDATE ... SET count=count+1 WHERE ... AND count < quota（0 行=超限）；
+ *  - quota = 0 表示不限（quota_visits 本期全 0，见 plan §10.2）→ 无条件累加供用量展示；
  *  - 超限：429 QUOTA_EXCEEDED，details {metric, limit, used}；
  *  - 无订阅用户回退 free 档配额（防御：verify 激活必绑 Free，正常均有订阅）。
  */
@@ -46,17 +48,23 @@ public class QuotaService {
         this.planMapper = planMapper;
     }
 
-    /** 前置校验 + 计数（业务写入口调用：PageService.create / LeadService.submit）。 */
+    /**
+     * 原子条件累加（业务写入口调用：PageService.create / LeadService.submit）：
+     * 占位 → quota>0 时条件累加（count<quota 才 +1，0 行=超限抛 429）；quota=0 不限直接累加。
+     */
     public void checkAndIncrement(String userId, String metric) {
         String period = currentPeriod();
         int quota = quotaOf(userId, metric);
+        Instant now = Instant.now();
+        usageCounterMapper.insertPlaceholder(UUID.randomUUID().toString(), userId, period, metric, now);
         if (quota > 0) {
-            long used = getCount(userId, period, metric);
-            if (used >= quota) {
-                throw BusinessException.quotaExceeded(metric, quota, used);
+            int updated = usageCounterMapper.incrementIfBelowQuota(userId, period, metric, quota, now);
+            if (updated == 0) {
+                throw BusinessException.quotaExceeded(metric, quota, getCount(userId, period, metric));
             }
+        } else {
+            usageCounterMapper.incrementUnconditional(userId, period, metric, now);
         }
-        increment(userId, period, metric);
     }
 
     /** 当前周期用量（/billing/me、/billing/usage 展示）。 */
@@ -65,9 +73,16 @@ public class QuotaService {
         return v != null ? v : 0L;
     }
 
-    /** 原子累加（幂等重试不回退：宁少计不超放方向的安全侧）。 */
+    /** 无条件累加（quota=0 不限路径；已保证占位行存在）。 */
     public void increment(String userId, String period, String metric) {
-        usageCounterMapper.increment(UUID.randomUUID().toString(), userId, period, metric, java.time.Instant.now());
+        Instant now = Instant.now();
+        usageCounterMapper.insertPlaceholder(UUID.randomUUID().toString(), userId, period, metric, now);
+        usageCounterMapper.incrementUnconditional(userId, period, metric, now);
+    }
+
+    /** 回退一次累加（count > 0 守卫防负）：LeadService 唯一键冲突收敛路径未产生新 lead 时回退 leads 计数。 */
+    public void decrement(String userId, String metric) {
+        usageCounterMapper.decrement(userId, currentPeriod(), metric, java.time.Instant.now());
     }
 
     /** 用户当前订阅档的某指标配额；无订阅回退 free 档；未知套餐/指标回退 0=不限。 */

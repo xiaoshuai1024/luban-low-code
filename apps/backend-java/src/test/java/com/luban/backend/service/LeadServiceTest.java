@@ -297,4 +297,35 @@ class LeadServiceTest {
         assertThatThrownBy(() -> service.submit(req("13800000001")))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
+
+    // === 唯一键冲突收敛路径的配额回退（收敛复用既有 lead，不残留 leads 计数） ===
+
+    @Test
+    void submitUniqueKeyConflict_convergePathRollsBackQuotaIncrement() {
+        Form f = sampleForm();
+        f.setDedupPolicy("mark");
+        when(formMapper.getById("form-1")).thenReturn(f);
+        when(antiSpamService.isRateLimited(anyString(), anyString(), anyInt(), anyInt())).thenReturn(false);
+        when(leadMapper.countByFormHashInWindow(eq("form-1"), anyString(), any())).thenReturn(0);
+        // 有主站点：配额按 owner 计（触发 checkAndIncrement）
+        com.luban.backend.entity.Site site = new com.luban.backend.entity.Site();
+        site.setId("site-1");
+        site.setOwnerUserId("own-1");
+        when(siteMapper.getById("site-1")).thenReturn(site);
+        Lead existing = new Lead();
+        existing.setId("lead-existing");
+        existing.setFormId("form-1");
+        existing.setSiteId("site-1");
+        existing.setStatus("invalid");
+        existing.setUpdatedAt(java.time.Instant.now());
+        when(leadMapper.findLatestByFormHash(eq("form-1"), anyString())).thenReturn(existing);
+        when(leadMapper.insert(any())).thenThrow(ukViolation());
+
+        LeadSubmitResult result = service.submit(req("13800000001"));
+
+        assertThat(result.leadId()).isEqualTo("lead-existing");
+        verify(quotaService).checkAndIncrement("own-1", QuotaService.METRIC_LEADS);
+        // 收敛路径未产生新 lead：回退已累加的 leads 计数
+        verify(quotaService).decrement("own-1", QuotaService.METRIC_LEADS);
+    }
 }

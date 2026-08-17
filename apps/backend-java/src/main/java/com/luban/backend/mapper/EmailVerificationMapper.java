@@ -8,6 +8,9 @@ import java.time.Instant;
 @Mapper
 public interface EmailVerificationMapper {
 
+    /** 尝试上限（EmailVerificationService.MAX_ATTEMPTS 同源，供下方 SQL 原子守卫引用）。 */
+    int MAX_ATTEMPTS = 5;
+
     @Select("SELECT id, email, code_hash, attempts, expires_at, consumed_at, created_at " +
             "FROM email_verifications WHERE email = #{email} ORDER BY created_at DESC LIMIT 1")
     EmailVerification findLatestByEmail(String email);
@@ -20,8 +23,14 @@ public interface EmailVerificationMapper {
             "VALUES (#{id}, #{email}, #{codeHash}, #{attempts}, #{expiresAt}, #{consumedAt}, #{createdAt})")
     int insert(EmailVerification verification);
 
-    @Update("UPDATE email_verifications SET attempts = #{attempts} WHERE id = #{id}")
-    int updateAttempts(@Param("id") String id, @Param("attempts") int attempts);
+    /** 原子自增失败计数：attempts 已达上限（或行不存在/被替换）时影响行数=0，由调用方回读判定 EXCEEDED。 */
+    @Update("UPDATE email_verifications SET attempts = attempts + 1 " +
+            "WHERE id = #{id} AND attempts < " + MAX_ATTEMPTS)
+    int incrementAttempts(@Param("id") String id);
+
+    /** 发信失败回滚验证码行：冷却/日限只对成功发信计数。 */
+    @Delete("DELETE FROM email_verifications WHERE id = #{id}")
+    int deleteById(@Param("id") String id);
 
     @Update("UPDATE email_verifications SET consumed_at = #{consumedAt} WHERE id = #{id} AND consumed_at IS NULL")
     int markConsumed(@Param("id") String id, @Param("consumedAt") Instant consumedAt);

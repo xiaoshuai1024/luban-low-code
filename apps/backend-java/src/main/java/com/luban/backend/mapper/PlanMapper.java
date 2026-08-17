@@ -8,7 +8,8 @@ import java.util.List;
 @Mapper
 public interface PlanMapper {
 
-    String COLS = "plan_code, name, status, price_monthly, quota_leads, quota_pages, quota_visits, gates, trial_days, sort_order";
+    /** gates AS gates_json：列名对齐实体属性 gatesJson（map-underscore-to-camel-case），否则读取恒为 null。 */
+    String COLS = "plan_code, name, status, price_monthly, quota_leads, quota_pages, quota_visits, gates AS gates_json, trial_days, sort_order";
 
     /** 列表仅 visible（hidden 供 e2e fixture，不影响 getByCode 订阅校验）。 */
     @Select("SELECT " + COLS + " FROM plans WHERE status = 'visible' ORDER BY sort_order")

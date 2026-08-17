@@ -1,5 +1,7 @@
 package com.luban.backend.exception;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -9,6 +11,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<APIError> handleBusiness(BusinessException ex) {
@@ -44,10 +48,15 @@ public class GlobalExceptionHandler {
                 .body(new APIError("INVALID_ARGUMENT", msg));
     }
 
+    /**
+     * 兜底 500：响应统一通用文案（不泄露 ex.getMessage() 中的内部细节，如 SQL/路径），
+     * 完整堆栈仅在服务端日志保留。
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<APIError> handleOther(Exception ex) {
+        log.error("unhandled exception", ex);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new APIError("INTERNAL", ex.getMessage() != null ? ex.getMessage() : "internal error"));
+                .body(new APIError("INTERNAL", "服务器内部错误"));
     }
 }

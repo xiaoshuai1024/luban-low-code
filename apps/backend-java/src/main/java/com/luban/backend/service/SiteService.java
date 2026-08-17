@@ -62,6 +62,7 @@ public class SiteService {
 
     /** T-be-6：create owner=当前登录用户（POST /sites 已放开给登录用户；受 quota_pages 限制）。 */
     public SiteResponse create(String name, String slug, String baseUrl, String status) {
+        validateSlug(slug);
         if (status == null || status.isBlank()) status = "active";
         Site site = new Site();
         site.setId(UUID.randomUUID().toString());
@@ -88,6 +89,7 @@ public class SiteService {
     public SiteResponse update(String id, String name, String slug, String baseUrl, String status,
                                com.fasterxml.jackson.databind.JsonNode seo, com.fasterxml.jackson.databind.JsonNode analytics) {
         Site site = ownershipGuard.assertCanWrite(id);
+        validateSlug(slug);
         site.setName(name);
         site.setSlug(slug);
         site.setBaseUrl(baseUrl != null ? baseUrl : "");
@@ -110,13 +112,18 @@ public class SiteService {
 
     /** T-be-6：向导防抖预检（GET /sites/slug-check）。200 {available:true,slug} / 409 SLUG_TAKEN / 400。 */
     public Map<String, Object> checkSlug(String slug) {
-        if (slug == null || !SLUG_PATTERN.matcher(slug).matches()) {
-            throw BusinessException.invalidArgument("slug: 3-48 位小写字母/数字/-");
-        }
+        validateSlug(slug);
         if (siteMapper.getBySlug(slug) != null) {
             throw BusinessException.slugTaken(slug);
         }
         return Map.of("available", true, "slug", slug);
+    }
+
+    /** slug 格式校验（create/update/checkSlug 统一口径）：[a-z0-9-]{3,48}，不合规 400 INVALID_ARGUMENT。 */
+    private static void validateSlug(String slug) {
+        if (slug == null || !SLUG_PATTERN.matcher(slug).matches()) {
+            throw BusinessException.invalidArgument("slug: 3-48 位小写字母/数字/-");
+        }
     }
 
     /** V2-T10: JsonNode → 字符串；null 返回 null（保留旧值语义） */

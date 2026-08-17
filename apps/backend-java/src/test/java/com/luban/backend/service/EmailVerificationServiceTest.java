@@ -131,20 +131,37 @@ class EmailVerificationServiceTest {
     @Test
     void verifyWrongCodeIncrementsAttemptsAndReportsRemaining() {
         when(mapper.findLatestByEmail(EMAIL)).thenReturn(row(2, Instant.now().plusSeconds(600), null, Instant.now()));
+        when(mapper.incrementAttempts("ev-1")).thenReturn(1);
 
         assertThatCodeInvalid(service, "999999", 2); // 5 - (2+1)
 
-        verify(mapper).updateAttempts("ev-1", 3);
+        // 原子自增（SQL 守卫 attempts<5），不再「读-改-写」回传绝对值
+        verify(mapper).incrementAttempts("ev-1");
     }
 
     @Test
     void verifyFifthFailureExceedsAttempts() {
         when(mapper.findLatestByEmail(EMAIL)).thenReturn(row(4, Instant.now().plusSeconds(600), null, Instant.now()));
+        when(mapper.incrementAttempts("ev-1")).thenReturn(1);
 
         assertThatThrownBy(() -> service.verify(EMAIL, "999999"))
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getCode()).isEqualTo("VERIFY_ATTEMPTS_EXCEEDED"));
-        verify(mapper).updateAttempts("ev-1", 5);
+        verify(mapper).incrementAttempts("ev-1");
+    }
+
+    /** 并发竞态：自增未生效（另一请求已把 attempts 计满）→ 回读最新行判 EXCEEDED。 */
+    @Test
+    void verifyWrongCodeWhenIncrementLosesRaceReReadsAndExceeds() {
+        when(mapper.findLatestByEmail(EMAIL))
+                .thenReturn(row(4, Instant.now().plusSeconds(600), null, Instant.now()))
+                .thenReturn(row(5, Instant.now().plusSeconds(600), null, Instant.now()));
+        when(mapper.incrementAttempts("ev-1")).thenReturn(0);
+
+        assertThatThrownBy(() -> service.verify(EMAIL, "999999"))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getCode()).isEqualTo("VERIFY_ATTEMPTS_EXCEEDED"));
+        verify(mapper).incrementAttempts("ev-1");
     }
 
     @Test
@@ -153,7 +170,7 @@ class EmailVerificationServiceTest {
         assertThatThrownBy(() -> service.verify(EMAIL, CODE))
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getCode()).isEqualTo("VERIFY_ATTEMPTS_EXCEEDED"));
-        verify(mapper, never()).updateAttempts(any(), org.mockito.ArgumentMatchers.anyInt());
+        verify(mapper, never()).incrementAttempts(any());
     }
 
     @Test
@@ -164,7 +181,7 @@ class EmailVerificationServiceTest {
         EmailVerification result = service.verify(EMAIL, CODE);
 
         assertThat(result).isSameAs(latest);
-        verify(mapper, never()).updateAttempts(any(), org.mockito.ArgumentMatchers.anyInt());
+        verify(mapper, never()).incrementAttempts(any());
         verify(mapper, never()).markConsumed(any(), any()); // 消费在激活事务内完成
     }
 
@@ -172,6 +189,20 @@ class EmailVerificationServiceTest {
     void markConsumedDelegatesWithNow() {
         service.markConsumed("ev-1");
         verify(mapper).markConsumed(eq("ev-1"), any());
+    }
+
+    // === 发信失败回滚（冷却/日限只对成功发信计数） ===
+
+    @Test
+    void discardIssuedDeletesRowById() {
+        service.discardIssued("ev-1");
+        verify(mapper).deleteById("ev-1");
+    }
+
+    @Test
+    void discardIssuedNullIsNoop() {
+        service.discardIssued(null);
+        verify(mapper, never()).deleteById(any());
     }
 
     private void assertThatCodeInvalid(EmailVerificationService service, String code, int expectedRemaining) {

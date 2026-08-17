@@ -228,4 +228,42 @@ class RegisterVerifyContractTest {
                 .andExpect(jsonPath("$.emailMasked").exists())
                 .andExpect(jsonPath("$.devCode").doesNotExist());
     }
+
+    /** 封禁绕过防御：disabled 用户 resend 一律 200 掩码不发码（不进冷却/日限路径）。 */
+    @Test
+    void disabledUserResendReturns200MaskedWithoutSending() throws Exception {
+        String username = "vfy-" + uid();
+        String email = username + "@example.com";
+        registerAndFetchCode(username, email);
+        jdbc.update("UPDATE users SET status = 'disabled' WHERE username = ?", username);
+        // 排除冷却干扰：清空验证码行后，若未修复会真实发新码（200 + devCode + 新行）
+        jdbc.update("DELETE FROM email_verifications WHERE email = ?", email);
+
+        mockMvc.perform(post("/backend/auth/register/resend")
+                        .contextPath("/backend")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + email + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.emailMasked").exists())
+                .andExpect(jsonPath("$.devCode").doesNotExist());
+
+        Integer rows = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM email_verifications WHERE email = ?", Integer.class, email);
+        assertThat(rows).isZero();
+    }
+
+    /** 封禁绕过防御：disabled 用户持有效验证码 verify → 403 USER_DISABLED，且不被激活。 */
+    @Test
+    void disabledUserVerifyReturns403UserDisabled() throws Exception {
+        String username = "vfy-" + uid();
+        String email = username + "@example.com";
+        String code = registerAndFetchCode(username, email);
+        jdbc.update("UPDATE users SET status = 'disabled' WHERE username = ?", username);
+
+        verify(email, code, 403, "USER_DISABLED");
+
+        var user = jdbc.queryForMap("SELECT status, email_verified_at FROM users WHERE username = ?", username);
+        assertThat(user.get("status")).isEqualTo("disabled");
+        assertThat(user.get("email_verified_at")).isNull();
+    }
 }

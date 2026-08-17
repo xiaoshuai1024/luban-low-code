@@ -25,6 +25,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *   GET  /sites        非 admin 仅 owner=self；admin 全量（含 NULL 平台站点）
  *   GET/PUT/DELETE     owner 或 admin；owner=NULL（平台站点）仅 admin
  *   子资源写（pages）   同 PUT/DELETE 矩阵
+ *   子资源读（pages/forms/collections/leads/versions 列表+详情）同单站 GET 矩阵；
+ *   versions/{id}/rollback 为写动作，同 PUT/DELETE 矩阵
  *   GET /sites/slug-check 200 available / 409 SLUG_TAKEN / 400
  */
 @SpringBootTest
@@ -206,6 +208,137 @@ class SiteOwnershipContractTest {
         mockMvc.perform(as(post("/backend/sites/" + platformSiteId + "/pages"), otherUserId, "user")
                         .contentType(MediaType.APPLICATION_JSON).content(pageBody))
                 .andExpect(status().isForbidden()); // 平台站点仅 admin
+    }
+
+    // === 子资源读守卫（S5 多租户隔离：他用户 403，owner 200）===
+
+    private String seedPage(String sid) {
+        String pageId = "so-pg-" + UUID.randomUUID().toString().substring(0, 8);
+        Instant now = Instant.now();
+        jdbc.update("INSERT INTO pages (id, site_id, name, path, status, schema_json, created_at, updated_at) " +
+                        "VALUES (?, ?, '落地页', '/so-" + pageId + "', 'published', '{}', ?, ?)",
+                pageId, sid, now, now);
+        return pageId;
+    }
+
+    private String seedForm(String sid, String pageId) {
+        String formId = "so-fm-" + UUID.randomUUID().toString().substring(0, 8);
+        Instant now = Instant.now();
+        jdbc.update("INSERT INTO forms (id, site_id, page_id, name, field_schema_json, submit_config_json, " +
+                        "dedup_keys_json, dedup_window, dedup_policy, status, created_at, updated_at) " +
+                        "VALUES (?, ?, ?, '报名表', '[]', '{}', '[\"phone\"]', 86400, 'reject', 'active', ?, ?)",
+                formId, sid, pageId, now, now);
+        return formId;
+    }
+
+    private String seedVersion(String pageId) {
+        String versionId = "so-vn-" + UUID.randomUUID().toString().substring(0, 8);
+        jdbc.update("INSERT INTO page_versions (id, page_id, version_no, schema_json, summary, created_at) " +
+                        "VALUES (?, ?, 1, '{}', '初始版本', ?)",
+                versionId, pageId, Instant.now());
+        return versionId;
+    }
+
+    @Test
+    void pagesListAndGetForbiddenForOtherUser() throws Exception {
+        String pageId = seedPage(siteId);
+        mockMvc.perform(as(get("/backend/sites/" + siteId + "/pages"), ownerId, "user"))
+                .andExpect(status().isOk());
+        mockMvc.perform(as(get("/backend/sites/" + siteId + "/pages"), otherUserId, "user"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PERMISSION_DENIED"));
+        mockMvc.perform(as(get("/backend/sites/" + siteId + "/pages/" + pageId), otherUserId, "user"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PERMISSION_DENIED"));
+    }
+
+    @Test
+    void formsListAndGetForbiddenForOtherUser() throws Exception {
+        String pageId = seedPage(siteId);
+        String formId = seedForm(siteId, pageId);
+        mockMvc.perform(as(get("/backend/forms"), ownerId, "user").queryParam("siteId", siteId))
+                .andExpect(status().isOk());
+        mockMvc.perform(as(get("/backend/forms"), otherUserId, "user").queryParam("siteId", siteId))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PERMISSION_DENIED"));
+        mockMvc.perform(as(get("/backend/forms/" + formId), otherUserId, "user").queryParam("siteId", siteId))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PERMISSION_DENIED"));
+    }
+
+    @Test
+    void collectionsAndItemsReadForbiddenForOtherUser() throws Exception {
+        String collectionId = "so-cl-" + UUID.randomUUID().toString().substring(0, 8);
+        String itemId = "so-ci-" + UUID.randomUUID().toString().substring(0, 8);
+        Instant now = Instant.now();
+        jdbc.update("INSERT INTO collections (id, site_id, name, field_schema_json, status, created_at, updated_at) " +
+                "VALUES (?, ?, '内容集合', '{}', 'active', ?, ?)", collectionId, siteId, now, now);
+        jdbc.update("INSERT INTO collection_items (id, collection_id, data_json, status, created_at, updated_at) " +
+                "VALUES (?, ?, '{}', 'active', ?, ?)", itemId, collectionId, now, now);
+
+        mockMvc.perform(as(get("/backend/collections"), ownerId, "user").queryParam("siteId", siteId))
+                .andExpect(status().isOk());
+        mockMvc.perform(as(get("/backend/collections"), otherUserId, "user").queryParam("siteId", siteId))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PERMISSION_DENIED"));
+        mockMvc.perform(as(get("/backend/collections/" + collectionId), otherUserId, "user").queryParam("siteId", siteId))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PERMISSION_DENIED"));
+        mockMvc.perform(as(get("/backend/collections/" + collectionId + "/items"), otherUserId, "user")
+                        .queryParam("siteId", siteId))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PERMISSION_DENIED"));
+        mockMvc.perform(as(get("/backend/collections/" + collectionId + "/items/" + itemId), otherUserId, "user")
+                        .queryParam("siteId", siteId))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PERMISSION_DENIED"));
+    }
+
+    @Test
+    void leadsListAndGetForbiddenForOtherUser() throws Exception {
+        String pageId = seedPage(siteId);
+        String formId = seedForm(siteId, pageId);
+        String leadId = "so-ld-" + UUID.randomUUID().toString().substring(0, 8);
+        Instant now = Instant.now();
+        jdbc.update("INSERT INTO leads (id, site_id, form_id, page_id, contact_json, dedup_hash, status, created_at, updated_at) " +
+                        "VALUES (?, ?, ?, ?, 'encrypted-contact', ?, 'new', ?, ?)",
+                leadId, siteId, formId, pageId, UUID.randomUUID().toString().replace("-", ""), now, now);
+
+        mockMvc.perform(as(get("/backend/leads"), ownerId, "user").queryParam("siteId", siteId))
+                .andExpect(status().isOk());
+        mockMvc.perform(as(get("/backend/leads"), otherUserId, "user").queryParam("siteId", siteId))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PERMISSION_DENIED"));
+        mockMvc.perform(as(get("/backend/leads/" + leadId), otherUserId, "user").queryParam("siteId", siteId))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PERMISSION_DENIED"));
+        mockMvc.perform(as(get("/backend/leads/" + leadId), ownerId, "user").queryParam("siteId", siteId))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void pageVersionsListGetAndRollbackForbiddenForOtherUser() throws Exception {
+        String pageId = seedPage(siteId);
+        String versionId = seedVersion(pageId);
+
+        mockMvc.perform(as(get("/backend/sites/" + siteId + "/pages/" + pageId + "/versions"), ownerId, "user"))
+                .andExpect(status().isOk());
+        mockMvc.perform(as(get("/backend/sites/" + siteId + "/pages/" + pageId + "/versions"), otherUserId, "user"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PERMISSION_DENIED"));
+        mockMvc.perform(as(get("/backend/sites/" + siteId + "/pages/" + pageId + "/versions/" + versionId), otherUserId, "user"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PERMISSION_DENIED"));
+
+        // 回滚 = 写动作：他用户 403（页面 schema 未被覆盖），owner 201
+        mockMvc.perform(as(post("/backend/sites/" + siteId + "/pages/" + pageId + "/versions/" + versionId + "/rollback"),
+                        otherUserId, "user"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PERMISSION_DENIED"));
+        mockMvc.perform(as(post("/backend/sites/" + siteId + "/pages/" + pageId + "/versions/" + versionId + "/rollback"),
+                        ownerId, "user"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.summary").value(org.hamcrest.Matchers.containsString("回滚到 v1")));
     }
 
     // === slug-check ===

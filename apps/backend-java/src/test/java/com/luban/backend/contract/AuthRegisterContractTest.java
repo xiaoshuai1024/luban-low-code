@@ -97,6 +97,19 @@ class AuthRegisterContractTest {
                 .andExpect(jsonPath("$.code").value("INVALID_ARGUMENT"));
     }
 
+    /** @Size(max=255) 对齐 users.email 列宽：超长邮箱 400 INVALID_ARGUMENT 而非落库 500。 */
+    @Test
+    void oversizedEmailReturns400() throws Exception {
+        String username = "reg-" + uid();
+        String longEmail = "a".repeat(250) + "@example.com"; // 262 > 255
+        mockMvc.perform(post("/backend/auth/register")
+                        .contextPath("/backend")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerBody(username, longEmail, "Passw0rd123")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_ARGUMENT"));
+    }
+
     @Test
     void invalidUsernameFormatReturns400() throws Exception {
         mockMvc.perform(post("/backend/auth/register")

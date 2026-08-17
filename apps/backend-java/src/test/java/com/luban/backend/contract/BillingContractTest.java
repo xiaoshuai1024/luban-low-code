@@ -1,5 +1,7 @@
 package com.luban.backend.contract;
 
+import com.luban.backend.entity.Plan;
+import com.luban.backend.mapper.PlanMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -36,6 +38,7 @@ class BillingContractTest {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private JdbcTemplate jdbc;
+    @Autowired private PlanMapper planMapper;
 
     private String uid() {
         return UUID.randomUUID().toString().substring(0, 8);
@@ -274,5 +277,22 @@ class BillingContractTest {
                 .andExpect(jsonPath("$.items.length()").value(1))
                 .andExpect(jsonPath("$.items[0].planCode").value("growth"))
                 .andExpect(jsonPath("$.items[0].status").value("paid"));
+    }
+
+    // === PlanMapper gates 列映射回归（COLS gates AS gates_json） ===
+
+    @Test
+    void planGatesJsonRoundTripsThroughMapper() {
+        String code = "gates-" + uid();
+        jdbc.update("INSERT INTO plans (plan_code, name, status, price_monthly, quota_leads, quota_pages, quota_visits, gates, trial_days, sort_order) " +
+                        "VALUES (?, ?, 'hidden', 0, 1, 1, 0, ?, 0, 98)", code, "Gates", "{\"a\":1}");
+        try {
+            Plan plan = planMapper.getByCode(code);
+            org.assertj.core.api.Assertions.assertThat(plan).isNotNull();
+            // gates 列须映射到 gatesJson（别名断裂时恒为 null）
+            org.assertj.core.api.Assertions.assertThat(plan.getGatesJson()).isEqualTo("{\"a\":1}");
+        } finally {
+            jdbc.update("DELETE FROM plans WHERE plan_code = ?", code);
+        }
     }
 }

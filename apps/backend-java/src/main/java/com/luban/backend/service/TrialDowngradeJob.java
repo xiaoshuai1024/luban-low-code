@@ -16,11 +16,13 @@ import java.util.List;
 /**
  * 试用到期降级（T-be-7，plan §3.2/§3.3）：
  *
- *   每小时扫 status=trialing 且 trial_ends_at < now → active(Free)（数据保留）
- *   + trial_records.converted_to='free'
+ *   每小时扫 status=trialing 且 trial_ends_at < now → 守卫式 UPDATE 降 active(Free)
+ *   （顺带清空 trial_started_at/trial_ends_at 残留字段，数据保留）
+ *   + 影响行数=1 才回填 trial_records.converted_to='free'
  *
  * 单条独立事务（TransactionTemplate 逐条包裹）：某条失败仅记录告警不阻断批
- * （部分失败可由下轮扫描自愈——降级条件仍在）。
+ * （部分失败可由下轮扫描自愈——降级条件仍在）。守卫条件（仍 trialing 且已到期）
+ * 使并发处理 / 状态已变时 0 行命中、不误降级、不重复回填。
  */
 @Component
 public class TrialDowngradeJob {
@@ -61,15 +63,21 @@ public class TrialDowngradeJob {
         }
     }
 
-    /** 单条独立事务：订阅降级 + 试用记录回填，原子。trialPlan 须先取原档（回填 trial_records 用）。 */
+    /**
+     * 单条独立事务：守卫式降级 UPDATE（仅 status=trialing 且已到期才落 free/active，
+     * 清 trial 残留字段）→ 影响行数=1 才回填 trial_records.converted_to。
+     * trialPlan 须先取原档（回填 trial_records 用）。
+     */
     void downgradeOne(Subscription sub, Instant now) {
         String trialPlan = sub.getPlanCode();
         transactionTemplate.executeWithoutResult(tx -> {
-            sub.setPlanCode(DOWNGRADE_PLAN);
-            sub.setStatus(SubscriptionService.STATUS_ACTIVE);
-            sub.setUpdatedAt(now);
-            subscriptionMapper.update(sub);
-            trialRecordMapper.markConverted(sub.getUserId(), trialPlan, DOWNGRADE_PLAN);
+            int updated = subscriptionMapper.guardDowngradeToFree(sub.getUserId(), now);
+            if (updated == 1) {
+                trialRecordMapper.markConverted(sub.getUserId(), trialPlan, DOWNGRADE_PLAN);
+            } else {
+                log.debug("trial downgrade skipped for user {}: guard matched 0 rows (already downgraded or state changed)",
+                        sub.getUserId());
+            }
         });
     }
 }

@@ -25,12 +25,13 @@ import java.util.UUID;
  *  - 已存在但密码不是 test（哈希不匹配）→ 重置为 test，保证体验入口始终可用；
  *  - 已存在且密码正确 → 不动（管理员改过的 name/role/status 不覆盖）。
  *
- * <p>条件装配：{@code app.demo-account.enabled=false}（env {@code APP_DEMO_ACCOUNT_ENABLED}）
- * 时整个初始化器不加载——生产 compose 显式置 false（无内置体验账号），本地/测试默认开启
- * （matchIfMissing=true，与收编前的无条件行为保持一致）。
+ * <p>条件装配：{@code app.demo-account.enabled=true}（env {@code APP_DEMO_ACCOUNT_ENABLED}，
+ * application.yml 默认 {@code false}）时初始化器才加载——默认关闭（安全缺省：生产/未知环境
+ * 无内置体验账号）；本地 dev compose（docker-compose.yml）显式置 true 保留体验入口
+ * （matchIfMissing=false：属性缺失即不装配）。
  */
 @Component
-@ConditionalOnProperty(name = "app.demo-account.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "app.demo-account.enabled", havingValue = "true", matchIfMissing = false)
 public class DemoAccountInitializer implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DemoAccountInitializer.class);

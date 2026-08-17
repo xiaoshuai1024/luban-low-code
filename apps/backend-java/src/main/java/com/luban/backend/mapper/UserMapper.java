@@ -42,7 +42,9 @@ public interface UserMapper {
     @Update("UPDATE users SET status=#{status}, updated_at=#{updatedAt} WHERE id=#{id}")
     int updateStatus(@Param("id") String id, @Param("status") String status, @Param("updatedAt") Instant updatedAt);
 
-    /** 注册验证通过：status→active + email_verified_at（单语句保证两列同落）。 */
-    @Update("UPDATE users SET status = 'active', email_verified_at = #{verifiedAt}, updated_at = #{updatedAt} WHERE id = #{id}")
+    /** 注册验证通过：status→active + email_verified_at（单语句保证两列同落）。
+     *  守卫 AND status='pending_verification'：active/disabled 一律不激活；影响行数=0 由调用方回读判状态给错。 */
+    @Update("UPDATE users SET status = 'active', email_verified_at = #{verifiedAt}, updated_at = #{updatedAt} " +
+            "WHERE id = #{id} AND status = 'pending_verification'")
     int verifyEmail(@Param("id") String id, @Param("verifiedAt") Instant verifiedAt, @Param("updatedAt") Instant updatedAt);
 }

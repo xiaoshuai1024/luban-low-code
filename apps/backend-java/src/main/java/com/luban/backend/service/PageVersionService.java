@@ -28,16 +28,20 @@ public class PageVersionService {
 
     private final PageVersionMapper versionMapper;
     private final PageMapper pageMapper;
+    private final SiteOwnershipGuard ownershipGuard;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private static final int KEEP_RECENT = 50;
 
-    public PageVersionService(PageVersionMapper versionMapper, PageMapper pageMapper) {
+    public PageVersionService(PageVersionMapper versionMapper, PageMapper pageMapper,
+                              SiteOwnershipGuard ownershipGuard) {
         this.versionMapper = versionMapper;
         this.pageMapper = pageMapper;
+        this.ownershipGuard = ownershipGuard;
     }
 
     /** 列出版本（不含 schema，轻量列表） */
     public List<PageVersionResponse> list(String siteId, String pageId) {
+        ownershipGuard.assertVisible(siteId);
         Page page = pageMapper.getByIdAndSiteId(pageId, siteId);
         if (page == null) throw BusinessException.pageNotFound();
         return versionMapper.listByPageId(pageId).stream()
@@ -47,6 +51,7 @@ public class PageVersionService {
 
     /** 取单版本（含 schema，详情/回滚前预览用） */
     public PageVersionResponse get(String siteId, String pageId, String versionId) {
+        ownershipGuard.assertVisible(siteId);
         Page page = pageMapper.getByIdAndSiteId(pageId, siteId);
         if (page == null) throw BusinessException.pageNotFound();
         PageVersion v = versionMapper.getByIdAndPageId(versionId, pageId);
@@ -60,6 +65,8 @@ public class PageVersionService {
      * 返回新版本（复制语义）。回滚动作本身也产生一条历史记录。
      */
     public PageVersionResponse rollback(String siteId, String pageId, String versionId, String createdBy) {
+        // 回滚是写动作（覆盖 page.schema_json）：owner/admin 守卫，他用户/匿名 403（S5 多租户隔离）
+        ownershipGuard.assertCanWrite(siteId);
         Page page = pageMapper.getByIdAndSiteId(pageId, siteId);
         if (page == null) throw BusinessException.pageNotFound();
         PageVersion target = versionMapper.getByIdAndPageId(versionId, pageId);

@@ -18,9 +18,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * T-be-8：DemoAccountInitializer 条件装配行为锁定。
  *
- *  - app.demo-account.enabled=false → bean 不加载（生产无内置体验账号）；
- *  - 未配置 / =true → bean 加载（本地/测试默认开启，matchIfMissing=true 与收编前行为一致）；
- *  - 默认 test profile 下 ApplicationRunner 真实执行：users 表存在 test 账号（role=user）。
+ *  - app.demo-account.enabled=true → bean 加载（dev compose 显式开启，matchIfMissing=false）；
+ *  - =false / 未配置 → bean 不加载（默认关闭：安全缺省，生产/未知环境无内置体验账号）；
+ *  - 默认 test profile 下 ApplicationRunner 不执行：users 表无 test 账号。
  *
  * 装配矩阵用 ApplicationContextRunner 切片验证（不触发 ApplicationRunner、不污染共享 H2）；
  * 行为验证用完整 @SpringBootTest。
@@ -51,16 +51,16 @@ class DemoAccountInitializerConditionalTest {
     }
 
     @Test
-    void missingPropertyDefaultsToEnabled() {
-        runner.run(ctx -> assertThat(ctx).hasSingleBean(DemoAccountInitializer.class));
+    void missingPropertyDefaultsToDisabled() {
+        runner.run(ctx -> assertThat(ctx).doesNotHaveBean(DemoAccountInitializer.class));
     }
 
-    /** 行为锁：默认（test profile 未配置该属性）时启动即自愈 test 体验账号。 */
+    /** 行为锁：默认（test profile 走 application.yml 缺省 false）时启动不创建 test 体验账号。 */
     @Test
-    void defaultProfileCreatesDemoAccount() {
+    void defaultProfileDoesNotCreateDemoAccount() {
         Integer count = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM users WHERE username = 'test' AND role = 'user' AND status = 'active'",
                 Integer.class);
-        assertThat(count).isGreaterThanOrEqualTo(1);
+        assertThat(count).isZero();
     }
 }

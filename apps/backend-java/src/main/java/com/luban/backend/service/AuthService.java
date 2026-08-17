@@ -21,7 +21,9 @@ public class AuthService {
 
     public LoginResponse login(String username, String password) {
         User u = userMapper.findByUsername(username);
-        if (u == null) {
+        // 先统一校验密码（用户不存在/密码错误同响应，消除账号状态 oracle：
+        // 错误密码不再暴露 pending_verification/disabled 等账号状态），通过后才判账号状态
+        if (u == null || !passwordEncoder.matches(password, u.getPassword())) {
             throw BusinessException.invalidCredentials();
         }
         // 注册未验证邮箱：文案「邮箱未验证」引导回注册流程（plan §3.2 非法态）
@@ -30,9 +32,6 @@ public class AuthService {
         }
         if (!"active".equals(u.getStatus())) {
             throw BusinessException.userDisabled();
-        }
-        if (!passwordEncoder.matches(password, u.getPassword())) {
-            throw BusinessException.invalidCredentials();
         }
         return LoginResponse.of(UserResponse.fromEntity(u));
     }

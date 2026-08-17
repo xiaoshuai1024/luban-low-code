@@ -185,15 +185,21 @@ class LeadServiceIntegrationTest {
         leadService.submit(new LeadSubmitRequest(
                 formId, Map.of("phone", "13800011111"), null, null, null, uniqueIp(), "v-list", null));
 
-        @SuppressWarnings("unchecked")
-        java.util.Map<String, Object> page = leadService.list(form.getSiteId(), null, null, null, 1, 20);
-        assertThat(((Number) page.get("total")).intValue()).isGreaterThan(0);
+        // list 读入口有归属守卫（owner/admin）；本测试无 HTTP filter，手动以 admin 身份进入
+        com.luban.backend.auth.UserContext.set("it-list-admin", "admin");
+        try {
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Object> page = leadService.list(form.getSiteId(), null, null, null, 1, 20);
+            assertThat(((Number) page.get("total")).intValue()).isGreaterThan(0);
 
-        @SuppressWarnings("unchecked")
-        java.util.List<com.luban.backend.dto.LeadResponse> respList =
-                (java.util.List<com.luban.backend.dto.LeadResponse>) page.get("list");
-        assertThat(respList).isNotEmpty();
-        // contactMasked 应存在（phone 已脱敏）
-        assertThat(respList.get(0).contactMasked()).isNotNull();
+            @SuppressWarnings("unchecked")
+            java.util.List<com.luban.backend.dto.LeadResponse> respList =
+                    (java.util.List<com.luban.backend.dto.LeadResponse>) page.get("list");
+            assertThat(respList).isNotEmpty();
+            // contactMasked 应存在（phone 已脱敏）
+            assertThat(respList.get(0).contactMasked()).isNotNull();
+        } finally {
+            com.luban.backend.auth.UserContext.clear();
+        }
     }
 }

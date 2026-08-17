@@ -14,6 +14,10 @@ public interface SubscriptionMapper {
     @Select("SELECT " + COLS + " FROM subscriptions WHERE user_id = #{userId}")
     Subscription getByUserId(String userId);
 
+    /** 订阅写入串行化点：锁该用户行（OrderService 0 元下单幂等竞态防护；行不存在返回 null）。 */
+    @Select("SELECT " + COLS + " FROM subscriptions WHERE user_id = #{userId} FOR UPDATE")
+    Subscription selectForUpdate(@Param("userId") String userId);
+
     /** TrialDowngradeJob 扫描：trialing 且已到期。 */
     @Select("SELECT " + COLS + " FROM subscriptions WHERE status = 'trialing' AND trial_ends_at < #{now}")
     List<Subscription> listExpiredTrialing(@Param("now") Instant now);
@@ -23,9 +27,19 @@ public interface SubscriptionMapper {
             "VALUES (#{userId}, #{planCode}, #{status}, #{startedAt}, #{expiresAt}, #{trialStartedAt}, #{trialEndsAt}, #{createdAt}, #{updatedAt})")
     int insert(Subscription subscription);
 
-    /** 整行覆盖更新（换档/降级）；未变化列由调用方按实体原值回填。 */
+    /** 整行覆盖更新（换档）；未变化列由调用方按实体原值回填。 */
     @Update("UPDATE subscriptions SET plan_code = #{planCode}, status = #{status}, started_at = #{startedAt}, " +
             "expires_at = #{expiresAt}, trial_started_at = #{trialStartedAt}, trial_ends_at = #{trialEndsAt}, updated_at = #{updatedAt} " +
             "WHERE user_id = #{userId}")
     int update(Subscription subscription);
+
+    /**
+     * 守卫式降级（TrialDowngradeJob）：仅当仍为 trialing 且已到期才落 free/active，
+     * 并清空 trial 残留字段（trial_started_at / trial_ends_at）。返回影响行数
+     * （0=已被并发处理或状态已变，调用方据此跳过 trial_records 回填）。
+     */
+    @Update("UPDATE subscriptions SET plan_code = 'free', status = 'active', " +
+            "trial_started_at = NULL, trial_ends_at = NULL, updated_at = #{now} " +
+            "WHERE user_id = #{userId} AND status = 'trialing' AND trial_ends_at < #{now}")
+    int guardDowngradeToFree(@Param("userId") String userId, @Param("now") Instant now);
 }

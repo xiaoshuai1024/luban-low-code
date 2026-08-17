@@ -33,4 +33,8 @@ public interface OrderMapper {
     @Update("UPDATE orders SET status = 'paid', paid_at = #{paidAt}, updated_at = #{updatedAt} " +
             "WHERE id = #{id} AND status = 'pending'")
     int markPaid(@Param("id") String id, @Param("paidAt") Instant paidAt, @Param("updatedAt") Instant updatedAt);
+
+    /** 并发竞态让位删除（OrderService 防御纵深路径；限定属主防误删）。 */
+    @Delete("DELETE FROM orders WHERE id = #{id} AND user_id = #{userId}")
+    int deleteByIdAndUser(@Param("id") String id, @Param("userId") String userId);
 }

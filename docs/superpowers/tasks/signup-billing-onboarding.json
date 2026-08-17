@@ -240,7 +240,7 @@
       "subsystem": "cross",
       "title": "文档勘误：v02-analytics-billing.json 注记（billing 实现随 backend-go 删除丢失，实际交付于 signup-billing-onboarding）+ docs/API.md billing 节与实现对账",
       "dependsOn": [],
-      "status": "pending"
+      "status": "completed"
     }
   ],
   "waves": {

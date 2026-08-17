@@ -2,7 +2,7 @@
   "featureId": "v02-analytics-billing",
   "title": "v02 转化分析 + 商业化骨架",
   "plan": "../../docs/superpowers/plans/2026-06-17-v02-analytics-billing-skeleton.md",
-  "notes": "校验脚本 scripts/verify-plan-ssot.mjs 为 stub，JSON 合规性人工保证。Go 后端本期 parity 显式豁免（issue 追赶）。",
+  "notes": "校验脚本 scripts/verify-plan-ssot.mjs 为 stub，JSON 合规性人工保证。Go 后端本期 parity 显式豁免（issue 追赶）。⚠️ 勘误（2026-08-17，T-doc-1）：本任务图的 billing/analytics/ab 交付账目为 backend-go 时代记录——billing 实现随 apps/backend-go 删除（2026-08-15，f248042）而丢失，Java 侧从未落地（git -S billing 零命中）；billing 域已于 feature/signup-billing-onboarding 在 Java 单端重建并回绿（analytics/ab 域仍未重建）。tasks 状态保留历史记录，不再作为实现存在性依据。",
   "tasks": [
     { "id": "T-be-1", "group": "backend-java", "wave": 1, "subsystem": "backend-java", "title": "schema.sql 增 plans/subscriptions/usage_counters/trial_records + analytics_events/analytics_daily + ab_experiments/ab_variants/ab_assignments 共 8 表", "dependsOn": [], "status": "done" },
     { "id": "T-be-2", "group": "backend-java", "wave": 1, "subsystem": "backend-java", "title": "billing 域：Plan/Subscription/Trial/Quota entity+mapper+service+controller（三档 Free/Starter/Growth，价格=0）", "dependsOn": ["T-be-1"], "status": "done" },

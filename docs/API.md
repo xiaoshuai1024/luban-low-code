@@ -27,7 +27,10 @@
 
 | Method | Path | 说明 |
 |--------|------|------|
-| POST | `/auth/login` | 登录（username + password → token + user） |
+| POST | `/auth/register` | 自助注册（username/email/password → 201；发邮箱验证码；重复 409 `USERNAME_TAKEN`/`EMAIL_TAKEN`） |
+| POST | `/auth/register/verify` | 验证码激活（email/code → 事务：active + 默认绑 Free + BFF 签发 `{token,user}`） |
+| POST | `/auth/register/resend` | 重发验证码（60s 冷却 + 每邮箱日限 10，超出 429 `VERIFY_RESEND_COOLDOWN`/`VERIFY_RESEND_DAILY_LIMIT`） |
+| POST | `/auth/login` | 登录（username + password → token + user；`pending_verification` 用户 401 `USER_PENDING_VERIFICATION`） |
 | GET | `/auth/me` | 当前用户信息（需 Bearer token） |
 
 ## Users（用户管理）
@@ -44,11 +47,12 @@
 
 | Method | Path | 说明 |
 |--------|------|------|
-| GET | `/sites` | 站点列表 |
+| GET | `/sites` | 站点列表（非 admin 仅返回 owner=自己的站点） |
 | GET | `/sites/{id}` | 站点详情 |
-| POST | `/sites` | 新建站点（name/slug/baseUrl/status） |
-| PUT | `/sites/{id}` | 编辑站点 |
-| DELETE | `/sites/{id}` | 删除站点（级联清理 7 张子表） |
+| GET | `/sites/slug-check?slug=` | slug 可用性预检（200 `{available:true}` / 409 `SLUG_TAKEN`） |
+| POST | `/sites` | 新建站点（name/slug/baseUrl/status；任意登录用户，owner=自己；超配额 429 `QUOTA_EXCEEDED`） |
+| PUT | `/sites/{id}` | 编辑站点（owner 或 admin；存量无主站点仅 admin） |
+| DELETE | `/sites/{id}` | 删除站点（级联清理 7 张子表；权限同 PUT） |
 
 ## Pages（页面管理）
 
@@ -188,10 +192,12 @@
 
 | Method | Path | 说明 |
 |--------|------|------|
-| GET | `/billing/plans` | 套餐列表（free/starter/growth） |
-| GET | `/billing/me` | 当前订阅 |
-| POST | `/billing/subscribe` | 订阅套餐 |
-| GET | `/billing/usage` | 用量查询 |
+| GET | `/billing/plans` | 套餐列表（free/starter/growth，裸数组，仅 visible） |
+| GET | `/billing/me` | 当前订阅（含 usage/quota 快照；无订阅回退 free） |
+| POST | `/billing/subscribe` | 订阅套餐（`{planCode}` → `{subscription}`；Starter 首次 trialing+14 天试用） |
+| GET | `/billing/usage` | 用量查询（`?period=YYYY-MM` 默认当月） |
+| POST | `/billing/orders` | 下单（三档全 0 元：同事务 `pending→paid` + 订阅生效；重复下单幂等返回原单；`amount>0` 防御 400 `PAYMENT_NOT_SUPPORTED`） |
+| GET | `/billing/orders` | 订单列表（分页 `{items,total}`） |
 
 ## Public（C 端访客 API）
 

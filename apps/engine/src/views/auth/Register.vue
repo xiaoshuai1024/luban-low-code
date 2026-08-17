@@ -159,7 +159,7 @@ async function submitRegister(): Promise<void> {
         topError.value = '邮件服务暂不可用，请稍后再试'
         break
       default:
-        topError.value = api.message
+        topError.value = api.message || '请求失败，请稍后重试'
     }
   } finally {
     submitting.value = false
@@ -167,12 +167,27 @@ async function submitRegister(): Promise<void> {
 }
 
 // === OTP 六格交互 ===
+/** 聚焦即全选：任何键入/粘贴都整体替换当前格，避免旧数字与粘贴内容拼接误判 */
+function onOtpFocus(e: FocusEvent): void {
+  ;(e.target as HTMLInputElement).select()
+}
+
 function onOtpInput(i: number, e: Event): void {
-  const raw = (e.target as HTMLInputElement).value.replace(/\D/g, '')
-  if (!raw) return
+  const ev = e as InputEvent
+  // 真粘贴取 InputEvent.data（纯粘贴内容，不受格内旧值拼接影响）；
+  // 普通键入取整格 value（focus 全选后即单个新数字）
+  const source =
+    ev.inputType === 'insertFromPaste' && typeof ev.data === 'string'
+      ? ev.data
+      : (e.target as HTMLInputElement).value
+  const raw = source.replace(/\D/g, '')
+  if (!raw) {
+    otpError.value = ''
+    return
+  }
   if (raw.length > 1) {
-    // 粘贴整段验证码：从第 i 格铺开
-    for (let k = 0; k < 6; k++) otpDigits[k] = raw[k] ?? ''
+    // 粘贴整段验证码：从第 i 格起铺开（超出第 6 格截断）
+    for (let k = 0; k < raw.length && i + k < 6; k++) otpDigits[i + k] = raw[k]
     otpInputs.value[Math.min(i + raw.length - 1, 5)]?.focus()
   } else {
     otpDigits[i] = raw
@@ -185,6 +200,7 @@ function onOtpKeydown(i: number, e: KeyboardEvent): void {
   if (e.key === 'Backspace' && !otpDigits[i] && i > 0) {
     e.preventDefault()
     otpDigits[i - 1] = ''
+    otpError.value = ''
     otpInputs.value[i - 1]?.focus()
   }
 }
@@ -210,6 +226,10 @@ async function resend(): Promise<void> {
   try {
     const { data } = await resendCode({ email: form.email })
     emailMasked.value = data.emailMasked
+    // 旧验证码已作废（如 VERIFY_ATTEMPTS_EXCEEDED 后重发）：清空六格旧数字重输
+    for (let k = 0; k < 6; k++) otpDigits[k] = ''
+    otpError.value = ''
+    otpInputs.value[0]?.focus()
     startCountdown()
     ElMessage.success('验证码已重新发送')
   } catch (e) {
@@ -226,7 +246,7 @@ async function resend(): Promise<void> {
         topError.value = '邮件服务暂不可用，请稍后再试'
         break
       default:
-        topError.value = api.message
+        topError.value = api.message || '请求失败，请稍后重试'
     }
   } finally {
     resending.value = false
@@ -268,7 +288,7 @@ async function submitVerify(): Promise<void> {
         topError.value = '操作过于频繁，请稍后再试'
         break
       default:
-        otpError.value = api.message
+        otpError.value = api.message || '请求失败，请稍后重试'
     }
   } finally {
     verifying.value = false
@@ -325,6 +345,7 @@ function goLogin(): void {
               v-model="form.username"
               placeholder="3-32 位小写字母、数字、下划线或短横线"
               size="large"
+              autocomplete="username"
               @blur="validateField('username')"
             />
           </ElFormItem>
@@ -333,6 +354,7 @@ function goLogin(): void {
               v-model="form.email"
               placeholder="用于接收验证码，如 name@example.com"
               size="large"
+              autocomplete="email"
               @blur="validateField('email')"
             />
           </ElFormItem>
@@ -343,6 +365,7 @@ function goLogin(): void {
               placeholder="至少 8 位，且同时包含字母和数字"
               size="large"
               show-password
+              autocomplete="new-password"
               @blur="validateField('password')"
             />
           </ElFormItem>
@@ -353,6 +376,7 @@ function goLogin(): void {
               placeholder="再次输入密码"
               size="large"
               show-password
+              autocomplete="new-password"
               @blur="validateField('confirmPassword')"
               @keyup.enter="submitRegister"
             />
@@ -382,14 +406,16 @@ function goLogin(): void {
               class="register-page__otp-box"
               type="text"
               inputmode="numeric"
-              autocomplete="one-time-code"
+              :autocomplete="i === 0 ? 'one-time-code' : 'off'"
               maxlength="6"
               :aria-label="`验证码第 ${i + 1} 位`"
+              :aria-invalid="!!otpError"
+              @focus="onOtpFocus"
               @input="onOtpInput(i, $event)"
               @keydown="onOtpKeydown(i, $event)"
             />
           </div>
-          <p v-if="otpError" class="register-page__otp-error">{{ otpError }}</p>
+          <p v-if="otpError" class="register-page__otp-error" role="alert">{{ otpError }}</p>
           <ElButton
             class="register-page__resend"
             :disabled="countdown > 0"

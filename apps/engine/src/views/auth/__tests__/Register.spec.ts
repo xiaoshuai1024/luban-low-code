@@ -110,6 +110,11 @@ describe('Register.vue Step1 表单', () => {
   it('默认渲染四字段表单 + 底部去登录链接', () => {
     const wrapper = mountRegister()
     expect(wrapper.find('input[placeholder^="3-32"]').exists()).toBe(true)
+    // autocomplete：四字段分别 username/email/new-password/new-password
+    expect(wrapper.find('input[placeholder^="3-32"]').attributes('autocomplete')).toBe('username')
+    expect(wrapper.find('input[placeholder^="用于接收"]').attributes('autocomplete')).toBe('email')
+    expect(wrapper.find('input[placeholder^="至少 8 位"]').attributes('autocomplete')).toBe('new-password')
+    expect(wrapper.find('input[placeholder="再次输入密码"]').attributes('autocomplete')).toBe('new-password')
     expect(wrapper.text()).toContain('创建账号')
     expect(wrapper.text()).toContain('已有账号')
     const link = wrapper.find('a[href="/login"]')
@@ -233,6 +238,57 @@ describe('Register.vue Step2 OTP', () => {
     for (let i = 0; i < 6; i++) {
       expect((boxes[i].element as HTMLInputElement).value).toBe(String(i + 1))
     }
+    // autocomplete：仅首格 one-time-code，其余 off
+    expect(boxes[0].attributes('autocomplete')).toBe('one-time-code')
+    expect(boxes[1].attributes('autocomplete')).toBe('off')
+  })
+
+  it('粘贴到中间格 → 从该格起铺开（不覆盖其前的格）', async () => {
+    const wrapper = await mountAtOtp()
+    const boxes = wrapper.findAll('.register-page__otp-box')
+    await boxes[0].setValue('1')
+    await boxes[2].setValue('789')
+    expect((boxes[0].element as HTMLInputElement).value).toBe('1')
+    expect((boxes[2].element as HTMLInputElement).value).toBe('7')
+    expect((boxes[3].element as HTMLInputElement).value).toBe('8')
+    expect((boxes[4].element as HTMLInputElement).value).toBe('9')
+    expect((boxes[5].element as HTMLInputElement).value).toBe('')
+  })
+
+  it('聚焦任意格 → 全选该格内容（防粘贴与旧值拼接误判）', async () => {
+    const wrapper = await mountAtOtp()
+    const boxes = wrapper.findAll('.register-page__otp-box')
+    await boxes[0].setValue('1')
+    const selectSpy = vi.spyOn(boxes[1].element as HTMLInputElement, 'select')
+    await boxes[1].trigger('focus')
+    expect(selectSpy).toHaveBeenCalled()
+  })
+
+  it('insertFromPaste 输入事件 → 按粘贴内容铺开，不拼接格内旧值', async () => {
+    const wrapper = await mountAtOtp()
+    const boxes = wrapper.findAll('.register-page__otp-box')
+    // 格内留旧数字，模拟未全选时的真粘贴：以 InputEvent.data 为准
+    await boxes[0].setValue('9')
+    boxes[0].element.dispatchEvent(
+      new InputEvent('input', { bubbles: true, inputType: 'insertFromPaste', data: '123456' }),
+    )
+    await flushPromises()
+    for (let i = 0; i < 6; i++) {
+      expect((boxes[i].element as HTMLInputElement).value).toBe(String(i + 1))
+    }
+  })
+
+  it('Backspace：空格退格 → 清除前一格并回焦前一格', async () => {
+    const wrapper = await mountAtOtp()
+    const boxes = wrapper.findAll('.register-page__otp-box')
+    await boxes[0].setValue('1')
+    await boxes[1].setValue('2')
+    const focusSpy = vi.spyOn(boxes[1].element as HTMLInputElement, 'focus')
+    // 第 3 格（空）按 Backspace → 第 2 格清空并回焦
+    await boxes[2].trigger('keydown', { key: 'Backspace' })
+    expect((boxes[0].element as HTMLInputElement).value).toBe('1')
+    expect((boxes[1].element as HTMLInputElement).value).toBe('')
+    expect(focusSpy).toHaveBeenCalled()
   })
 
   it('未填满提交 → 「请输入完整的 6 位验证码」', async () => {
@@ -286,6 +342,42 @@ describe('Register.vue Step2 OTP', () => {
     await flushPromises()
     expect(wrapper.text()).toContain('验证码错误，还可尝试 3 次')
     expect(wrapper.find('.register-page__otp.is-error').exists()).toBe(true)
+    // a11y：六格标 aria-invalid，错误文案 role=alert
+    const boxes = wrapper.findAll('.register-page__otp-box')
+    expect(boxes[0].attributes('aria-invalid')).toBe('true')
+    const errP = wrapper.find('.register-page__otp-error')
+    expect(errP.attributes('role')).toBe('alert')
+  })
+
+  it('VERIFY_ATTEMPTS_EXCEEDED → 文案+红框；重发成功后清空六格旧数字', async () => {
+    vi.useFakeTimers()
+    registerMock.mockResolvedValue({
+      data: { username: 'alice', emailMasked: 'a***@example.com' },
+    })
+    const wrapper = mountRegister()
+    await submitValidForm(wrapper)
+    const boxes = () => wrapper.findAll('.register-page__otp-box')
+
+    await boxes()[0].setValue('123456')
+    verifyCodeMock.mockRejectedValue(
+      apiError(400, { code: 'VERIFY_ATTEMPTS_EXCEEDED', message: 'too many attempts' }),
+    )
+    const btn = wrapper.findAll('button').find((b) => b.text().includes('验证并登录'))
+    await btn!.trigger('click')
+    await vi.advanceTimersByTimeAsync(0)
+    expect(wrapper.text()).toContain('验证码尝试次数已达上限，请重新发送验证码')
+    expect(wrapper.find('.register-page__otp.is-error').exists()).toBe(true)
+
+    // 倒计时到期 → 重发成功 → 六格旧数字清空、错误态消除
+    await vi.advanceTimersByTimeAsync(60_000)
+    resendCodeMock.mockResolvedValue({ data: { emailMasked: 'a***@example.com' } })
+    const resendBtn = wrapper.findAll('button').find((b) => b.text().includes('重新发送'))!
+    await resendBtn.trigger('click')
+    await vi.advanceTimersByTimeAsync(0)
+    for (let i = 0; i < 6; i++) {
+      expect((boxes()[i].element as HTMLInputElement).value).toBe('')
+    }
+    expect(wrapper.find('.register-page__otp.is-error').exists()).toBe(false)
   })
 
   it('VERIFY_CODE_EXPIRED → 提示重新发送', async () => {

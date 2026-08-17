@@ -1,4 +1,11 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
+
+// === mock getToken：守卫分支只依赖登录态，不依赖 localStorage ===
+const { getTokenMock } = vi.hoisted(() => ({ getTokenMock: vi.fn() }))
+vi.mock('@/api/request', () => ({
+  getToken: (...args: unknown[]) => getTokenMock(...args),
+}))
+
 import router from '@/router'
 
 describe('Router', () => {
@@ -41,4 +48,29 @@ describe('Router', () => {
     expect(route).toBeDefined()
     expect(route?.name).toBe('Billing')
   })
+
+  // === 守卫：已登录访问 /register → 重定向 /dashboard（§9.1） ===
+  // 真实导航会按需加载路由懒加载组件（DefaultLayout/Dashboard/Register + element-plus），
+  // coverage 插桩下偶超 5s 默认超时，故放宽到 15s。
+  it(
+    '已登录（getToken 有值）访问 /register → 重定向 /dashboard',
+    async () => {
+      getTokenMock.mockReturnValue('jwt-1')
+      await router.push('/register')
+      expect(router.currentRoute.value.path).toBe('/dashboard')
+      getTokenMock.mockReset()
+    },
+    15_000,
+  )
+
+  it(
+    '未登录（getToken 为空）访问 /register → 停留注册页',
+    async () => {
+      getTokenMock.mockReturnValue(null)
+      await router.push('/register')
+      expect(router.currentRoute.value.path).toBe('/register')
+      getTokenMock.mockReset()
+    },
+    15_000,
+  )
 })

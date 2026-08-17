@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElForm, ElFormItem, ElInput, ElButton, ElMessage } from 'element-plus'
+import { ElForm, ElFormItem, ElInput, ElButton, ElMessage, ElIcon } from 'element-plus'
+import { User } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores'
 import { login } from '@/api/auth'
 import { setToken } from '@/api/request'
@@ -57,7 +58,10 @@ function fillDemo() {
         </ElFormItem>
       </ElForm>
       <div class="login-page__demo">
-        <div class="login-page__demo-title">🎯 体验账号</div>
+        <div class="login-page__demo-title">
+          <ElIcon class="login-page__demo-icon"><User /></ElIcon>
+          体验账号
+        </div>
         <div class="login-page__demo-desc">无需注册，直接登录体验搭建</div>
         <div class="login-page__demo-cred">
           <code>test</code><span class="login-page__demo-sep">/</span><code>test</code>
@@ -126,9 +130,17 @@ function fillDemo() {
 }
 
 .login-page__demo-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   font-size: 14px;
   font-weight: 600;
   color: #4f46e5;
+}
+
+.login-page__demo-icon {
+  font-size: 14px;
 }
 
 .login-page__demo-desc {

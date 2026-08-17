@@ -36,17 +36,43 @@ describe('extractApiError（BFF/Java 错误体归一，signup-billing-onboarding
     })
   })
 
-  it('响应体无 message → 回落 axios message', () => {
+  it('响应体非对象（无法归一）→ 友好中文文案，不透出 axios 英文原文', () => {
     const e = new axios.AxiosError('Network Error', 'ECONNABORTED', undefined, undefined, {
       status: 500,
       data: 'internal error',
     } as never)
-    expect(extractApiError(e)).toEqual({ message: 'Network Error' })
+    expect(extractApiError(e)).toEqual({ message: '网络异常，请检查连接后重试' })
   })
 
-  it('无响应的 axios 错误（网络/超时）→ Error.message', () => {
+  it('响应体有 code 但 message 空 → 仍回传 code + 兜底中文文案', () => {
+    const e = new axios.AxiosError('Bad Request', 'ERR_BAD_REQUEST', undefined, undefined, {
+      status: 400,
+      data: { code: 'RATE_LIMITED', message: '' },
+    } as never)
+    expect(extractApiError(e)).toEqual({ code: 'RATE_LIMITED', message: '请求失败，请稍后重试' })
+  })
+
+  it('details 为字符串/null → 归一为 undefined', () => {
+    const mk = (details: unknown) =>
+      new axios.AxiosError('Bad Request', 'ERR_BAD_REQUEST', undefined, undefined, {
+        status: 400,
+        data: { code: 'VERIFY_CODE_INVALID', message: '验证码错误', details },
+      } as never)
+    expect(extractApiError(mk('oops'))).toEqual({
+      code: 'VERIFY_CODE_INVALID',
+      message: '验证码错误',
+      details: undefined,
+    })
+    expect(extractApiError(mk(null))).toEqual({
+      code: 'VERIFY_CODE_INVALID',
+      message: '验证码错误',
+      details: undefined,
+    })
+  })
+
+  it('无响应的 axios 错误（网络/超时）→ 友好中文文案', () => {
     const e = new axios.AxiosError('timeout of 15000ms exceeded')
-    expect(extractApiError(e)).toEqual({ message: 'timeout of 15000ms exceeded' })
+    expect(extractApiError(e)).toEqual({ message: '网络异常，请检查连接后重试' })
   })
 
   it('非 axios 的普通 Error → message', () => {

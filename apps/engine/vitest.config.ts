@@ -26,6 +26,8 @@ export default defineConfig({
         'src/api/auth.ts',
         'src/api/billing.ts',
         'src/api/site.ts',
+        'src/api/request.ts',
+        'src/config/features.ts',
         'src/views/auth/Register.vue',
         'src/views/onboarding/OnboardingWizard.vue',
         'src/views/onboarding/components/PlanPicker.vue',

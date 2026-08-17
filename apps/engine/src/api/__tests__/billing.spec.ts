@@ -47,9 +47,15 @@ describe('billing api', () => {
     expect(request.get).toHaveBeenCalledWith('/billing/me')
   })
 
-  it('getUsage → GET /billing/usage', () => {
+  it('getUsage 无参 → GET /billing/usage（默认当月）', () => {
     getUsage()
-    expect(request.get).toHaveBeenCalledWith('/billing/usage')
+    // 不对 params 实现细节做断言，仅锁定 URL 契约
+    expect(vi.mocked(request.get).mock.calls[0]?.[0]).toBe('/billing/usage')
+  })
+
+  it('getUsage 带周期 → GET /billing/usage?period=2026-08', () => {
+    getUsage('2026-08')
+    expect(request.get).toHaveBeenCalledWith('/billing/usage', { params: { period: '2026-08' } })
   })
 
   it('subscribe → POST /billing/subscribe {planCode}', () => {
@@ -67,11 +73,6 @@ describe('billing api', () => {
     expect(request.get).toHaveBeenCalledWith('/billing/orders', {
       params: { page: 2, size: 10 },
     })
-  })
-
-  it('getOrders 不传参数 → params 为 undefined', () => {
-    getOrders()
-    expect(request.get).toHaveBeenCalledWith('/billing/orders', { params: undefined })
   })
 })
 

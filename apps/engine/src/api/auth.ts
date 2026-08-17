@@ -41,9 +41,16 @@ export function verifyCode(payload: { email: string; code: string }) {
   return request.post<LoginResult>('/auth/register/verify', payload)
 }
 
+/** resend 成功响应（后端 resend 不回 username，signup-billing-onboarding §9.2） */
+export interface RegisterResendResult {
+  /** 掩码邮箱（a***@domain.com），Step2 展示用 */
+  emailMasked: string
+  devCode?: string
+}
+
 /** Step2 重发验证码（60s 冷却 + 每日上限由服务端 429 把守） */
 export function resendCode(payload: { email: string }) {
-  return request.post<RegisterResult>('/auth/register/resend', payload)
+  return request.post<RegisterResendResult>('/auth/register/resend', payload)
 }
 
 export function logout(): void {

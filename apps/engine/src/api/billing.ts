@@ -95,9 +95,9 @@ export function getMyPlan() {
   return request.get<Subscription>('/billing/me')
 }
 
-/** 当前周期用量（默认当月） */
-export function getUsage() {
-  return request.get<Usage>('/billing/usage')
+/** 当前周期用量（默认当月；period 形如 2026-08 查指定月） */
+export function getUsage(period?: string) {
+  return request.get<Usage>('/billing/usage', { params: period ? { period } : undefined })
 }
 
 /** 订阅套餐（v02 契约别名保留；主路径走 createOrder） */

@@ -2,6 +2,7 @@ package com.luban.backend.controller;
 
 import com.luban.backend.auth.UserContext;
 import com.luban.backend.dto.BillingMeResponse;
+import com.luban.backend.entity.Plan;
 import com.luban.backend.entity.Subscription;
 import com.luban.backend.dto.OrderCreateRequest;
 import com.luban.backend.dto.OrderCreateResponse;
@@ -56,17 +57,19 @@ public class BillingController {
     @GetMapping("/me")
     public BillingMeResponse me() {
         String userId = UserContext.getUserId();
+        // 订阅/套餐各查一次，quota 三指标与 planName 复用（原 quotaOf×3 = 每指标重复查订阅+套餐）
         Subscription subscription = subscriptionService.getOrFallback(userId);
+        Plan plan = planService.getByCode(subscription.getPlanCode());
         String period = QuotaService.currentPeriod();
         BillingMeResponse.Snapshot usage = new BillingMeResponse.Snapshot(
                 quotaService.getCount(userId, period, QuotaService.METRIC_LEADS),
                 quotaService.getCount(userId, period, QuotaService.METRIC_PAGES),
                 quotaService.getCount(userId, period, QuotaService.METRIC_VISITS));
         BillingMeResponse.Snapshot quota = new BillingMeResponse.Snapshot(
-                quotaService.quotaOf(userId, QuotaService.METRIC_LEADS),
-                quotaService.quotaOf(userId, QuotaService.METRIC_PAGES),
-                quotaService.quotaOf(userId, QuotaService.METRIC_VISITS));
-        SubscriptionResponse sub = subscriptionService.toResponse(subscription);
+                quotaService.quotaOf(subscription, plan, QuotaService.METRIC_LEADS),
+                quotaService.quotaOf(subscription, plan, QuotaService.METRIC_PAGES),
+                quotaService.quotaOf(subscription, plan, QuotaService.METRIC_VISITS));
+        SubscriptionResponse sub = subscriptionService.toResponse(subscription, plan);
         return new BillingMeResponse(
                 sub.planCode(), sub.planName(), sub.status(), sub.trialEndsAt(), usage, quota);
     }

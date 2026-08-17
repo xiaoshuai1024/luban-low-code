@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.HexFormat;
@@ -40,9 +41,12 @@ public class EmailVerificationService {
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final EmailVerificationMapper verificationMapper;
+    private final Clock clock;
 
-    public EmailVerificationService(EmailVerificationMapper verificationMapper) {
+    /** Clock 注入（对齐 TrialDowngradeJob / SchedulingConfig 先例）：时间源可测。 */
+    public EmailVerificationService(EmailVerificationMapper verificationMapper, Clock clock) {
         this.verificationMapper = verificationMapper;
+        this.clock = clock;
     }
 
     /** 发码结果：实体（含 id 供消费）+ 明文码（仅内存/邮件正文，不落库不落日志）。 */
@@ -50,7 +54,7 @@ public class EmailVerificationService {
 
     /** 重发/首发的统一入口：冷却与日限校验 → 插入新行（旧行自然作废，TTL 重置）。 */
     public IssuedCode issue(String email) {
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         EmailVerification latest = verificationMapper.findLatestByEmail(email);
         if (latest != null && latest.getCreatedAt() != null
                 && latest.getCreatedAt().isAfter(now.minusSeconds(RESEND_COOLDOWN_SECONDS))) {
@@ -86,7 +90,7 @@ public class EmailVerificationService {
         if (latest.getAttempts() >= MAX_ATTEMPTS) {
             throw BusinessException.verifyAttemptsExceeded();
         }
-        if (latest.getExpiresAt() != null && latest.getExpiresAt().isBefore(Instant.now())) {
+        if (latest.getExpiresAt() != null && latest.getExpiresAt().isBefore(clock.instant())) {
             throw BusinessException.verifyCodeExpired();
         }
         if (!hashEquals(latest.getCodeHash(), code)) {
@@ -110,7 +114,7 @@ public class EmailVerificationService {
     /** 消费验证码（激活事务内调用；重复消费被 WHERE consumed_at IS NULL 天然幂等）。 */
     public void markConsumed(String verificationId) {
         if (verificationId != null) {
-            verificationMapper.markConsumed(verificationId, Instant.now());
+            verificationMapper.markConsumed(verificationId, clock.instant());
         }
     }
 

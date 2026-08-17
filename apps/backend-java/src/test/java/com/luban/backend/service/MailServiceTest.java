@@ -69,6 +69,19 @@ class MailServiceTest {
         assertThat(message.getText()).contains("654321").contains("10");
     }
 
+    /** SMTP_FROM 空（未配置）→ 发件人回退 no-reply@luban.local（不裸发空 From）。 */
+    @Test
+    void emptySmtpFromFallsBackToDefaultSender() {
+        JavaMailSender sender = mock(JavaMailSender.class);
+        MailService service = new MailService(provider(sender), "smtp.example.com", "", false);
+
+        service.sendVerificationCode("alice@example.com", "123456", 10);
+
+        ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(sender).send(captor.capture());
+        assertThat(captor.getValue().getFrom()).isEqualTo("no-reply@luban.local");
+    }
+
     @Test
     void sendFailureSurfacesAs503() {
         JavaMailSender sender = mock(JavaMailSender.class);

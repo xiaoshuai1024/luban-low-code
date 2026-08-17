@@ -12,9 +12,6 @@ public interface TrialRecordMapper {
     @Select("SELECT COUNT(1) FROM trial_records WHERE user_id = #{userId} AND plan_code = #{planCode}")
     long countByUserAndPlan(@Param("userId") String userId, @Param("planCode") String planCode);
 
-    @Select("SELECT " + COLS + " FROM trial_records WHERE user_id = #{userId} AND plan_code = #{planCode}")
-    TrialRecord getByUserAndPlan(@Param("userId") String userId, @Param("planCode") String planCode);
-
     @Insert("INSERT INTO trial_records (id, user_id, plan_code, started_at, ends_at, converted_to, created_at) " +
             "VALUES (#{id}, #{userId}, #{planCode}, #{startedAt}, #{endsAt}, #{convertedTo}, #{createdAt})")
     int insert(TrialRecord record);

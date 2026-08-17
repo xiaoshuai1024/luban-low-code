@@ -57,11 +57,11 @@ class AuthRegisterContractTest {
                 .andExpect(jsonPath("$.emailMasked").value(matchesPattern(MASKED_PATTERN)))
                 .andExpect(jsonPath("$.devCode").value(matchesPattern("^[0-9]{6}$")));
 
-        // DB：pending_verification + 明文邮箱（PII，仅库内）+ 密码哈希
+        // DB：pending_verification + 明文邮箱（PII，仅库内）+ BCrypt 哈希（PasswordEncoderConfig 唯一编码器）
         var row = jdbc.queryForMap("SELECT status, email, password FROM users WHERE username = ?", username);
         assertThat(row.get("status")).isEqualTo("pending_verification");
         assertThat(row.get("email")).isEqualTo(email);
-        assertThat((String) row.get("password")).doesNotStartWith("Passw0rd123");
+        assertThat((String) row.get("password")).startsWith("$2"); // BCrypt 前缀（$2a/$2b/$2y）
     }
 
     @Test

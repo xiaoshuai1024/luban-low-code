@@ -57,8 +57,8 @@ public class TrialDowngradeJob {
             try {
                 downgradeOne(sub, now);
             } catch (Exception e) {
-                // 单条独立事务：失败不阻断批，下轮自愈
-                log.warn("trial downgrade failed for user {}: {}", sub.getUserId(), e.getMessage());
+                // 单条独立事务：失败不阻断批，下轮自愈（异常对象作最后一个参数，SLF4J 打全堆栈）
+                log.warn("trial downgrade failed for user {}", sub.getUserId(), e);
             }
         }
     }

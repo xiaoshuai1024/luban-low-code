@@ -116,7 +116,8 @@ class QuotaEnforcementIT {
                 .andExpect(status().isTooManyRequests())
                 .andExpect(jsonPath("$.code").value("QUOTA_EXCEEDED"))
                 .andExpect(jsonPath("$.details.metric").value("leads"))
-                .andExpect(jsonPath("$.details.limit").value(1));
+                .andExpect(jsonPath("$.details.limit").value(1))
+                .andExpect(jsonPath("$.details.used").value(1)); // 对齐 pages 路径：拦截时 used=已用 1
 
         // 6) 原子累加落库：pages=1（第 2 次被拦截未累加）、leads=1
         assertThat(metricCount("pages")).isEqualTo(1);

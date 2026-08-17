@@ -178,7 +178,12 @@ public class SubscriptionService {
     /** 转 API 载荷（补套餐名）。 */
     public com.luban.backend.dto.SubscriptionResponse toResponse(Subscription sub) {
         if (sub == null) return null;
-        Plan plan = planMapper.getByCode(sub.getPlanCode());
+        return toResponse(sub, planMapper.getByCode(sub.getPlanCode()));
+    }
+
+    /** 转 API 载荷（复用已查出的套餐，/billing/me 单请求只查一次套餐）。 */
+    public com.luban.backend.dto.SubscriptionResponse toResponse(Subscription sub, Plan plan) {
+        if (sub == null) return null;
         return com.luban.backend.dto.SubscriptionResponse.fromEntity(sub, plan != null ? plan.getName() : null);
     }
 }

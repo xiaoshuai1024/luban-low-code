@@ -20,13 +20,15 @@ public interface UserMapper {
     @Select("SELECT " + COLS + " FROM users WHERE id = #{id}")
     User getById(String id);
 
-    @Select("SELECT " + COLS + " FROM users " +
-            "WHERE (#{keyword} IS NULL OR #{keyword} = '' OR username LIKE CONCAT('%', #{keyword}, '%') OR name LIKE CONCAT('%', #{keyword}, '%')) " +
+    /** keyword 关键字搜索口径：username/name/email 三列模糊匹配（list 与 count 必须同口径，防分页漂移）。 */
+    String KEYWORD_MATCH = "(#{keyword} IS NULL OR #{keyword} = '' OR username LIKE CONCAT('%', #{keyword}, '%') " +
+            "OR name LIKE CONCAT('%', #{keyword}, '%') OR email LIKE CONCAT('%', #{keyword}, '%'))";
+
+    @Select("SELECT " + COLS + " FROM users WHERE " + KEYWORD_MATCH + " " +
             "ORDER BY created_at DESC LIMIT #{size} OFFSET #{offset}")
     List<User> list(@Param("keyword") String keyword, @Param("offset") int offset, @Param("size") int size);
 
-    @Select("SELECT COUNT(1) FROM users " +
-            "WHERE (#{keyword} IS NULL OR #{keyword} = '' OR username LIKE CONCAT('%', #{keyword}, '%') OR name LIKE CONCAT('%', #{keyword}, '%'))")
+    @Select("SELECT COUNT(1) FROM users WHERE " + KEYWORD_MATCH)
     long count(@Param("keyword") String keyword);
 
     @Insert("INSERT INTO users (id, username, email, email_verified_at, name, role, status, password, created_at, updated_at) " +

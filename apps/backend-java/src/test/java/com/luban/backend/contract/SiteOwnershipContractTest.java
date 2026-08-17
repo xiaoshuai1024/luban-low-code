@@ -151,7 +151,8 @@ class SiteOwnershipContractTest {
     @Test
     void getPlatformSiteAdminOnly() throws Exception {
         mockMvc.perform(as(get("/backend/sites/" + platformSiteId), otherUserId, "user"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PERMISSION_DENIED")); // owner=NULL 平台站点仅 admin
         mockMvc.perform(as(get("/backend/sites/" + platformSiteId), adminId, "admin"))
                 .andExpect(status().isOk());
     }
@@ -172,7 +173,8 @@ class SiteOwnershipContractTest {
         mockMvc.perform(as(put("/backend/sites/" + platformSiteId), ownerId, "user")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"平台\",\"slug\":\"plat\",\"baseUrl\":\"\",\"status\":\"active\"}"))
-                .andExpect(status().isForbidden()); // owner=NULL 平台站点仅 admin
+                .andExpect(status().isForbidden()) // owner=NULL 平台站点仅 admin
+                .andExpect(jsonPath("$.code").value("PERMISSION_DENIED"));
         mockMvc.perform(as(put("/backend/sites/" + siteId), adminId, "admin")
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isOk());
@@ -207,7 +209,8 @@ class SiteOwnershipContractTest {
                 .andExpect(status().isCreated());
         mockMvc.perform(as(post("/backend/sites/" + platformSiteId + "/pages"), otherUserId, "user")
                         .contentType(MediaType.APPLICATION_JSON).content(pageBody))
-                .andExpect(status().isForbidden()); // 平台站点仅 admin
+                .andExpect(status().isForbidden()) // 平台站点仅 admin
+                .andExpect(jsonPath("$.code").value("PERMISSION_DENIED"));
     }
 
     // === 子资源读守卫（S5 多租户隔离：他用户 403，owner 200）===

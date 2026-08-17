@@ -10,7 +10,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -31,13 +33,21 @@ class EmailVerificationServiceTest {
     private static final String EMAIL = "alice@example.com";
     private static final String CODE = "123456";
 
+    /** 固定时钟（正午 UTC，避开日界歧义）：冷却/日限/TTL 精确临界断言用。 */
+    private static final Instant NOW = Instant.parse("2026-08-17T12:00:00Z");
+    private static final Clock FIXED_CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
+
     @Mock private EmailVerificationMapper mapper;
 
     private EmailVerificationService service;
 
     @BeforeEach
     void setup() {
-        service = new EmailVerificationService(mapper);
+        service = new EmailVerificationService(mapper, Clock.systemUTC());
+    }
+
+    private EmailVerificationService fixedClockService() {
+        return new EmailVerificationService(mapper, FIXED_CLOCK);
     }
 
     private EmailVerification row(int attempts, Instant expiresAt, Instant consumedAt, Instant createdAt) {
@@ -99,6 +109,35 @@ class EmailVerificationServiceTest {
         verify(mapper, never()).insert(any());
     }
 
+    // === 精确临界（固定时钟：冷却到期放行 / 日限第 10 次放行） ===
+
+    /** 冷却 60s：最后一发在 now-61s → 已到期放行，行时间取注入时钟。 */
+    @Test
+    void issueJustPastCooldownBoundaryIsAllowed() {
+        when(mapper.findLatestByEmail(EMAIL)).thenReturn(row(0, NOW.plusSeconds(600), null, NOW.minusSeconds(61)));
+        when(mapper.countCreatedSince(eq(EMAIL), any())).thenReturn(0L);
+
+        EmailVerificationService.IssuedCode issued = fixedClockService().issue(EMAIL);
+
+        assertThat(issued.code()).matches("^[0-9]{6}$");
+        ArgumentCaptor<EmailVerification> captor = ArgumentCaptor.forClass(EmailVerification.class);
+        verify(mapper).insert(captor.capture());
+        EmailVerification stored = captor.getValue();
+        assertThat(stored.getCreatedAt()).isEqualTo(NOW);
+        assertThat(stored.getExpiresAt()).isEqualTo(NOW.plusSeconds(EmailVerificationService.CODE_TTL_SECONDS));
+    }
+
+    /** 日限 10：当日已发 9 次（count=9 < 10）→ 第 10 次仍放行（日界取注入时钟的 UTC 日界）。 */
+    @Test
+    void issueWithNineSentTodayAllowsTenthSend() {
+        when(mapper.findLatestByEmail(EMAIL)).thenReturn(row(0, NOW.plusSeconds(600), null, NOW.minusSeconds(120)));
+        when(mapper.countCreatedSince(eq(EMAIL), eq(Instant.parse("2026-08-17T00:00:00Z")))).thenReturn(9L);
+
+        fixedClockService().issue(EMAIL);
+
+        verify(mapper).insert(any()); // count=9 未到 10：放行
+    }
+
     // === verify ===
 
     @Test
@@ -126,6 +165,29 @@ class EmailVerificationServiceTest {
         assertThatThrownBy(() -> service.verify(EMAIL, CODE))
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getCode()).isEqualTo("VERIFY_CODE_EXPIRED"));
+    }
+
+    // === TTL 精确临界（固定时钟） ===
+
+    /** expires_at = now-1s（isBefore(now) 成立）→ 过期。 */
+    @Test
+    void verifyTtlMinusOneSecondIsExpired() {
+        when(mapper.findLatestByEmail(EMAIL)).thenReturn(row(0, NOW.minusSeconds(1), null, NOW));
+
+        assertThatThrownBy(() -> fixedClockService().verify(EMAIL, CODE))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getCode()).isEqualTo("VERIFY_CODE_EXPIRED"));
+    }
+
+    /** expires_at = now+1s（isBefore(now) 不成立）→ 仍有效，返回未消费实体。 */
+    @Test
+    void verifyTtlPlusOneSecondStillValid() {
+        EmailVerification latest = row(0, NOW.plusSeconds(1), null, NOW);
+        when(mapper.findLatestByEmail(EMAIL)).thenReturn(latest);
+
+        EmailVerification result = fixedClockService().verify(EMAIL, CODE);
+
+        assertThat(result).isSameAs(latest);
     }
 
     @Test

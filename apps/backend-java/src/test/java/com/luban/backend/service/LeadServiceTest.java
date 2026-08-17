@@ -23,6 +23,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -43,6 +44,8 @@ class LeadServiceTest {
     @Mock private SiteMapper siteMapper;
     @Mock private SiteOwnershipGuard ownershipGuard;
     @Mock private QuotaService quotaService;
+    // feature-gate 新依赖：默认 fail-open（isEnabled=true），既有用例行为不变
+    @Mock private FeatureGateService featureGateService;
 
     private LeadService service;
 
@@ -60,8 +63,10 @@ class LeadServiceTest {
 
     @BeforeEach
     void setup() {
+        // lead_capture gate fail-open：submitFormNotFoundThrows 用例不触达 gate 检查，lenient 避免严格桩告警
+        lenient().when(featureGateService.isEnabled(anyString(), anyString())).thenReturn(true);
         service = new LeadService(formMapper, leadMapper, siteMapper, ownershipGuard, quotaService,
-                new DedupService(), antiSpamService, new LeadCryptoService(""), new LeadStatusMachine(), notifyService);
+                featureGateService, new DedupService(), antiSpamService, new LeadCryptoService(""), new LeadStatusMachine(), notifyService);
     }
 
     private LeadSubmitRequest req(String phone) {
@@ -213,6 +218,23 @@ class LeadServiceTest {
                 .isEqualTo("FORM_NOT_FOUND");
     }
 
+    // === lead_capture gate（wire-e2e-feature-gaps 1.3：关闭 → LEAD_DISABLED） ===
+
+    @Test
+    void submitLeadCaptureGateDisabledThrows() {
+        when(formMapper.getById("form-1")).thenReturn(sampleForm());
+        when(featureGateService.isEnabled("site-1", FeatureGateService.KEY_LEAD_CAPTURE)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.submit(req("13800000001")))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getCode())
+                .isEqualTo("LEAD_DISABLED");
+        // 拦截在防刷/去重/入库之前，不产生任何写
+        verify(leadMapper, never()).insert(any());
+        verify(quotaService, never()).checkAndIncrement(anyString(), anyString());
+        verify(notifyService, never()).notifyNewLead(any(), any());
+    }
+
     // === uk_form_dedup 唯一键冲突（并发竞态）收敛路径（close-review-gaps 3.3） ===
 
     /** H2/MySQL 唯一键冲突消息（对齐 SiteService.isUniqueViolation 口径）。 */
@@ -327,5 +349,40 @@ class LeadServiceTest {
         verify(quotaService).checkAndIncrement("own-1", QuotaService.METRIC_LEADS);
         // 收敛路径未产生新 lead：回退已累加的 leads 计数
         verify(quotaService).decrement("own-1", QuotaService.METRIC_LEADS);
+    }
+
+    // === resolveQuotaOwner 配额归属（site→owner；owner=NULL 平台站点不限） ===
+
+    @Test
+    void submitWithOwnedSiteChargesLeadsQuotaToSiteOwner() {
+        when(formMapper.getById("form-1")).thenReturn(sampleForm());
+        when(antiSpamService.isRateLimited(anyString(), anyString(), anyInt(), anyInt())).thenReturn(false);
+        when(leadMapper.countByFormHashInWindow(eq("form-1"), anyString(), any())).thenReturn(0);
+        com.luban.backend.entity.Site site = new com.luban.backend.entity.Site();
+        site.setId("site-1");
+        site.setOwnerUserId("own-1");
+        when(siteMapper.getById("site-1")).thenReturn(site);
+
+        service.submit(req("13800000001"));
+
+        // site 带 owner → 配额按 owner 计（submitter 语境下即站点归属人）
+        verify(quotaService).checkAndIncrement("own-1", QuotaService.METRIC_LEADS);
+    }
+
+    @Test
+    void submitOnPlatformSiteWithoutOwnerSkipsQuota() {
+        when(formMapper.getById("form-1")).thenReturn(sampleForm());
+        when(antiSpamService.isRateLimited(anyString(), anyString(), anyInt(), anyInt())).thenReturn(false);
+        when(leadMapper.countByFormHashInWindow(eq("form-1"), anyString(), any())).thenReturn(0);
+        com.luban.backend.entity.Site site = new com.luban.backend.entity.Site();
+        site.setId("site-1");
+        site.setOwnerUserId(null); // 平台站点
+        when(siteMapper.getById("site-1")).thenReturn(site);
+
+        LeadSubmitResult result = service.submit(req("13800000001"));
+
+        // owner=NULL → 不限，不查不累加任何人的配额
+        assertThat(result.status()).isEqualTo("new");
+        verify(quotaService, never()).checkAndIncrement(anyString(), anyString());
     }
 }

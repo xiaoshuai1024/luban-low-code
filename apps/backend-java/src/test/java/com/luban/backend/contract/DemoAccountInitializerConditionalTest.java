@@ -2,18 +2,24 @@ package com.luban.backend.contract;
 
 import com.luban.backend.config.DemoAccountInitializer;
 import com.luban.backend.mapper.UserMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * T-be-8：DemoAccountInitializer 条件装配行为锁定。
@@ -62,5 +68,43 @@ class DemoAccountInitializerConditionalTest {
                 "SELECT COUNT(*) FROM users WHERE username = 'test' AND role = 'user' AND status = 'active'",
                 Integer.class);
         assertThat(count).isZero();
+    }
+}
+
+/**
+ * enabled=true 行为锁（T-be-8 补充）：ApplicationRunner 真实执行——
+ * 体验账号恰好 1 个（role=user/status=active），且 test/test 可登录（200）。
+ *
+ * 独立 Spring context（properties 差异触发新缓存键），H2 为同名共享库
+ * （DB_CLOSE_DELAY=-1）：用后删除 test 账号，避免污染默认 context 的
+ * 「不创建」断言（users 被 subscriptions/orders/trial_records ON DELETE CASCADE 引用）。
+ */
+@SpringBootTest(properties = "app.demo-account.enabled=true")
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+class DemoAccountInitializerEnabledContractTest {
+
+    @Autowired private MockMvc mockMvc;
+    @Autowired private JdbcTemplate jdbc;
+
+    @AfterEach
+    void cleanupSharedH2() {
+        jdbc.update("DELETE FROM users WHERE username = 'test'");
+    }
+
+    @Test
+    void enabledPropertyCreatesSingleActiveDemoAccountWhichCanLogin() throws Exception {
+        Integer count = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE username = 'test' AND role = 'user' AND status = 'active'",
+                Integer.class);
+        assertThat(count).isEqualTo(1);
+
+        mockMvc.perform(post("/backend/auth/login")
+                        .contextPath("/backend")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"test\",\"password\":\"test\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.username").value("test"))
+                .andExpect(jsonPath("$.user.role").value("user"));
     }
 }

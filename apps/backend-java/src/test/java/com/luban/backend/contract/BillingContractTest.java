@@ -1,7 +1,11 @@
 package com.luban.backend.contract;
 
 import com.luban.backend.entity.Plan;
+import com.luban.backend.mapper.OrderMapper;
 import com.luban.backend.mapper.PlanMapper;
+import com.luban.backend.mapper.SubscriptionMapper;
+import com.luban.backend.mapper.TrialRecordMapper;
+import com.luban.backend.service.TrialDowngradeJob;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -11,10 +15,16 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -39,6 +49,10 @@ class BillingContractTest {
     @Autowired private MockMvc mockMvc;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private PlanMapper planMapper;
+    @Autowired private SubscriptionMapper subscriptionMapper;
+    @Autowired private TrialRecordMapper trialRecordMapper;
+    @Autowired private OrderMapper orderMapper;
+    @Autowired private PlatformTransactionManager transactionManager;
 
     private String uid() {
         return UUID.randomUUID().toString().substring(0, 8);
@@ -99,11 +113,14 @@ class BillingContractTest {
     @Test
     void billingEndpointsRequireLogin() throws Exception {
         mockMvc.perform(get("/backend/billing/plans").contextPath("/backend"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
         mockMvc.perform(get("/backend/billing/me").contextPath("/backend"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
         mockMvc.perform(get("/backend/billing/orders").contextPath("/backend"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
     }
 
     // === GET /billing/me ===
@@ -141,6 +158,12 @@ class BillingContractTest {
                 "SELECT plan_code, status, trial_ends_at FROM subscriptions WHERE user_id = ?", userId);
         org.assertj.core.api.Assertions.assertThat(row.get("plan_code")).isEqualTo("starter");
         org.assertj.core.api.Assertions.assertThat(row.get("status")).isEqualTo("trialing");
+        // trial_ends_at = now + 14d（区间断言容许时钟偏移：[now+13d, now+15d]）
+        Object rawEnds = row.get("trial_ends_at");
+        Instant trialEnds = rawEnds instanceof Instant i ? i : ((java.sql.Timestamp) rawEnds).toInstant();
+        Instant now = Instant.now();
+        assertThat(trialEnds).isAfter(now.plus(Duration.ofDays(13)));
+        assertThat(trialEnds).isBefore(now.plus(Duration.ofDays(15)));
         Integer trialRows = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM trial_records WHERE user_id = ? AND plan_code = 'starter'",
                 Integer.class, userId);
@@ -294,5 +317,115 @@ class BillingContractTest {
         } finally {
             jdbc.update("DELETE FROM plans WHERE plan_code = ?", code);
         }
+    }
+
+    // === T-be-7 到期降级边界（真实 H2 + 固定时钟驱动 TrialDowngradeJob 全逻辑） ===
+
+    /** 以固定时钟组装 job（对齐生产构造：mapper + TransactionTemplate + Clock）。 */
+    private TrialDowngradeJob downgradeJobAt(Instant now) {
+        return new TrialDowngradeJob(subscriptionMapper, trialRecordMapper,
+                new TransactionTemplate(transactionManager), Clock.fixed(now, ZoneOffset.UTC));
+    }
+
+    /** 种 trialing 订阅行 + 对应 trial_records（converted_to 未回填）。 */
+    private void seedTrialingSubscription(String userId, Instant trialStartedAt, Instant trialEndsAt) {
+        Instant now = Instant.now();
+        jdbc.update("INSERT INTO subscriptions (user_id, plan_code, status, started_at, expires_at, " +
+                        "trial_started_at, trial_ends_at, created_at, updated_at) " +
+                        "VALUES (?, 'starter', 'trialing', ?, NULL, ?, ?, ?, ?)",
+                userId, trialStartedAt, trialStartedAt, trialEndsAt, now, now);
+        jdbc.update("INSERT INTO trial_records (id, user_id, plan_code, started_at, ends_at, converted_to, created_at) " +
+                        "VALUES (?, ?, 'starter', ?, ?, NULL, ?)",
+                "tr-dg-" + uid(), userId, trialStartedAt, trialEndsAt, now);
+    }
+
+    /** 试用进行到第 13.9 天（trial_ends_at = now+0.1d，未到期）→ 不降级、不回填。 */
+    @Test
+    void trialAt13Point9DaysIsNotDowngraded() {
+        String userId = seedUser();
+        Instant now = Instant.now();
+        Instant startedAt = now.minus(Duration.ofDays(14)).plus(Duration.ofMinutes(144)); // 13.9d 前
+        seedTrialingSubscription(userId, startedAt, startedAt.plus(Duration.ofDays(14))); // ends = now+0.1d
+
+        downgradeJobAt(now).downgradeExpiredTrials();
+
+        var row = jdbc.queryForMap(
+                "SELECT plan_code, status, trial_started_at, trial_ends_at FROM subscriptions WHERE user_id = ?", userId);
+        assertThat(row.get("plan_code")).isEqualTo("starter");
+        assertThat(row.get("status")).isEqualTo("trialing");
+        assertThat(row.get("trial_ends_at")).isNotNull();
+        Integer converted = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM trial_records WHERE user_id = ? AND converted_to IS NOT NULL",
+                Integer.class, userId);
+        assertThat(converted).isZero();
+    }
+
+    /** 试用进行到第 14.1 天（trial_ends_at = now-0.1d，已到期）→ 降 free/active + converted_to='free' 回填。 */
+    @Test
+    void trialAt14Point1DaysDowngradedToFreeWithConvertedBackfill() {
+        String userId = seedUser();
+        Instant now = Instant.now();
+        Instant startedAt = now.minus(Duration.ofDays(14)).minus(Duration.ofMinutes(144)); // 14.1d 前
+        seedTrialingSubscription(userId, startedAt, startedAt.plus(Duration.ofDays(14))); // ends = now-0.1d
+
+        downgradeJobAt(now).downgradeExpiredTrials();
+
+        var row = jdbc.queryForMap(
+                "SELECT plan_code, status, trial_started_at, trial_ends_at FROM subscriptions WHERE user_id = ?", userId);
+        assertThat(row.get("plan_code")).isEqualTo("free");
+        assertThat(row.get("status")).isEqualTo("active");
+        assertThat(row.get("trial_started_at")).isNull();
+        assertThat(row.get("trial_ends_at")).isNull();
+        String convertedTo = jdbc.queryForObject(
+                "SELECT converted_to FROM trial_records WHERE user_id = ? AND plan_code = 'starter'",
+                String.class, userId);
+        assertThat(convertedTo).isEqualTo("free");
+    }
+
+    // === applyPlan 已有订阅行 → update 分支（T-be-3 状态机） ===
+
+    /** starter 首订生效（trialing）后再 order growth：仍单行，换档 active 且 trial 字段清空。 */
+    @Test
+    void applyPlanOnExistingSubscriptionRowUpdatesInPlaceKeepingSingleRow() throws Exception {
+        String userId = seedUser();
+        mockMvc.perform(user(post("/backend/billing/subscribe"), userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"planCode\":\"starter\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.subscription.status").value("trialing"));
+
+        mockMvc.perform(user(post("/backend/billing/orders"), userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"planCode\":\"growth\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.subscription.planCode").value("growth"))
+                .andExpect(jsonPath("$.subscription.status").value("active"));
+
+        Integer rows = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM subscriptions WHERE user_id = ?", Integer.class, userId);
+        assertThat(rows).isEqualTo(1); // 已有行走 update，不插新行
+        var row = jdbc.queryForMap(
+                "SELECT plan_code, status, trial_started_at, trial_ends_at FROM subscriptions WHERE user_id = ?", userId);
+        assertThat(row.get("plan_code")).isEqualTo("growth");
+        assertThat(row.get("status")).isEqualTo("active");
+        assertThat(row.get("trial_started_at")).isNull(); // 换档清 trial 残留
+        assertThat(row.get("trial_ends_at")).isNull();
+    }
+
+    // === OrderMapper.markPaid 幂等（0 元直通 SQL 守卫） ===
+
+    /** markPaid 限定 status='pending'：对已 paid 行再调用影响 0 行（不重复支付）。 */
+    @Test
+    void markPaidOnAlreadyPaidOrderAffectsZeroRows() {
+        String userId = seedUser();
+        String orderId = "ord-" + uid();
+        Instant now = Instant.now();
+        jdbc.update("INSERT INTO orders (id, order_no, user_id, plan_code, amount, status, paid_at, created_at, updated_at) " +
+                        "VALUES (?, ?, ?, 'growth', 0, 'paid', ?, ?, ?)",
+                orderId, "no-" + orderId, userId, now, now, now);
+
+        int updated = orderMapper.markPaid(orderId, now.plusSeconds(60), now.plusSeconds(60));
+
+        assertThat(updated).isZero();
     }
 }

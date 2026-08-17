@@ -11,9 +11,6 @@ public interface OrderMapper {
 
     String COLS = "id, order_no, user_id, plan_code, amount, status, paid_at, created_at, updated_at";
 
-    @Select("SELECT " + COLS + " FROM orders WHERE id = #{id}")
-    Order getById(String id);
-
     /** 重复下单幂等返回的「原单」：同用户同套餐最近一笔已支付订单。 */
     @Select("SELECT " + COLS + " FROM orders WHERE user_id = #{userId} AND plan_code = #{planCode} AND status = 'paid' " +
             "ORDER BY created_at DESC LIMIT 1")

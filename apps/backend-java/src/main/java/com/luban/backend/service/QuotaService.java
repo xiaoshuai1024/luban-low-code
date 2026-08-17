@@ -94,6 +94,16 @@ public class QuotaService {
             log.warn("quota lookup: plan '{}' missing for user {}, treating as unlimited", planCode, userId);
             return 0;
         }
+        return quotaOf(sub, plan, metric);
+    }
+
+    /** 已查出订阅/套餐的配额读取（/billing/me 复用：单请求只查一次订阅+套餐）；口径同 {@link #quotaOf(String, String)}。 */
+    public int quotaOf(Subscription sub, Plan plan, String metric) {
+        if (plan == null) {
+            String planCode = sub != null ? sub.getPlanCode() : DEFAULT_PLAN;
+            log.warn("quota lookup: plan '{}' missing, treating as unlimited", planCode);
+            return 0;
+        }
         return switch (metric != null ? metric : "") {
             case METRIC_LEADS -> plan.getQuotaLeads();
             case METRIC_PAGES -> plan.getQuotaPages();

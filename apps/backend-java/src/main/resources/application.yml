@@ -29,6 +29,24 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
     baseline-version: 0
+  # 注册邮箱验证码 SMTP（全部 env 注入，缺 host 时 Boot 不装配 JavaMailSender，
+  # MailService fail-closed：非 dev-echo 场景发码返回 503 EMAIL_SERVICE_UNAVAILABLE）
+  mail:
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SMTP_AUTH:true}
+          starttls:
+            enable: ${SMTP_STARTTLS:true}
+
+app:
+  demo-account:
+    # 内置体验账号（DemoAccountInitializer）开关；生产 compose 显式置 false
+    enabled: ${APP_DEMO_ACCOUNT_ENABLED:true}
 
 mybatis:
   configuration:

@@ -26,13 +26,18 @@ public class PageService {
     private final FormMapper formMapper;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final PageVersionService versionService;
+    private final SiteOwnershipGuard ownershipGuard;
+    private final QuotaService quotaService;
 
     public PageService(PageMapper pageMapper, SiteMapper siteMapper, FormMapper formMapper,
-                       PageVersionService versionService) {
+                       PageVersionService versionService, SiteOwnershipGuard ownershipGuard,
+                       QuotaService quotaService) {
         this.pageMapper = pageMapper;
         this.siteMapper = siteMapper;
         this.formMapper = formMapper;
         this.versionService = versionService;
+        this.ownershipGuard = ownershipGuard;
+        this.quotaService = quotaService;
     }
 
     public List<PageResponse> list(String siteId) {
@@ -47,7 +52,12 @@ public class PageService {
     }
 
     public PageResponse create(String siteId, String name, String path, String status, JsonNode schema, JsonNode seo) {
-        if (siteMapper.getById(siteId) == null) throw BusinessException.siteNotFound();
+        // T-be-6 写守卫 + T-be-5 配额：按 site→owner 计 pages 配额（owner=NULL 平台站点不限）
+        com.luban.backend.entity.Site site = ownershipGuard.assertCanWrite(siteId);
+        String quotaOwner = site.getOwnerUserId();
+        if (quotaOwner != null) {
+            quotaService.checkAndIncrement(quotaOwner, QuotaService.METRIC_PAGES);
+        }
         if (status == null || status.isBlank()) status = "draft";
         String schemaJson = schemaToJson(schema);
         Page page = new Page();
@@ -75,6 +85,7 @@ public class PageService {
     }
 
     public PageResponse update(String siteId, String pageId, String name, String path, String status, JsonNode schema, JsonNode seo) {
+        ownershipGuard.assertCanWrite(siteId);
         Page page = pageMapper.getByIdAndSiteId(pageId, siteId);
         if (page == null) throw BusinessException.pageNotFound();
         page.setName(name);
@@ -104,6 +115,7 @@ public class PageService {
      * 仅 JsonProcessingException 不阻塞发布；DB 异常（createSnapshot 同事务）正常传播回滚，避免宽 catch 吞异常致事务 rollback-only 陷阱。 */
     @Transactional(rollbackFor = Exception.class)
     public PageResponse publish(String siteId, String pageId, String actorId) {
+        ownershipGuard.assertCanWrite(siteId);
         Page page = pageMapper.getByIdAndSiteId(pageId, siteId);
         if (page == null) throw BusinessException.pageNotFound();
         Instant now = Instant.now();
@@ -126,6 +138,7 @@ public class PageService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void delete(String siteId, String pageId) {
+        ownershipGuard.assertCanWrite(siteId);
         if (pageMapper.getByIdAndSiteId(pageId, siteId) == null) throw BusinessException.pageNotFound();
         try {
             formMapper.deleteByPageId(pageId);

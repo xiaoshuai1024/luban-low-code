@@ -10,6 +10,8 @@ public class Site {
     private String name;
     private String slug;
     private String baseUrl;
+    /** 站点归属（signup-billing-onboarding）：NULL=存量平台站点（仅 admin 可写）；owner/配额按此列 */
+    private String ownerUserId;
     private String status;
     /** V2-T2 站点级 SEO JSON */
     private String seoJson;
@@ -26,6 +28,8 @@ public class Site {
     public void setSlug(String slug) { this.slug = slug; }
     public String getBaseUrl() { return baseUrl; }
     public void setBaseUrl(String baseUrl) { this.baseUrl = baseUrl; }
+    public String getOwnerUserId() { return ownerUserId; }
+    public void setOwnerUserId(String ownerUserId) { this.ownerUserId = ownerUserId; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
     public String getSeoJson() { return seoJson; }

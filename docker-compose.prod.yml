@@ -80,6 +80,8 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       LEAD_ENC_KEY: ${LEAD_ENC_KEY:?在 .env.prod 设置 LEAD_ENC_KEY}
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?在 .env.prod 设置 AUTH_JWT_SECRET}
+      # 生产关闭内置体验账号（DemoAccountInitializer 条件装配，G2 审计项）
+      APP_DEMO_ACCOUNT_ENABLED: "false"
       JAVA_TOOL_OPTIONS: "-Xmx512m"   # JVM 自动读取；叠 mem_limit 900m 防 OOM 殃及 gudu
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/backend/healthz || exit 1"]

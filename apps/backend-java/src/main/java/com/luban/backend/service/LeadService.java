@@ -9,6 +9,7 @@ import com.luban.backend.entity.Lead;
 import com.luban.backend.exception.BusinessException;
 import com.luban.backend.mapper.FormMapper;
 import com.luban.backend.mapper.LeadMapper;
+import com.luban.backend.mapper.SiteMapper;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +35,9 @@ public class LeadService {
 
     private final FormMapper formMapper;
     private final LeadMapper leadMapper;
+    private final SiteMapper siteMapper;
+    private final SiteOwnershipGuard ownershipGuard;
+    private final QuotaService quotaService;
     private final DedupService dedupService;
     private final AntiSpamService antiSpamService;
     private final LeadCryptoService cryptoService;
@@ -41,11 +45,15 @@ public class LeadService {
     private final LeadNotifyService notifyService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public LeadService(FormMapper formMapper, LeadMapper leadMapper, DedupService dedupService,
+    public LeadService(FormMapper formMapper, LeadMapper leadMapper, SiteMapper siteMapper,
+                       SiteOwnershipGuard ownershipGuard, QuotaService quotaService, DedupService dedupService,
                        AntiSpamService antiSpamService, LeadCryptoService cryptoService,
                        LeadStatusMachine statusMachine, LeadNotifyService notifyService) {
         this.formMapper = formMapper;
         this.leadMapper = leadMapper;
+        this.siteMapper = siteMapper;
+        this.ownershipGuard = ownershipGuard;
+        this.quotaService = quotaService;
         this.dedupService = dedupService;
         this.antiSpamService = antiSpamService;
         this.cryptoService = cryptoService;
@@ -93,7 +101,12 @@ public class LeadService {
             }
         }
 
-        // 3. 加密 contact + 构建 lead
+        // 3. 加密 contact + 构建 lead（T-be-5：按 site→owner 先查限后累加 leads 配额，
+        //    拦截在累加前；owner=NULL 平台站点不限；MERGE 命中路径不产生新 lead 不计数）
+        String quotaOwner = resolveQuotaOwner(form.getSiteId());
+        if (quotaOwner != null) {
+            quotaService.checkAndIncrement(quotaOwner, QuotaService.METRIC_LEADS);
+        }
         String encryptedContact = cryptoService.encrypt(toJson(req.contact()));
         Lead lead = new Lead();
         lead.setId(UUID.randomUUID().toString());
@@ -191,6 +204,7 @@ public class LeadService {
 
     @Transactional(rollbackFor = Exception.class)
     public LeadResponse transitStatus(String siteId, String leadId, String toStatusRaw, String actorId) {
+        ownershipGuard.assertCanWrite(siteId);
         Lead lead = getOrThrow(siteId, leadId);
         LeadStatusMachine.Status from = statusMachine.parse(lead.getStatus());
         LeadStatusMachine.Status to = statusMachine.parse(toStatusRaw);
@@ -225,6 +239,13 @@ public class LeadService {
         Lead lead = leadMapper.getByIdAndSiteId(leadId, siteId);
         if (lead == null) throw BusinessException.leadNotFound();
         return lead;
+    }
+
+    /** 配额归属：site→owner（平台站点 owner=NULL 不限，由管理员/平台承担）。 */
+    private String resolveQuotaOwner(String siteId) {
+        if (siteId == null) return null;
+        com.luban.backend.entity.Site site = siteMapper.getById(siteId);
+        return site != null ? site.getOwnerUserId() : null;
     }
 
     /** 转响应：contact 解密后脱敏（phone/email）。 */

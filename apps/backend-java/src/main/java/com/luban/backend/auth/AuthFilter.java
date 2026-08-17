@@ -36,8 +36,13 @@ public class AuthFilter implements Filter {
     private static final String HEADER_USER_ID = "X-User-ID";
     private static final String HEADER_USER_ROLE = "X-User-Role";
     private static final String HEADER_INTERNAL_AUTH = "X-Internal-Auth";
-    private static final Set<String> NO_AUTH_PATHS = Set.of("/backend/ping", "/backend/healthz", "/backend/auth/login", "/backend/auth/api-key/validate");
-    private static final Pattern ADMIN_SITES = Pattern.compile("^/backend/sites(/[^/]+)?$"); // /backend/sites or /backend/sites/:id
+    // 注册三端点免鉴权（T-be-2）：BFF 侧 IP 限流 + 验证码 TTL/尝试上限/冷却三重防护兜底
+    private static final Set<String> NO_AUTH_PATHS = Set.of(
+            "/backend/ping", "/backend/healthz", "/backend/auth/login", "/backend/auth/api-key/validate",
+            "/backend/auth/register", "/backend/auth/register/verify", "/backend/auth/register/resend");
+    // T-be-6：/backend/sites 不再走 filter 级 admin 前置——POST /sites 放开给任意登录用户
+    // （owner=self，quota_pages 限流），PUT/DELETE 的 owner/admin 判定下沉 SiteOwnershipGuard
+    // （否则非 admin 的 owner 会被 filter 403 拦截，见 plan §9.1 T-be-6）。
     private static final Pattern ADMIN_USERS = Pattern.compile("^/backend/users(/.*)?$");
     private static final Pattern ADMIN_SETTINGS = Pattern.compile("^/backend/settings$");
     // /backend/leads/export — 明文 CSV 导出（解密 contact），仅 admin，防止任意用户导出任意站点线索。
@@ -114,9 +119,6 @@ public class AuthFilter implements Filter {
         // 线索明文 CSV 导出：仅 admin（原任意登录用户可导出任意站点，越权）。
         if (ADMIN_LEADS_EXPORT.matcher(path).matches()) {
             return true;
-        }
-        if (ADMIN_SITES.matcher(path).matches()) {
-            return "POST".equals(method) || "PUT".equals(method) || "DELETE".equals(method);
         }
         if (ADMIN_DATASOURCES.matcher(path).matches()) {
             // 含 /test：连接探测会从服务端发起出网请求（SSRF 面），同样仅 admin；GET 保持 RequireUser。

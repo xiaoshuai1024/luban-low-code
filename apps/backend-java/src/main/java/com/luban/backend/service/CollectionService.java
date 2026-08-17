@@ -27,10 +27,13 @@ public class CollectionService {
     private final CollectionMapper collectionMapper;
     private final SiteMapper siteMapper;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final SiteOwnershipGuard ownershipGuard;
 
-    public CollectionService(CollectionMapper collectionMapper, SiteMapper siteMapper) {
+    public CollectionService(CollectionMapper collectionMapper, SiteMapper siteMapper,
+                             SiteOwnershipGuard ownershipGuard) {
         this.collectionMapper = collectionMapper;
         this.siteMapper = siteMapper;
+        this.ownershipGuard = ownershipGuard;
     }
 
     // === Collection ===
@@ -48,7 +51,7 @@ public class CollectionService {
     }
 
     public CollectionResponse create(String siteId, String name, JsonNode fieldSchema, String status) {
-        if (siteMapper.getById(siteId) == null) throw BusinessException.siteNotFound();
+        ownershipGuard.assertCanWrite(siteId);
         if (status == null || status.isBlank()) status = "active";
         ContentCollection c = new ContentCollection();
         c.setId(UUID.randomUUID().toString());
@@ -71,6 +74,7 @@ public class CollectionService {
     }
 
     public CollectionResponse update(String siteId, String id, String name, JsonNode fieldSchema, String status) {
+        ownershipGuard.assertCanWrite(siteId);
         ContentCollection c = collectionMapper.getByIdAndSiteId(id, siteId);
         if (c == null) throw BusinessException.collectionNotFound();
         c.setName(name);
@@ -90,6 +94,7 @@ public class CollectionService {
     }
 
     public void delete(String siteId, String id) {
+        ownershipGuard.assertCanWrite(siteId);
         int n = collectionMapper.deleteByIdAndSiteId(id, siteId);
         if (n == 0) throw BusinessException.collectionNotFound();
         // collection_items 由 FK ON DELETE CASCADE 自动清理
@@ -114,6 +119,7 @@ public class CollectionService {
     }
 
     public CollectionItemResponse createItem(String siteId, String collectionId, JsonNode data, String status) {
+        ownershipGuard.assertCanWrite(siteId);
         ContentCollection c = collectionMapper.getByIdAndSiteId(collectionId, siteId);
         if (c == null) throw BusinessException.collectionNotFound();
         if (status == null || status.isBlank()) status = "active";
@@ -130,6 +136,7 @@ public class CollectionService {
     }
 
     public CollectionItemResponse updateItem(String siteId, String collectionId, String itemId, JsonNode data, String status) {
+        ownershipGuard.assertCanWrite(siteId);
         ContentCollection c = collectionMapper.getByIdAndSiteId(collectionId, siteId);
         if (c == null) throw BusinessException.collectionNotFound();
         ContentCollectionItem it = collectionMapper.getItemByIdAndCollectionId(itemId, collectionId);
@@ -143,6 +150,7 @@ public class CollectionService {
     }
 
     public void deleteItem(String siteId, String collectionId, String itemId) {
+        ownershipGuard.assertCanWrite(siteId);
         ContentCollection c = collectionMapper.getByIdAndSiteId(collectionId, siteId);
         if (c == null) throw BusinessException.collectionNotFound();
         int n = collectionMapper.deleteItemByIdAndCollectionId(itemId, collectionId);

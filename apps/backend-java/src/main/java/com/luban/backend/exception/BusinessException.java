@@ -70,6 +70,10 @@ public class BusinessException extends RuntimeException {
         return new BusinessException(HttpStatus.FORBIDDEN, "PERMISSION_DENIED", "admin only");
     }
 
+    public static BusinessException permissionDenied(String message) {
+        return new BusinessException(HttpStatus.FORBIDDEN, "PERMISSION_DENIED", message);
+    }
+
     public static BusinessException invalidArgument(String message) {
         return new BusinessException(HttpStatus.BAD_REQUEST, "INVALID_ARGUMENT", message != null ? message : "请求参数非法");
     }
@@ -142,5 +146,74 @@ public class BusinessException extends RuntimeException {
 
     public static BusinessException collectionItemNotFound() {
         return new BusinessException(HttpStatus.NOT_FOUND, "COLLECTION_ITEM_NOT_FOUND", "内容项不存在");
+    }
+
+    // ---- signup-billing-onboarding 注册/billing/quota（plan §9.2 错误码清单）----
+
+    public static BusinessException usernameTaken() {
+        return new BusinessException(HttpStatus.CONFLICT, "USERNAME_TAKEN", "用户名已被占用");
+    }
+
+    public static BusinessException emailTaken() {
+        return new BusinessException(HttpStatus.CONFLICT, "EMAIL_TAKEN", "邮箱已被注册");
+    }
+
+    public static BusinessException weakPassword() {
+        return new BusinessException(HttpStatus.BAD_REQUEST, "WEAK_PASSWORD", "密码至少 8 位且需包含字母和数字");
+    }
+
+    public static BusinessException userPendingVerification() {
+        return new BusinessException(HttpStatus.UNAUTHORIZED, "USER_PENDING_VERIFICATION", "邮箱未验证，请先完成邮箱验证");
+    }
+
+    /** 400 VERIFY_CODE_INVALID，details.remainingAttempts 供前端提示「还可尝试 N 次」。 */
+    public static BusinessException verifyCodeInvalid(int remainingAttempts) {
+        return new BusinessException(HttpStatus.BAD_REQUEST, "VERIFY_CODE_INVALID", "验证码错误",
+                java.util.Map.of("remainingAttempts", Math.max(0, remainingAttempts)));
+    }
+
+    public static BusinessException verifyCodeExpired() {
+        return new BusinessException(HttpStatus.BAD_REQUEST, "VERIFY_CODE_EXPIRED", "验证码已过期，请重新发送");
+    }
+
+    public static BusinessException verifyAttemptsExceeded() {
+        return new BusinessException(HttpStatus.BAD_REQUEST, "VERIFY_ATTEMPTS_EXCEEDED", "尝试次数过多，请重新发送验证码");
+    }
+
+    public static BusinessException verifyResendCooldown() {
+        return new BusinessException(HttpStatus.TOO_MANY_REQUESTS, "VERIFY_RESEND_COOLDOWN", "发送过于频繁，请稍后再试");
+    }
+
+    public static BusinessException verifyResendDailyLimit() {
+        return new BusinessException(HttpStatus.TOO_MANY_REQUESTS, "VERIFY_RESEND_DAILY_LIMIT", "今日验证码发送次数已达上限");
+    }
+
+    public static BusinessException emailServiceUnavailable() {
+        return new BusinessException(HttpStatus.SERVICE_UNAVAILABLE, "EMAIL_SERVICE_UNAVAILABLE", "邮件服务暂不可用，请稍后再试");
+    }
+
+    public static BusinessException invalidPlan() {
+        return new BusinessException(HttpStatus.BAD_REQUEST, "INVALID_PLAN", "套餐不存在或不可用");
+    }
+
+    /** 400 PAYMENT_NOT_SUPPORTED：未来接支付网关的挂载点（本期三档全 0 元，不可达防御）。 */
+    public static BusinessException paymentNotSupported() {
+        return new BusinessException(HttpStatus.BAD_REQUEST, "PAYMENT_NOT_SUPPORTED", "暂不支持非 0 元支付");
+    }
+
+    public static BusinessException orderAlreadyPaid() {
+        return new BusinessException(HttpStatus.CONFLICT, "ORDER_ALREADY_PAID", "订单已支付");
+    }
+
+    /** 429 QUOTA_EXCEEDED，details {metric,limit,used}（quota=0 不限，不会走到这里）。 */
+    public static BusinessException quotaExceeded(String metric, long limit, long used) {
+        return new BusinessException(HttpStatus.TOO_MANY_REQUESTS, "QUOTA_EXCEEDED",
+                "套餐配额已达上限，请升级套餐",
+                java.util.Map.of("metric", metric, "limit", limit, "used", used));
+    }
+
+    public static BusinessException slugTaken(String slug) {
+        return new BusinessException(HttpStatus.CONFLICT, "SLUG_TAKEN", "站点地址已被占用",
+                slug != null ? java.util.Map.of("slug", slug) : null);
     }
 }

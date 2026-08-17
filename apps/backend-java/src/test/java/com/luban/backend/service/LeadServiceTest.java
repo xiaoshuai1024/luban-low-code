@@ -7,6 +7,7 @@ import com.luban.backend.entity.Lead;
 import com.luban.backend.exception.BusinessException;
 import com.luban.backend.mapper.FormMapper;
 import com.luban.backend.mapper.LeadMapper;
+import com.luban.backend.mapper.SiteMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,6 +38,11 @@ class LeadServiceTest {
     @Mock private LeadMapper leadMapper;
     @Mock private AntiSpamService antiSpamService;
     @Mock private LeadNotifyService notifyService;
+    // signup-billing-onboarding 新依赖：默认 mock（siteMapper.getById 返回 null → 平台站点语义，
+    // quota/ownership 不介入），既有用例行为不变
+    @Mock private SiteMapper siteMapper;
+    @Mock private SiteOwnershipGuard ownershipGuard;
+    @Mock private QuotaService quotaService;
 
     private LeadService service;
 
@@ -54,8 +60,8 @@ class LeadServiceTest {
 
     @BeforeEach
     void setup() {
-        service = new LeadService(formMapper, leadMapper, new DedupService(), antiSpamService,
-                new LeadCryptoService(""), new LeadStatusMachine(), notifyService);
+        service = new LeadService(formMapper, leadMapper, siteMapper, ownershipGuard, quotaService,
+                new DedupService(), antiSpamService, new LeadCryptoService(""), new LeadStatusMachine(), notifyService);
     }
 
     private LeadSubmitRequest req(String phone) {

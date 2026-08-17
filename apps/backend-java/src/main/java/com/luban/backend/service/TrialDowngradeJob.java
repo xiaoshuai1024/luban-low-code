@@ -1,0 +1,75 @@
+package com.luban.backend.service;
+
+import com.luban.backend.entity.Subscription;
+import com.luban.backend.mapper.SubscriptionMapper;
+import com.luban.backend.mapper.TrialRecordMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionTemplate;
+
+import java.time.Clock;
+import java.time.Instant;
+import java.util.List;
+
+/**
+ * 试用到期降级（T-be-7，plan §3.2/§3.3）：
+ *
+ *   每小时扫 status=trialing 且 trial_ends_at < now → active(Free)（数据保留）
+ *   + trial_records.converted_to='free'
+ *
+ * 单条独立事务（TransactionTemplate 逐条包裹）：某条失败仅记录告警不阻断批
+ * （部分失败可由下轮扫描自愈——降级条件仍在）。
+ */
+@Component
+public class TrialDowngradeJob {
+
+    private static final Logger log = LoggerFactory.getLogger(TrialDowngradeJob.class);
+    static final String DOWNGRADE_PLAN = "free";
+
+    private final SubscriptionMapper subscriptionMapper;
+    private final TrialRecordMapper trialRecordMapper;
+    private final TransactionTemplate transactionTemplate;
+    private final Clock clock;
+
+    public TrialDowngradeJob(SubscriptionMapper subscriptionMapper,
+                             TrialRecordMapper trialRecordMapper,
+                             TransactionTemplate transactionTemplate,
+                             Clock clock) {
+        this.subscriptionMapper = subscriptionMapper;
+        this.trialRecordMapper = trialRecordMapper;
+        this.transactionTemplate = transactionTemplate;
+        this.clock = clock;
+    }
+
+    @Scheduled(cron = "0 0 * * * *") // 每小时整点
+    public void downgradeExpiredTrials() {
+        Instant now = clock.instant();
+        List<Subscription> expired = subscriptionMapper.listExpiredTrialing(now);
+        if (expired.isEmpty()) {
+            return;
+        }
+        log.info("trial downgrade: {} expired trialing subscription(s) at {}", expired.size(), now);
+        for (Subscription sub : expired) {
+            try {
+                downgradeOne(sub, now);
+            } catch (Exception e) {
+                // 单条独立事务：失败不阻断批，下轮自愈
+                log.warn("trial downgrade failed for user {}: {}", sub.getUserId(), e.getMessage());
+            }
+        }
+    }
+
+    /** 单条独立事务：订阅降级 + 试用记录回填，原子。trialPlan 须先取原档（回填 trial_records 用）。 */
+    void downgradeOne(Subscription sub, Instant now) {
+        String trialPlan = sub.getPlanCode();
+        transactionTemplate.executeWithoutResult(tx -> {
+            sub.setPlanCode(DOWNGRADE_PLAN);
+            sub.setStatus(SubscriptionService.STATUS_ACTIVE);
+            sub.setUpdatedAt(now);
+            subscriptionMapper.update(sub);
+            trialRecordMapper.markConverted(sub.getUserId(), trialPlan, DOWNGRADE_PLAN);
+        });
+    }
+}

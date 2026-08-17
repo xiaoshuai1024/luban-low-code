@@ -24,6 +24,10 @@ public class AuthService {
         if (u == null) {
             throw BusinessException.invalidCredentials();
         }
+        // 注册未验证邮箱：文案「邮箱未验证」引导回注册流程（plan §3.2 非法态）
+        if ("pending_verification".equals(u.getStatus())) {
+            throw BusinessException.userPendingVerification();
+        }
         if (!"active".equals(u.getStatus())) {
             throw BusinessException.userDisabled();
         }

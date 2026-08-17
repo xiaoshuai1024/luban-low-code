@@ -1,12 +1,13 @@
 # luban-workspace — pnpm monorepo 根
 #
-# 纳入根 workspace 的 TS 单包应用（engine / bff / website）。
+# 纳入根 workspace 的 TS 单包应用（engine / bff / website）+ e2e 测试仓。
 # packages/ui 保持自身独立 pnpm workspace（nx + 3 npm 发布包），不纳入根（pnpm 不允许嵌套）。
 packages:
   - 'apps/engine'
   - 'apps/bff'
   - 'apps/website'
   - 'apps/docs'
+  - 'e2e'
 allowBuilds:
   '@parcel/watcher': true
   esbuild: true

@@ -30,7 +30,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: e2e/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Check e2e prerequisites
         run: |

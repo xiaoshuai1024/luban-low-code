@@ -202,7 +202,7 @@
       "subsystem": "web",
       "title": "website default 站点 seed 营销页 hero 加「免费注册」CTA 外链 manage 域 /register（website 代码零改动）",
       "dependsOn": [],
-      "status": "in_progress",
+      "status": "completed",
       "journey": "J-signup-onboarding"
     },
     {

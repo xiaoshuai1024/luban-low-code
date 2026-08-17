@@ -55,6 +55,9 @@ services:
       REDIS_PORT: "6379"
       # BFF↔backend 共享密钥（X-Internal-Auth 校验），与 bff 服务注入同值；e2e 固定 dev 值，勿用于生产
       INTERNAL_AUTH_SECRET: "e2e-dev-internal-auth-not-for-prod"
+      # e2e 专用账号引导（E2EAccountBootstrap：全新库启动时创建，已存在不重置）
+      E2E_BOOTSTRAP_ACCOUNT: "e2e-ci"
+      E2E_BOOTSTRAP_PASSWORD: "e2e-ci-pass-2026"
     ports:
       - "8080:8080"
     depends_on:

@@ -20,7 +20,7 @@
     "paths": {
       "@/*": ["./src/*"],
       // 与 vite.config.ts alias 对应：vite 用 src，类型走已构建 dist 的 .d.ts，
-      // 避免把包源码拉进本工程 strict 编译
+      // 避免把包源码拉进本工程 strict 编译；CI 须先 nx 构建 ui 两包（见 ci-test.yml）
       "luban-low-code": ["../../packages/ui/packages/luban-low-code/dist/index.d.ts"],
       "@luban-low-code/luban-base": ["../../packages/ui/packages/luban-base/dist/index.d.ts"]
     }

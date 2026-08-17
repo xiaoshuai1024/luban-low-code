@@ -29,6 +29,12 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
       - name: Install workspace deps (root)
         run: pnpm install --frozen-lockfile
+      - name: Install ui workspace deps
+        run: pnpm install --frozen-lockfile
+        working-directory: packages/ui
+      - name: Build ui packages (engine 类型依赖其 dist .d.ts)
+        run: pnpm exec nx run-many --target=build --projects=luban-base,luban-low-code --skip-nx-cache
+        working-directory: packages/ui
       - name: test
         run: pnpm test
         working-directory: apps/engine

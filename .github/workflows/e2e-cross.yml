@@ -54,8 +54,9 @@ jobs:
           LUBAN_E2E_WEBSITE_URL: http://127.0.0.1:3000
           LUBAN_E2E_JAVA_API: http://127.0.0.1:8080
           LUBAN_E2E_BFF_URL: http://127.0.0.1:3100
-          LUBAN_E2E_ACCOUNT: ${{ secrets.LUBAN_E2E_ACCOUNT }}
-          LUBAN_E2E_PASSWORD: ${{ secrets.LUBAN_E2E_PASSWORD }}
+          # 与 docker-compose.e2e.yml 的 E2E_BOOTSTRAP_* 同值（栈为全新临时库，自建账号）
+          LUBAN_E2E_ACCOUNT: e2e-ci
+          LUBAN_E2E_PASSWORD: e2e-ci-pass-2026
         working-directory: e2e
         run: pnpm test
 

@@ -38,6 +38,7 @@ public class LeadService {
     private final SiteMapper siteMapper;
     private final SiteOwnershipGuard ownershipGuard;
     private final QuotaService quotaService;
+    private final FeatureGateService featureGateService;
     private final DedupService dedupService;
     private final AntiSpamService antiSpamService;
     private final LeadCryptoService cryptoService;
@@ -46,7 +47,8 @@ public class LeadService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public LeadService(FormMapper formMapper, LeadMapper leadMapper, SiteMapper siteMapper,
-                       SiteOwnershipGuard ownershipGuard, QuotaService quotaService, DedupService dedupService,
+                       SiteOwnershipGuard ownershipGuard, QuotaService quotaService,
+                       FeatureGateService featureGateService, DedupService dedupService,
                        AntiSpamService antiSpamService, LeadCryptoService cryptoService,
                        LeadStatusMachine statusMachine, LeadNotifyService notifyService) {
         this.formMapper = formMapper;
@@ -54,6 +56,7 @@ public class LeadService {
         this.siteMapper = siteMapper;
         this.ownershipGuard = ownershipGuard;
         this.quotaService = quotaService;
+        this.featureGateService = featureGateService;
         this.dedupService = dedupService;
         this.antiSpamService = antiSpamService;
         this.cryptoService = cryptoService;
@@ -64,7 +67,7 @@ public class LeadService {
     /**
      * 留资提交（公开入口核心编排）。
      *
-     * @throws BusinessException FORM_NOT_FOUND / LEAD_SPAM_BLOCKED / LEAD_DUPLICATE
+     * @throws BusinessException FORM_NOT_FOUND / LEAD_SPAM_BLOCKED / LEAD_DUPLICATE / LEAD_DISABLED（lead_capture gate 关闭）
      */
     @Transactional(rollbackFor = Exception.class)
     public LeadSubmitResult submit(LeadSubmitRequest req) {
@@ -73,6 +76,13 @@ public class LeadService {
             throw BusinessException.formNotFound();
         }
         if (!"active".equals(form.getStatus())) {
+            throw BusinessException.leadDisabled();
+        }
+
+        // 0. site 级 lead_capture gate（wire-e2e-feature-gaps D1：关闭 → LEAD_DISABLED，
+        //    fail-open——无配置放行）。siteId 在此处已知（form 已加载），故检查放 service 层
+        //    而非 controller（避免 PublicLeadController 重复查 form）。
+        if (!featureGateService.isEnabled(form.getSiteId(), FeatureGateService.KEY_LEAD_CAPTURE)) {
             throw BusinessException.leadDisabled();
         }
 

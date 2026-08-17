@@ -84,10 +84,26 @@ services:
       AUTH_JWT_SECRET: "e2e-dev-jwt-secret-not-for-prod"
       # 与 backend-java 服务注入同值（X-Internal-Auth）
       INTERNAL_AUTH_SECRET: "e2e-dev-internal-auth-not-for-prod"
+      # AI 服务反代目标（服务根，不含 /ai 前缀）；未配置时 /api/ai/* 返回 503
+      AI_SERVICE_BASE_URL: "http://ai:8000"
+      AI_SERVICE_TOKEN: "dev-internal-token-change-me"
     ports:
       - "3100:3000"
     depends_on:
       - backend-java
+
+  ai:
+    build:
+      context: ./packages/ai-assistant
+    environment:
+      # BFF→AI 信任头（与 bff.AI_SERVICE_TOKEN 同值）
+      AI_SERVICE_TOKEN: "dev-internal-token-change-me"
+      BFF_BASE_URL: "http://bff:3000"
+      AUTH_JWT_SECRET: "e2e-dev-jwt-secret-not-for-prod"
+    ports:
+      - "8100:8000"
+    depends_on:
+      - bff
 
   engine:
     build:
@@ -95,6 +111,8 @@ services:
       dockerfile: apps/engine/Dockerfile
     environment:
       VITE_BFF_BASE_URL: "http://127.0.0.1:3100"
+      # engine AI 面板直连 AI 服务（宿主映射 8100；容器内走不了 127.0.0.1）
+      VITE_AI_BASE_URL: "http://127.0.0.1:8100"
     depends_on:
       - bff
     ports:

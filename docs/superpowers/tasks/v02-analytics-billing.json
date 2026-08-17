@@ -99,7 +99,8 @@
       "dependsOn": [
         "T-be-1"
       ],
-      "status": "done"
+      "status": "done",
+      "note": "2026-08-17 wire-e2e-feature-gaps 重实现（原 done 为账实不符，代码从未存在——见 commit 5034c3f 勘误）；Java 248 用例 + BFF 172 用例绿，e2e PR#23"
     },
     {
       "id": "T-be-10",
@@ -110,7 +111,8 @@
       "dependsOn": [
         "T-be-9"
       ],
-      "status": "done"
+      "status": "done",
+      "note": "2026-08-17 wire-e2e-feature-gaps 重实现（原 done 为账实不符，代码从未存在——见 commit 5034c3f 勘误）；Java 248 用例 + BFF 172 用例绿，e2e PR#23"
     },
     {
       "id": "T-be-11",
@@ -166,7 +168,8 @@
       "dependsOn": [
         "T-be-10"
       ],
-      "status": "done"
+      "status": "done",
+      "note": "2026-08-17 wire-e2e-feature-gaps 重实现（原 done 为账实不符，代码从未存在——见 commit 5034c3f 勘误）；Java 248 用例 + BFF 172 用例绿，e2e PR#23"
     },
     {
       "id": "T-bff-5",

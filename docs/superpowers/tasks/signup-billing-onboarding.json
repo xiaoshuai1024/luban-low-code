@@ -35,7 +35,7 @@
       "subsystem": "backend-java",
       "title": "Flyway 迁移（users.email/email_verified_at、email_verifications、plans/subscriptions/trial_records/usage_counters/orders、sites.owner_user_id + 三档 seed）+ H2 镜像同步",
       "dependsOn": [],
-      "status": "in_progress",
+      "status": "completed",
       "journey": "J-signup-onboarding"
     },
     {
@@ -47,7 +47,7 @@
       "dependsOn": [
         "T-be-1"
       ],
-      "status": "in_progress",
+      "status": "completed",
       "journey": "J-signup-onboarding"
     },
     {
@@ -59,7 +59,7 @@
       "dependsOn": [
         "T-be-1"
       ],
-      "status": "in_progress",
+      "status": "completed",
       "journey": "J-billing"
     },
     {
@@ -71,7 +71,7 @@
       "dependsOn": [
         "T-be-3"
       ],
-      "status": "in_progress",
+      "status": "completed",
       "journey": "J-signup-onboarding"
     },
     {
@@ -83,7 +83,7 @@
       "dependsOn": [
         "T-be-3"
       ],
-      "status": "in_progress",
+      "status": "completed",
       "journey": "J-quota-enforcement"
     },
     {
@@ -95,7 +95,7 @@
       "dependsOn": [
         "T-be-1"
       ],
-      "status": "in_progress",
+      "status": "completed",
       "journey": "J-signup-onboarding"
     },
     {
@@ -107,7 +107,7 @@
       "dependsOn": [
         "T-be-3"
       ],
-      "status": "in_progress",
+      "status": "completed",
       "journey": "J-billing"
     },
     {
@@ -117,7 +117,7 @@
       "subsystem": "backend-java",
       "title": "DemoAccountInitializer 收编：@ConditionalOnProperty(app.demo-account.enabled) dev/e2e 默认 true、prod compose false，纳入 git 提交",
       "dependsOn": [],
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "id": "T-bff-1",

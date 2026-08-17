@@ -74,7 +74,7 @@ jobs:
           cache-dependency-path: packages/ui/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
-      - run: pnpm run release:packages
+      - run: pnpm exec nx run-many --target=build --skip-nx-cache
 
   backend-java:
     name: backend-java (mvn verify)

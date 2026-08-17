@@ -42,6 +42,8 @@ class PublicPageContractTest {
         // child table added by W1-T2; without this the DELETE FROM sites below violates
         // fk_datasources_site when DatasourceContractTest ran earlier in the same JVM).
         jdbc.update("DELETE FROM datasources");
+        jdbc.update("DELETE FROM leads");
+        jdbc.update("DELETE FROM forms");
         jdbc.update("DELETE FROM pages");
         jdbc.update("DELETE FROM sites");
         Instant now = Instant.now();

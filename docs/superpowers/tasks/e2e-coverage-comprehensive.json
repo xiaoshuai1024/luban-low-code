@@ -430,7 +430,7 @@
     {
       "id": "T24",
       "title": "【功能接线】form DELETE 端点+管理UI：Java FormService/FormMapper/LeadMapper + BFF DELETE handler + engine FormList/FormEditor/router",
-      "status": "in_progress",
+      "status": "done",
       "group": "cross",
       "subsystem": "cross",
       "dependsOn": [],
@@ -438,7 +438,8 @@
       "notes": [
         "2026-07-05: 功能接线 in_progress，E2E 依赖这些功能落地后才能写对应 UI spec",
         "2026-07-05: 功能接线 in_progress，E2E spec 依赖功能落地"
-      ]
+      ],
+      "note": "2026-08-15 close-review-gaps：Java DELETE /forms/{id}(409 FORM_HAS_LEADS) + BFF DELETE 代理 + engine deleteForm/FormList 真删除，mvn verify 与 pnpm test 全绿"
     }
   ],
   "metadata": {

@@ -45,6 +45,8 @@ class DatasourceContractTest {
     void seed() {
         // datasources FK → sites; delete child first.
         jdbc.update("DELETE FROM datasources");
+        jdbc.update("DELETE FROM leads");
+        jdbc.update("DELETE FROM forms");
         jdbc.update("DELETE FROM pages");
         jdbc.update("DELETE FROM sites");
         Instant now = Instant.now();

@@ -49,6 +49,8 @@ class V2FeaturesContractTest {
         jdbc.update("DELETE FROM collection_items");
         jdbc.update("DELETE FROM collections");
         jdbc.update("DELETE FROM page_versions");
+        jdbc.update("DELETE FROM leads WHERE site_id = ?", SITE_ID);
+        jdbc.update("DELETE FROM forms WHERE site_id = ?", SITE_ID);
         jdbc.update("DELETE FROM pages WHERE site_id = ?", SITE_ID);
         jdbc.update("DELETE FROM sites WHERE id = ?", SITE_ID);
         Instant now = Instant.now();

@@ -64,5 +64,21 @@ describe("GET /api/billing/me", () => {
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toContain("/billing/me");
     expect((init as RequestInit).method).toBe("GET");
+    const headers = (init as RequestInit).headers as Record<string, string>;
+    expect(headers["X-User-ID"]).toBe("u-1");
+    expect(headers["X-User-Role"]).toBe("user");
+  });
+
+  it("后端 500 → 透传 500 与错误体（toBackendResponse）", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue(
+      backendResponse(500, { code: "INTERNAL", message: "boom" })
+    );
+
+    const res = await GET(makeReq());
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.code).toBe("INTERNAL");
+    expect(body.message).toBe("boom");
   });
 });

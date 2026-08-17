@@ -10,8 +10,10 @@ interface Plan {
   quotaLeads: number;
   quotaPages: number;
   quotaVisits: number;
-  gates?: unknown;
-  trialDays?: number;
+  /** PlanResponse.gates（JsonNode）：放行的 gate_key 集合，DB NULL/非法 JSON 时为 null */
+  gates: string[] | null;
+  /** PlanResponse.trialDays（int，恒返回） */
+  trialDays: number;
 }
 
 /** GET /api/billing/plans → 套餐列表（透传 Java 裸数组，不包裹） */

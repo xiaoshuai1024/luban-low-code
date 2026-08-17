@@ -73,6 +73,9 @@ describe("GET /api/billing/orders", () => {
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toContain("/billing/orders?page=1&size=10");
     expect((init as RequestInit).method).toBe("GET");
+    const headers = (init as RequestInit).headers as Record<string, string>;
+    expect(headers["X-User-ID"]).toBe("u-1");
+    expect(headers["X-User-Role"]).toBe("user");
   });
 });
 
@@ -103,9 +106,27 @@ describe("POST /api/billing/orders", () => {
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toContain("/billing/orders");
     expect((init as RequestInit).method).toBe("POST");
+    const headers = (init as RequestInit).headers as Record<string, string>;
+    expect(headers["X-User-ID"]).toBe("u-1");
+    expect(headers["X-User-Role"]).toBe("user");
     expect(JSON.parse((init as RequestInit).body as string)).toEqual({
       planCode: "starter",
     });
+  });
+
+  it("body 非法 JSON → 400 BAD_REQUEST（不请求后端）", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    const req = new Request("http://localhost/api/billing/orders", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: "not-json",
+    }) as unknown as import("next/server").NextRequest;
+
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.code).toBe("BAD_REQUEST");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("后端 429 QUOTA_EXCEEDED → 透传 429 与错误体（不再变 500）", async () => {

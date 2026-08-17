@@ -58,8 +58,11 @@ describe("GET /api/billing/usage", () => {
       visits: 0,
     });
 
-    const [url] = fetchMock.mock.calls[0];
+    const [url, init] = fetchMock.mock.calls[0];
     expect(url).toContain("/billing/usage");
+    const headers = (init as RequestInit).headers as Record<string, string>;
+    expect(headers["X-User-ID"]).toBe("u-1");
+    expect(headers["X-User-Role"]).toBe("user");
   });
 
   it("query 原样透传（?period=2026-07）", async () => {
@@ -71,6 +74,22 @@ describe("GET /api/billing/usage", () => {
     await GET(makeReq("http://localhost/api/billing/usage?period=2026-07"));
     const [url] = fetchMock.mock.calls[0];
     expect(url).toContain("/billing/usage?period=2026-07");
+  });
+
+  it("非法 period（?period=abc）→ 后端 400 INVALID_ARGUMENT 透传", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue(
+      backendResponse(400, {
+        code: "INVALID_ARGUMENT",
+        message: "period: 格式应为 yyyy-MM",
+      })
+    );
+
+    const res = await GET(makeReq("http://localhost/api/billing/usage?period=abc"));
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.code).toBe("INVALID_ARGUMENT");
+    expect(body.message).toBe("period: 格式应为 yyyy-MM");
   });
 
   it("后端 429 QUOTA_EXCEEDED → 透传 429 与错误体", async () => {

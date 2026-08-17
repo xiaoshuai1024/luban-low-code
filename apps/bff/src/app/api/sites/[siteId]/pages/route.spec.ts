@@ -63,6 +63,26 @@ describe("GET /api/sites/:siteId/pages", () => {
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toContain("/sites/s-1/pages");
     expect((init as RequestInit).method).toBe("GET");
+    // authHeaders 重构等价锁：JWT 校验后注入身份头（role 兜底 "user"）
+    const headers = (init as RequestInit).headers as Record<string, string>;
+    expect(headers["X-User-ID"]).toBe("u-1");
+    expect(headers["X-User-Role"]).toBe("user");
+  });
+
+  it("非站点所有者 → 后端 403 PERMISSION_DENIED 透传", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue(
+      backendResponse(403, {
+        code: "PERMISSION_DENIED",
+        message: "无权查看此站点",
+      })
+    );
+
+    const res = await GET(makeReq("GET"), params());
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.code).toBe("PERMISSION_DENIED");
+    expect(body.message).toBe("无权查看此站点");
   });
 });
 
@@ -99,5 +119,20 @@ describe("POST /api/sites/:siteId/pages", () => {
     const body = await res.json();
     expect(body.code).toBe("QUOTA_EXCEEDED");
     expect(body.details).toEqual({ metric: "pages", limit: 3, used: 3 });
+  });
+
+  it("body 非法 JSON → 400 BAD_REQUEST（不请求后端）", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    const req = new Request("http://localhost/api/sites/s-1/pages", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: "not-json",
+    }) as unknown as import("next/server").NextRequest;
+
+    const res = await POST(req, params());
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.code).toBe("BAD_REQUEST");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

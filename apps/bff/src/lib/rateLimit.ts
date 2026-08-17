@@ -15,8 +15,21 @@ export type RateLimitScope = "login" | "register" | "verify" | "resend";
 /** `${scope}:${ip}` → 窗口内失败时间戳列表 */
 const failuresByKey = new Map<string, number[]>();
 
+/** Map 容量硬上限：超过后整表清扫过期条目，防伪造 XFF 刷 key 导致内存无界增长。 */
+const MAX_KEYS = 10_000;
+
 function recentFailures(key: string, now: number): number[] {
   return (failuresByKey.get(key) || []).filter((t) => now - t < WINDOW_MS);
+}
+
+/** 顺带清扫：条目滑出窗口即删 key；容量超限时全表过期清扫一次。 */
+function prune(key: string, now: number): void {
+  if (!failuresByKey.get(key)?.length) failuresByKey.delete(key);
+  if (failuresByKey.size > MAX_KEYS) {
+    for (const [k, list] of failuresByKey) {
+      if (!list.some((t) => now - t < WINDOW_MS)) failuresByKey.delete(k);
+    }
+  }
 }
 
 /** 该 IP 在该 scope 窗口内失败次数是否已达阈值（放行前检查）。 */
@@ -25,7 +38,10 @@ export function isRateLimited(
   now: number = Date.now(),
   scope: RateLimitScope = "login"
 ): boolean {
-  return recentFailures(`${scope}:${ip}`, now).length >= MAX_FAILURES;
+  const key = `${scope}:${ip}`;
+  const limited = recentFailures(key, now).length >= MAX_FAILURES;
+  if (!limited) prune(key, now);
+  return limited;
 }
 
 /** 记录一次失败（窗口自动滑动）。 */
@@ -38,6 +54,7 @@ export function recordFailure(
   const ts = recentFailures(key, now);
   ts.push(now);
   failuresByKey.set(key, ts);
+  prune(key, now);
 }
 
 /** 从请求提取客户端 IP：优先 x-forwarded-for 首段，其次 x-real-ip，兜底 unknown。 */

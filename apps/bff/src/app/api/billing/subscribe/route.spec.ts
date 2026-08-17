@@ -79,4 +79,19 @@ describe("POST /api/billing/subscribe", () => {
     expect(res.status).toBe(400);
     expect((await res.json()).code).toBe("INVALID_PLAN");
   });
+
+  it("body 非法 JSON → 400 BAD_REQUEST（不请求后端）", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    const req = new Request("http://localhost/api/billing/subscribe", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: "not-json",
+    }) as unknown as import("next/server").NextRequest;
+
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.code).toBe("BAD_REQUEST");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });

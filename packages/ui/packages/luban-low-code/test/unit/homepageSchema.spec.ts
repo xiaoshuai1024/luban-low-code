@@ -40,6 +40,16 @@ describe('官网主页 schema 渲染', () => {
     expect(text).toContain('MIT 开源协议');
   });
 
+  it('hero 主 CTA 渲染「免费注册」且 <a> href 指向 manage 域 /register（注册入口）', () => {
+    const wrapper = mount(LubanPage, { props: { schema } });
+    const hero = wrapper.find('#hero');
+    expect(hero.exists(), '分区 #hero 未渲染').toBe(true);
+    expect(hero.text()).toContain('免费注册');
+    const cta = hero.findAll('a').find((a) => a.text().includes('免费注册'));
+    expect(cta, 'hero 主 CTA 未渲染为「免费注册」链接').toBeTruthy();
+    expect(cta?.attributes('href')).toContain('/register');
+  });
+
   it('特性卡片与组件墙数量正确（6 特性 / 30 组件）', () => {
     const wrapper = mount(LubanPage, { props: { schema } });
     const features = wrapper.find('#features').text();

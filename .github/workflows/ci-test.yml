@@ -17,9 +17,6 @@ jobs:
     name: engine (test + build)
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    defaults:
-      run:
-        working-directory: apps/engine
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -30,17 +27,19 @@ jobs:
           node-version: 22
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm test
-      - run: pnpm run build
+      - name: Install workspace deps (root)
+        run: pnpm install --frozen-lockfile
+      - name: test
+        run: pnpm test
+        working-directory: apps/engine
+      - name: build
+        run: pnpm run build
+        working-directory: apps/engine
 
   bff:
     name: bff (test + build)
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    defaults:
-      run:
-        working-directory: apps/bff
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -51,17 +50,19 @@ jobs:
           node-version: 22
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm test
-      - run: pnpm run build
+      - name: Install workspace deps (root)
+        run: pnpm install --frozen-lockfile
+      - name: test
+        run: pnpm test
+        working-directory: apps/bff
+      - name: build
+        run: pnpm run build
+        working-directory: apps/bff
 
   ui:
     name: ui (test + build)
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    defaults:
-      run:
-        working-directory: packages/ui
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -72,9 +73,15 @@ jobs:
           node-version: 22
           cache: pnpm
           cache-dependency-path: packages/ui/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm test
-      - run: pnpm exec nx run-many --target=build --skip-nx-cache
+      - name: Install ui workspace deps
+        run: pnpm install --frozen-lockfile
+        working-directory: packages/ui
+      - name: test
+        run: pnpm test
+        working-directory: packages/ui
+      - name: build
+        run: pnpm exec nx run-many --target=build --skip-nx-cache
+        working-directory: packages/ui
 
   backend-java:
     name: backend-java (mvn verify)

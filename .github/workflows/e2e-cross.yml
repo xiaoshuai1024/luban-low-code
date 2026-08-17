@@ -37,9 +37,8 @@ jobs:
           test -f docker-compose.e2e.yml || { echo "::error::docker-compose.e2e.yml 缺失"; exit 1; }
           test -d e2e || { echo "::error::e2e 目录缺失"; exit 1; }
 
-      - name: Install e2e deps
-        working-directory: e2e
-        run: pnpm install
+      - name: Install workspace deps (root)
+        run: pnpm install --frozen-lockfile
 
       - name: Install Playwright Chromium
         working-directory: e2e
@@ -55,6 +54,8 @@ jobs:
           LUBAN_E2E_WEBSITE_URL: http://127.0.0.1:3000
           LUBAN_E2E_JAVA_API: http://127.0.0.1:8080
           LUBAN_E2E_BFF_URL: http://127.0.0.1:3100
+          LUBAN_E2E_ACCOUNT: ${{ secrets.LUBAN_E2E_ACCOUNT }}
+          LUBAN_E2E_PASSWORD: ${{ secrets.LUBAN_E2E_PASSWORD }}
         working-directory: e2e
         run: pnpm test
 

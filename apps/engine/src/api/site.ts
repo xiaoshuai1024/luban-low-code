@@ -31,6 +31,17 @@ export function getSites() {
   return request.get<Site[]>('/sites')
 }
 
+/**
+ * slug 预检（signup-billing-onboarding §9.2）：
+ * 200 {available:true,slug} / 409 SLUG_TAKEN / 400 INVALID_ARGUMENT。
+ * 开通向导 Step2 输入防抖 500ms 调用，绿色「可用」/红色「已被占用」反馈。
+ */
+export function checkSlug(slug: string) {
+  return request.get<{ available: boolean; slug?: string }>('/sites/slug-check', {
+    params: { slug },
+  })
+}
+
 export function getSite(id: string) {
   return request.get<Site>(`/sites/${id}`)
 }

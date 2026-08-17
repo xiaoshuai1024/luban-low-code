@@ -22,6 +22,17 @@ export default defineConfig({
         'src/views/page/components/SchemaTreePreview.vue',
         'src/views/page/components/DesignUploader.vue',
         'src/views/page/components/DesignPreview.vue',
+        // === signup-billing-onboarding（§6.3 陷阱：新文件不追加即不进覆盖率门禁）===
+        'src/api/auth.ts',
+        'src/api/billing.ts',
+        'src/api/site.ts',
+        'src/views/auth/Register.vue',
+        'src/views/onboarding/OnboardingWizard.vue',
+        'src/views/onboarding/components/PlanPicker.vue',
+        'src/views/onboarding/components/SiteForm.vue',
+        'src/views/onboarding/components/TemplateSelect.vue',
+        'src/components/UserPlanPanel.vue',
+        'src/views/settings/Billing.vue',
       ],
       exclude: ['src/**/*.spec.ts', 'src/test/**'],
       // 门禁阈值：核心逻辑层（composables/api/stores）达 93-97%；Vue SFC 组件的

@@ -23,7 +23,9 @@ import {
   ArrowRight,
   Document,
   Files,
+  Tickets,
 } from '@element-plus/icons-vue'
+import UserPlanPanel from '@/components/UserPlanPanel.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -60,6 +62,15 @@ function handleLogout() {
   userStore.clearAuth()
   router.push('/login')
 }
+
+/** 用户菜单命令分发：退出登录 / 套餐与订单（signup-billing-onboarding §4.2.3） */
+function handleCommand(command: string | number | object) {
+  if (command === 'logout') {
+    handleLogout()
+  } else if (command === 'billing') {
+    router.push('/settings/billing')
+  }
+}
 </script>
 
 <template>
@@ -92,7 +103,7 @@ function handleLogout() {
     <ElContainer direction="vertical">
       <ElHeader class="default-layout__header">
         <span class="default-layout__title">{{ $route.meta.title ?? '管理后台' }}</span>
-        <ElDropdown trigger="click" @command="handleLogout">
+        <ElDropdown trigger="click" @command="handleCommand">
           <span class="default-layout__user">
             <span class="default-layout__avatar">
               {{ (userStore.name || userStore.username || '用户').slice(0, 1).toUpperCase() }}
@@ -108,12 +119,19 @@ function handleLogout() {
             <ElIcon><ArrowRight /></ElIcon>
           </span>
           <template #dropdown>
-            <ElDropdownMenu command="logout">
+            <ElDropdownMenu>
               <ElDropdownItem disabled>
                 当前账号：{{ userStore.username || '未知' }}
               </ElDropdownItem>
               <ElDropdownItem disabled>
                 角色：{{ userStore.isAdmin ? '管理员' : '普通用户' }}
+              </ElDropdownItem>
+              <!-- 套餐+用量分组（signup-billing-onboarding §4.2.3）：自取数据，失败显「—」不阻断菜单 -->
+              <ElDropdownItem divided disabled class="default-layout__plan-item">
+                <UserPlanPanel />
+              </ElDropdownItem>
+              <ElDropdownItem command="billing">
+                <ElIcon><Tickets /></ElIcon>套餐与订单
               </ElDropdownItem>
               <ElDropdownItem divided command="logout">退出登录</ElDropdownItem>
             </ElDropdownMenu>
@@ -198,6 +216,12 @@ function handleLogout() {
 .default-layout__user-role {
   font-size: 12px;
   color: #909399;
+}
+
+/* 套餐分组条目（ElDropdownItem 根节点）：放宽内边距容纳用量面板 */
+.default-layout__plan-item {
+  padding: 8px 12px;
+  cursor: default;
 }
 
 .default-layout__main {

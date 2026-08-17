@@ -11,6 +11,7 @@ import {
   ElInput,
   ElMessage,
   ElMessageBox,
+  ElEmpty,
 } from 'element-plus'
 import { getSites, createSite, updateSite, deleteSite, type Site } from '@/api/site'
 
@@ -107,6 +108,12 @@ onMounted(fetchList)
           <ElButton link type="danger" @click="handleDelete(row as Site)">删除</ElButton>
         </template>
       </ElTableColumn>
+      <!-- 空态：同 Dashboard 开通引导（signup-billing-onboarding §4.2.3） -->
+      <template #empty>
+        <ElEmpty description="还没有站点，开通你的第一个站点">
+          <ElButton type="primary" @click="router.push('/onboarding')">免费开通</ElButton>
+        </ElEmpty>
+      </template>
     </ElTable>
 
     <ElDialog v-model="dialogVisible" :title="editingId ? '编辑站点' : '新建站点'" width="500px">

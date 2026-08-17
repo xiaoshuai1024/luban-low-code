@@ -155,7 +155,7 @@
         "T-bff-1",
         "T-bff-2"
       ],
-      "status": "in_progress",
+      "status": "completed",
       "journey": "J-signup-onboarding"
     },
     {
@@ -167,7 +167,7 @@
       "dependsOn": [
         "T-eng-1"
       ],
-      "status": "in_progress",
+      "status": "completed",
       "journey": "J-signup-onboarding"
     },
     {
@@ -180,7 +180,7 @@
         "T-eng-1",
         "T-be-6"
       ],
-      "status": "in_progress",
+      "status": "completed",
       "journey": "J-signup-onboarding"
     },
     {
@@ -192,7 +192,7 @@
       "dependsOn": [
         "T-eng-1"
       ],
-      "status": "in_progress",
+      "status": "completed",
       "journey": "J-signup-onboarding"
     },
     {

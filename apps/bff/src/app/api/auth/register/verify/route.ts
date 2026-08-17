@@ -4,40 +4,50 @@ import { signToken } from "@/lib/authToken";
 import { rateLimited, toBackendResponse } from "@/lib/apiHandler";
 import { clientIpFromRequest, isRateLimited, recordFailure } from "@/lib/rateLimit";
 
-interface LoginPayload {
-  username: string;
-  password: string;
+interface VerifyPayload {
+  email: string;
+  code: string;
 }
 
-interface LoginResult {
+/** Java /auth/register/verify 200 响应（BFF 据此签发 JWT） */
+interface VerifyBackendResult {
+  user: {
+    id: string;
+    username: string;
+    name?: string;
+    role?: string;
+    status?: string;
+  };
+}
+
+interface VerifyResult {
   token: string;
-  user?: { username: string; name?: string; role?: string };
+  user: { username: string; name?: string; role?: string };
 }
 
+/** POST /api/auth/register/verify — 校验邮箱验证码并在 BFF 组装登录态（engine 零适配，剥离 user.id） */
 export async function POST(req: Request) {
   const ip = clientIpFromRequest(req);
-  if (isRateLimited(ip)) return rateLimited();
+  if (isRateLimited(ip, Date.now(), "verify")) return rateLimited();
 
   try {
-    const body = (await req.json()) as LoginPayload;
+    const body = (await req.json()) as VerifyPayload;
 
-    // 调用后端校验账号密码
-    const backendRes = await callBackend<{
-      user: { id: string; username: string; name?: string; role?: string };
-      claims: { userId: string; role: string };
-    }>("/auth/login", {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
+    const backendRes = await callBackend<VerifyBackendResult>(
+      "/auth/register/verify",
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      }
+    );
 
-    // 基于返回的用户信息在 BFF 层签发 JWT
     const token = signToken({
       id: backendRes.user.id,
       username: backendRes.user.username,
       role: backendRes.user.role,
     });
 
-    const result: LoginResult = {
+    const result: VerifyResult = {
       token,
       user: {
         // 安全：不暴露 user.id（内部 UUID）
@@ -49,8 +59,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json(result);
   } catch (e) {
-    // 登录失败（后端 401/5xx、body 非法）计入限流窗口
-    recordFailure(ip);
+    // 验证失败（错码/过期/尝试超限、body 非法）计入限流窗口
+    recordFailure(ip, Date.now(), "verify");
     if (e instanceof SyntaxError) {
       return NextResponse.json(
         { code: "BAD_REQUEST", message: "Invalid JSON body" },

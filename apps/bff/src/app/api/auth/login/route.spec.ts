@@ -59,7 +59,7 @@ describe("POST /api/auth/login 限流", () => {
     const res = await POST(makeReq());
     expect(res.status).toBe(429);
     const body = await res.json();
-    expect(body.error).toBe("RATE_LIMITED");
+    expect(body.code).toBe("RATE_LIMITED");
     // 限流命中后不再请求后端
     expect(fetchMock).toHaveBeenCalledTimes(10);
   });

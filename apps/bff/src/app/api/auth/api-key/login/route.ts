@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { callBackend } from "@/lib/backendClient";
 import { signToken } from "@/lib/authToken";
-import { toBackendResponse } from "@/lib/apiHandler";
+import { rateLimited, toBackendResponse } from "@/lib/apiHandler";
 import type { ApiKeyValidateResponse } from "@/lib/apiKey";
 import { clientIpFromRequest, isRateLimited, recordFailure } from "@/lib/rateLimit";
 
@@ -12,13 +12,6 @@ interface ApiKeyLoginPayload {
 interface ApiKeyLoginResult {
   token: string;
   user: { username: string; role?: string };
-}
-
-function rateLimited() {
-  return NextResponse.json(
-    { error: "RATE_LIMITED", message: "too many failed attempts, retry later" },
-    { status: 429 }
-  );
 }
 
 /**

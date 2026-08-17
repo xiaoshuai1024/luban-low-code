@@ -52,7 +52,7 @@ describe("POST /api/auth/api-key/login 限流", () => {
     }
     const res = await POST(makeReq());
     expect(res.status).toBe(429);
-    expect((await res.json()).error).toBe("RATE_LIMITED");
+    expect((await res.json()).code).toBe("RATE_LIMITED");
     expect(fetchMock).toHaveBeenCalledTimes(10);
   });
 

@@ -50,7 +50,7 @@
 | GET | `/sites` | 站点列表（非 admin 仅返回 owner=自己的站点） |
 | GET | `/sites/{id}` | 站点详情 |
 | GET | `/sites/slug-check?slug=` | slug 可用性预检（200 `{available:true}` / 409 `SLUG_TAKEN`） |
-| POST | `/sites` | 新建站点（name/slug/baseUrl/status；任意登录用户，owner=自己；超配额 429 `QUOTA_EXCEEDED`） |
+| POST | `/sites` | 新建站点（name/slug/baseUrl/status；任意登录用户，owner=自己；slug 不合规 400；配额在 Pages/Leads 写入时按 owner 拦截） |
 | PUT | `/sites/{id}` | 编辑站点（owner 或 admin；存量无主站点仅 admin） |
 | DELETE | `/sites/{id}` | 删除站点（级联清理 7 张子表；权限同 PUT） |
 

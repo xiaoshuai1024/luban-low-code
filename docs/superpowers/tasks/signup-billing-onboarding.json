@@ -2,7 +2,7 @@
   "featureId": "signup-billing-onboarding",
   "title": "注册流程：注册（邮箱验证码）→ 购买套餐（0 元订单）→ 开通服务 → 使用站点",
   "plan": "../../docs/superpowers/plans/2026-08-17-signup-billing-onboarding.md",
-  "notes": "backend-go 已删除（2026-08-15），Java 单端权威，所有新接口单端豁免。billing 域为 v02 设计在 Java 侧的重建（原实现随 backend-go 删除丢失，v02 任务图 26/26 done 为 Go 时代账目，由 T-doc-1 勘误）。",
+  "notes": "backend-go 已删除（2026-08-15），Java 单端权威，所有新接口单端豁免。billing 域为 v02 设计在 Java 侧的重建（v02 任务图 26/26 done 属账实不符：本仓全部历史无 billing 实现代码，与 backend-go 删除无关，见 T-doc-1 勘误）。",
   "journeys": [
     {
       "id": "J-signup-onboarding",
@@ -16,7 +16,7 @@
         "S4 使用站点：发布后访客经 website /{slug}/{path} 访问",
         "S5 多租户隔离：用户 B 不可见/不可操作用户 A 的站点"
       ],
-      "status": "declared"
+      "status": "covered"
     },
     {
       "id": "J-billing",
@@ -217,7 +217,7 @@
         "T-be-5",
         "T-be-6"
       ],
-      "status": "pending",
+      "status": "in_progress",
       "journey": "J-signup-onboarding"
     },
     {
@@ -230,7 +230,7 @@
         "T-eng-2",
         "T-eng-3"
       ],
-      "status": "pending",
+      "status": "in_progress",
       "journey": "J-signup-onboarding"
     },
     {
@@ -238,7 +238,7 @@
       "group": "cross",
       "wave": 5,
       "subsystem": "cross",
-      "title": "文档勘误：v02-analytics-billing.json 注记（billing 实现随 backend-go 删除丢失，实际交付于 signup-billing-onboarding）+ docs/API.md billing 节与实现对账",
+      "title": "文档勘误：v02-analytics-billing.json 注记（billing 账实不符：本仓历史无实现代码，实际交付于 signup-billing-onboarding）+ docs/API.md billing 节与实现对账",
       "dependsOn": [],
       "status": "completed"
     }

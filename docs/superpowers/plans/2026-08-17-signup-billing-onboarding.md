@@ -5,7 +5,7 @@ createdAt: 2026-08-17
 status: approved
 taskGraph: docs/superpowers/tasks/signup-billing-onboarding.json
 contractSource: plan-template 命令体 + writing-plans SKILL + docs/superpowers/PLAN_WRITING_CONTRACT.md（均全文加载）
-scope: 新用户从官网 CTA 自助注册（用户名+邮箱+密码+邮箱验证码）→ 选套餐创建 0 元订单（自动支付成功）→ 开通向导建首站+模板建首页 → 进设计器发布、访客经 website 访问；重建 Java 侧 billing/quota 域（随 backend-go 删除而丢失）并令既有红 spec 回绿
+scope: 新用户从官网 CTA 自助注册（用户名+邮箱+密码+邮箱验证码）→ 选套餐创建 0 元订单（自动支付成功）→ 开通向导建首站+模板建首页 → 进设计器发布、访客经 website 访问；重建 Java 侧 billing/quota 域（v02 账目标 done 但本仓历史无对应代码）并令既有红 spec 回绿
 split: 不拆分（单期收口）
 branches: 单仓 monorepo，新分支 feature/signup-billing-onboarding（自 master），禁 push 默认分支
 ---
@@ -14,7 +14,7 @@ branches: 单仓 monorepo，新分支 feature/signup-billing-onboarding（自 ma
 
 > **已加载 skill/契约**：`writing-plans` SKILL（全文）· `docs/superpowers/PLAN_WRITING_CONTRACT.md`（全文）· `ux-product-review` SKILL（全文）· `.agents/rules/luban-e2e-execution-contract.md`（全文）· `scripts/verify-plan-ssot.mjs`（schema）。另基于 5 路并行只读调研（backend-java / bff / website / engine / docs+任务图）与本人交叉验证。
 >
-> **关键背景事实（已验证）**：v02-analytics-billing 任务图 26/26 done 为 backend-go 时代账目——`git log --all -S "billing" -- apps/backend-java` 零命中，Java/BFF/engine 代码零 billing 实现；billing 能力随 `apps/backend-go` 删除（2026-08-15，f248042）而丢失。`e2e/flows/billing.spec.ts`、`quota-enforcement.spec.ts` 已存在且当前必红（spec 头自述「尚未跑绿」）。本 plan 在 Java 单端权威前提下重建 billing 契约（继承 v02 设计与 `docs/API.md` L187-194 已约定端点），并作为注册流程的套餐/订单/配额底座。
+> **关键背景事实（已验证，2026-08-17 R1 审查修正归因）**：v02-analytics-billing 任务图 26/26 done 属**账实不符**——`git log --all -S "billing"` 对 apps/backend-java 与 apps/backend-go 全部历史均零命中（backend-go 从未实现 billing，v02 对 Go 本就 parity 豁免；v02 任务组标注为 backend-java），本仓任何路径历史中均无 billing 实现代码。`e2e/flows/billing.spec.ts`、`quota-enforcement.spec.ts` 已存在且当前必红（spec 头自述「尚未跑绿」）。本 plan 在 Java 单端权威前提下重建 billing 契约（继承 v02 设计与 `docs/API.md` L187-194 已约定端点），并作为注册流程的套餐/订单/配额底座。
 
 ---
 
@@ -389,7 +389,7 @@ engine / bff / website 85% · UI 90%（不涉及）· Java 80%（行）。`make 
 | `J-billing` | ref（首次定义于 journey-registry/v02 时代，此处引用） | — | — | — |
 | `J-quota-enforcement` | ref | — | — | — |
 
-门禁：`node scripts/verify-plan-ssot.mjs journey-coverage` 收口前跑通（P0=100%，`J-signup-onboarding` 由新 spec 绑定 `@J-signup-onboarding`）。
+门禁：`node scripts/verify-plan-ssot.mjs journey-coverage` 收口前跑通（**本 feature 声明的 P0 旅程 100%**：`J-signup-onboarding` 已由新 spec 绑定 `@J-signup-onboarding`；仓内存量 7 个其它 P0 GAP 属其它 feature，不在本期口径）。
 
 ### 7.1 跨端主路径（正式路由，无 e2e 专页）
 
@@ -418,7 +418,7 @@ engine / bff / website 85% · UI 90%（不涉及）· Java 80%（行）。`make 
 | 4 | 未验证直接 login | 401 `USER_PENDING_VERIFICATION` |
 | 5 | verify 错码 1 次 | 400 `VERIFY_CODE_INVALID`（含剩余次数） |
 | 6 | verify 正确码 | 200 + token + user；GET /api/auth/me 带 token 200 |
-| 清理 | admin 删测试用户（或 SQL） | 幂等可重跑 |
+| 清理 | 站点 DELETE（owner token）；**用户行不做 API/SQL 清理**（无 DELETE users API；e2e 专属数据随 `e2e-down -v` 卷销毁重置，唯一后缀保证跨跑幂等，生产不适用） | 幂等可重跑 |
 
 **S2 0 元订单（P0，同 spec，绑 @J-signup-onboarding @J-billing）**
 
@@ -538,7 +538,7 @@ engine / bff / website 85% · UI 90%（不涉及）· Java 80%（行）。`make 
 | 3 | `getOrders` 分页返回：engine 组 `{list,total}` vs backend `{items,total}` | **`{items,total}`**（AGENT_RULES §4 分页规范） |
 | 4 | `subscribe` 响应形态 | **`{subscription:{...}}`**；engine 向导/切换主路径走 `createOrder`（返回 `{order,subscription}`），`subscribe` 为 v02 契约别名保留 |
 | 5 | e2e-tiny fixture 注入方式 | **方案 A：`E2EBillingPlanBootstrap`**（env 门控 ApplicationRunner，先例 `E2EAccountBootstrap`）；init SQL 字面方案不可行（§7.3 S6 已修正） |
-| 6 | 测试用户清理：engine/BFF 均无 `DELETE /users` API | flows teardown 以 **docker exec SQL 删除**（仅 e2e 环境；创建仍走 API，遵 e2e-test-style-guide）；不新增 admin DELETE /users（防膨胀，记 §10.2 延后） |
+| 6 | 测试用户清理：engine/BFF 均无 `DELETE /users` API | **不清理**：e2e 用户行随 e2e 数据卷生命周期存在（`e2e-down -v` 即重置），spec 用唯一后缀保证幂等可重跑；不新增 admin DELETE /users（防膨胀，记 §10.2 延后）。R1 修订：原「docker exec SQL teardown」裁定与 flows 运行形态不符（spec 无法假定 compose 项目名/宿主访问），以卷级重置为准 |
 | 7 | bff `api-key/login` 的 `error`→`code` 修正超出 plan 字面（原只点名 login） | **随 T-bff-1 同 commit**（同仓不允许两种错误体字段名并存） |
 | 8 | W1 缝隙：T-be-2 verify 事务需 `SubscriptionService.bindDefaultFree`（属 T-be-3） | T-be-2 先落调用点/接口签名，T-be-3 实装后同 wave 收口前接线并跑 `RegisterVerifyContractTest` 回绿 |
 

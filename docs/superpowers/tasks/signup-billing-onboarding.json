@@ -128,7 +128,7 @@
       "dependsOn": [
         "T-be-2"
       ],
-      "status": "in_progress",
+      "status": "completed",
       "journey": "J-signup-onboarding"
     },
     {
@@ -142,7 +142,7 @@
         "T-be-4",
         "T-be-6"
       ],
-      "status": "in_progress",
+      "status": "completed",
       "journey": "J-billing"
     },
     {

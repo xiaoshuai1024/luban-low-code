@@ -47,6 +47,22 @@ describe('FeatureGate features (D15-D1)', () => {
     expect(FEATURES.events).toBe(false)
   })
 
+  it('signup/onboarding 默认开（signup-billing-onboarding §6.5）', async () => {
+    vi.resetModules()
+    const { FEATURES } = await import('../features')
+    expect(FEATURES.signup).toBe(true)
+    expect(FEATURES.onboarding).toBe(true)
+  })
+
+  it("env='false' → signup/onboarding 关闭（回滚首选手段）", async () => {
+    vi.stubEnv('VITE_FEATURE_SIGNUP', 'false')
+    vi.stubEnv('VITE_FEATURE_ONBOARDING', 'false')
+    vi.resetModules()
+    const { FEATURES } = await import('../features')
+    expect(FEATURES.signup).toBe(false)
+    expect(FEATURES.onboarding).toBe(false)
+  })
+
   it("env='true'/'1'/任意非false值 → 开", async () => {
     vi.stubEnv('VITE_FEATURE_STYLE', 'true')
     vi.stubEnv('VITE_FEATURE_DATASOURCE', '1')

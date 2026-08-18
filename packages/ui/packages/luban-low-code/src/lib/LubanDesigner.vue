@@ -407,9 +407,6 @@ function onPaletteDrop(e: DragEvent): void {
   }
 }
 
-function clearDropError(): void {
-  dropError.value = null;
-}
 
 /** 拖入预览：鼠标附近显示组件类型名 */
 const dropPreviewType = ref<string | null>(null);

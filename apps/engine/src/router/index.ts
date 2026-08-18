@@ -10,6 +10,20 @@ const router = createRouter({
       component: () => import('@/views/Login.vue'),
       meta: { layout: 'login', public: true },
     },
+    // === signup-billing-onboarding：自助注册两步页（public；FeatureGate 关闭时页内整卡替换）===
+    {
+      path: '/register',
+      name: 'Register',
+      component: () => import('@/views/auth/Register.vue'),
+      meta: { layout: 'login', public: true, title: '创建账号' },
+    },
+    // === signup-billing-onboarding：开通向导（三步；非 public → token 守卫）===
+    {
+      path: '/onboarding',
+      name: 'Onboarding',
+      component: () => import('@/views/onboarding/OnboardingWizard.vue'),
+      meta: { title: '开通服务' },
+    },
     {
       path: '/',
       component: () => import('@/layouts/DefaultLayout.vue'),
@@ -102,6 +116,13 @@ const router = createRouter({
           component: () => import('@/views/settings/Settings.vue'),
           meta: { title: '系统设置' },
         },
+        // === signup-billing-onboarding：套餐与订单（用户菜单入口）===
+        {
+          path: 'settings/billing',
+          name: 'Billing',
+          component: () => import('@/views/settings/Billing.vue'),
+          meta: { title: '套餐与订单' },
+        },
       ],
     },
     // 全屏沉浸式设计器（独立路由，不含侧边栏/顶栏）
@@ -135,6 +156,11 @@ router.beforeEach((to, _from, next) => {
     return
   }
   if (to.path === '/login' && token) {
+    next({ path: '/dashboard' })
+    return
+  }
+  // 已登录用户访问注册页 → 直接进工作台（signup-billing-onboarding §9.1）
+  if (to.path === '/register' && token) {
     next({ path: '/dashboard' })
     return
   }

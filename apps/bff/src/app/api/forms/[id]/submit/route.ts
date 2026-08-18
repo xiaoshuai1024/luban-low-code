@@ -16,7 +16,13 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
-    const body = await req.json();
+    const body = (await req.json().catch(() => null));
+    if (body === null) {
+      return NextResponse.json(
+        { code: "BAD_REQUEST", message: "Invalid JSON body" },
+        { status: 400 }
+      );
+    }
     // 注入 path formId 到 body（后端 LeadSubmitRequest.formId @NotBlank，前端/e2e 只传 contact）
     body.formId = id;
     const headers = {
@@ -32,12 +38,6 @@ export async function POST(
     const { leadId: _, ...publicResult } = data;
     return NextResponse.json(publicResult);
   } catch (e) {
-    if (e instanceof SyntaxError) {
-      return NextResponse.json(
-        { code: "BAD_REQUEST", message: "Invalid JSON body" },
-        { status: 400 }
-      );
-    }
     return toBackendResponse(e);
   }
 }

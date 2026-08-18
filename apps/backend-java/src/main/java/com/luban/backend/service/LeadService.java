@@ -9,6 +9,7 @@ import com.luban.backend.entity.Lead;
 import com.luban.backend.exception.BusinessException;
 import com.luban.backend.mapper.FormMapper;
 import com.luban.backend.mapper.LeadMapper;
+import com.luban.backend.mapper.SiteMapper;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +35,10 @@ public class LeadService {
 
     private final FormMapper formMapper;
     private final LeadMapper leadMapper;
+    private final SiteMapper siteMapper;
+    private final SiteOwnershipGuard ownershipGuard;
+    private final QuotaService quotaService;
+    private final FeatureGateService featureGateService;
     private final DedupService dedupService;
     private final AntiSpamService antiSpamService;
     private final LeadCryptoService cryptoService;
@@ -41,11 +46,17 @@ public class LeadService {
     private final LeadNotifyService notifyService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public LeadService(FormMapper formMapper, LeadMapper leadMapper, DedupService dedupService,
+    public LeadService(FormMapper formMapper, LeadMapper leadMapper, SiteMapper siteMapper,
+                       SiteOwnershipGuard ownershipGuard, QuotaService quotaService,
+                       FeatureGateService featureGateService, DedupService dedupService,
                        AntiSpamService antiSpamService, LeadCryptoService cryptoService,
                        LeadStatusMachine statusMachine, LeadNotifyService notifyService) {
         this.formMapper = formMapper;
         this.leadMapper = leadMapper;
+        this.siteMapper = siteMapper;
+        this.ownershipGuard = ownershipGuard;
+        this.quotaService = quotaService;
+        this.featureGateService = featureGateService;
         this.dedupService = dedupService;
         this.antiSpamService = antiSpamService;
         this.cryptoService = cryptoService;
@@ -56,7 +67,7 @@ public class LeadService {
     /**
      * 留资提交（公开入口核心编排）。
      *
-     * @throws BusinessException FORM_NOT_FOUND / LEAD_SPAM_BLOCKED / LEAD_DUPLICATE
+     * @throws BusinessException FORM_NOT_FOUND / LEAD_SPAM_BLOCKED / LEAD_DUPLICATE / LEAD_DISABLED（lead_capture gate 关闭）
      */
     @Transactional(rollbackFor = Exception.class)
     public LeadSubmitResult submit(LeadSubmitRequest req) {
@@ -65,6 +76,13 @@ public class LeadService {
             throw BusinessException.formNotFound();
         }
         if (!"active".equals(form.getStatus())) {
+            throw BusinessException.leadDisabled();
+        }
+
+        // 0. site 级 lead_capture gate（wire-e2e-feature-gaps D1：关闭 → LEAD_DISABLED，
+        //    fail-open——无配置放行）。siteId 在此处已知（form 已加载），故检查放 service 层
+        //    而非 controller（避免 PublicLeadController 重复查 form）。
+        if (!featureGateService.isEnabled(form.getSiteId(), FeatureGateService.KEY_LEAD_CAPTURE)) {
             throw BusinessException.leadDisabled();
         }
 
@@ -93,7 +111,12 @@ public class LeadService {
             }
         }
 
-        // 3. 加密 contact + 构建 lead
+        // 3. 加密 contact + 构建 lead（T-be-5：按 site→owner 先查限后累加 leads 配额，
+        //    拦截在累加前；owner=NULL 平台站点不限；MERGE 命中路径不产生新 lead 不计数）
+        String quotaOwner = resolveQuotaOwner(form.getSiteId());
+        if (quotaOwner != null) {
+            quotaService.checkAndIncrement(quotaOwner, QuotaService.METRIC_LEADS);
+        }
         String encryptedContact = cryptoService.encrypt(toJson(req.contact()));
         Lead lead = new Lead();
         lead.setId(UUID.randomUUID().toString());
@@ -117,7 +140,13 @@ public class LeadService {
             // 并发竞态（如双击双发）：check-then-insert 之间另一请求已插入同指纹 lead，
             // insert 撞 uk_form_dedup 唯一键 → 按去重策略收敛为幂等结果，不再冒泡 500
             if (!isUniqueViolation(e)) throw e;
-            return onConcurrentDuplicate(form, req, hash, policy);
+            LeadSubmitResult converged = onConcurrentDuplicate(form, req, hash, policy);
+            // 收敛路径复用既有 lead，未产生新行：回退第 3 步的 leads 配额累加
+            //（REJECT 抛 409 LEAD_DUPLICATE 时不会走到这里，事务整体回滚同样不残留计数）
+            if (quotaOwner != null) {
+                quotaService.decrement(quotaOwner, QuotaService.METRIC_LEADS);
+            }
+            return converged;
         }
 
         // 4. 通知（失败不阻塞主流程）
@@ -176,8 +205,9 @@ public class LeadService {
         return new LeadSubmitResult(existing.getId(), existing.getStatus(), true);
     }
 
-    /** 线索中心：列表（分页 + 筛选，contact 脱敏）。 */
+    /** 线索中心：列表（分页 + 筛选，contact 脱敏）。读入口守卫：仅站点 owner/admin 可见。 */
     public Map<String, Object> list(String siteId, String status, String formId, String assigneeId, int page, int size) {
+        ownershipGuard.assertVisible(siteId);
         int offset = Math.max(0, (page - 1) * size);
         List<Lead> leads = leadMapper.listByQuery(siteId, status, formId, assigneeId, offset, size);
         int total = leadMapper.countByQuery(siteId, status, formId, assigneeId);
@@ -186,11 +216,13 @@ public class LeadService {
     }
 
     public LeadResponse get(String siteId, String leadId) {
+        ownershipGuard.assertVisible(siteId);
         return toResponse(getOrThrow(siteId, leadId));
     }
 
     @Transactional(rollbackFor = Exception.class)
     public LeadResponse transitStatus(String siteId, String leadId, String toStatusRaw, String actorId) {
+        ownershipGuard.assertCanWrite(siteId);
         Lead lead = getOrThrow(siteId, leadId);
         LeadStatusMachine.Status from = statusMachine.parse(lead.getStatus());
         LeadStatusMachine.Status to = statusMachine.parse(toStatusRaw);
@@ -225,6 +257,13 @@ public class LeadService {
         Lead lead = leadMapper.getByIdAndSiteId(leadId, siteId);
         if (lead == null) throw BusinessException.leadNotFound();
         return lead;
+    }
+
+    /** 配额归属：site→owner（平台站点 owner=NULL 不限，由管理员/平台承担）。 */
+    private String resolveQuotaOwner(String siteId) {
+        if (siteId == null) return null;
+        com.luban.backend.entity.Site site = siteMapper.getById(siteId);
+        return site != null ? site.getOwnerUserId() : null;
     }
 
     /** 转响应：contact 解密后脱敏（phone/email）。 */

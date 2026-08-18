@@ -19,12 +19,6 @@ export async function GET(
     });
     return NextResponse.json(data);
   } catch (e) {
-    if (e instanceof SyntaxError) {
-      return NextResponse.json(
-        { code: "BAD_REQUEST", message: "Invalid JSON body" },
-        { status: 400 }
-      );
-    }
     return toBackendResponse(e);
   }
 }
@@ -39,7 +33,13 @@ export async function PATCH(
     if (!h) return unauthenticated();
     const { id } = await params;
     const siteId = new URL(req.url).searchParams.get("siteId") || "";
-    const body = await req.json();
+    const body = (await req.json().catch(() => null));
+    if (body === null) {
+      return NextResponse.json(
+        { code: "BAD_REQUEST", message: "Invalid JSON body" },
+        { status: 400 }
+      );
+    }
     const data = await callBackend(`/forms/${id}?siteId=${encodeURIComponent(siteId)}`, {
       method: "PATCH",
       headers: h,
@@ -47,12 +47,6 @@ export async function PATCH(
     });
     return NextResponse.json(data);
   } catch (e) {
-    if (e instanceof SyntaxError) {
-      return NextResponse.json(
-        { code: "BAD_REQUEST", message: "Invalid JSON body" },
-        { status: 400 }
-      );
-    }
     return toBackendResponse(e);
   }
 }

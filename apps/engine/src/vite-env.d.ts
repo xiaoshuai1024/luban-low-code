@@ -21,6 +21,9 @@ interface ImportMetaEnv {
   readonly VITE_FEATURE_ANALYTICS?: string
   readonly VITE_FEATURE_MULTI_SELECT?: string
   readonly VITE_FEATURE_ALIGN_GUIDES?: string
+  // === signup-billing-onboarding FeatureGate（§6.5）===
+  readonly VITE_FEATURE_SIGNUP?: string
+  readonly VITE_FEATURE_ONBOARDING?: string
 }
 
 interface ImportMeta {

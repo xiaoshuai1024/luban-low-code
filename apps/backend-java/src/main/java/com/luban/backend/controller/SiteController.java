@@ -25,6 +25,12 @@ public class SiteController {
         return siteService.list();
     }
 
+    /** T-be-6：向导防抖预检。字面段优先于 /{id} 模板段（Spring 路径特异性规则）。 */
+    @GetMapping("/slug-check")
+    public java.util.Map<String, Object> slugCheck(@RequestParam String slug) {
+        return siteService.checkSlug(slug);
+    }
+
     @GetMapping("/{id}")
     public SiteResponse get(@PathVariable String id) {
         return siteService.get(id);

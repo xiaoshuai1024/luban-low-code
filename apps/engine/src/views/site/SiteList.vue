@@ -11,23 +11,30 @@ import {
   ElInput,
   ElMessage,
   ElMessageBox,
+  ElEmpty,
+  ElResult,
 } from 'element-plus'
 import { getSites, createSite, updateSite, deleteSite, type Site } from '@/api/site'
+import { extractApiError } from '@/api/request'
 
 const router = useRouter()
 const list = ref<Site[]>([])
 const loading = ref(false)
+/** 拉取失败标记（#empty 插槽区分错误态与真空态） */
+const fetchError = ref('')
 const dialogVisible = ref(false)
 const editingId = ref<string | null>(null)
 const form = ref<Partial<Site>>({ name: '', slug: '', baseUrl: '', status: 'active' })
 
 async function fetchList() {
   loading.value = true
+  fetchError.value = ''
   try {
     const { data } = await getSites()
     list.value = Array.isArray(data) ? data : []
-  } catch {
+  } catch (e) {
     list.value = []
+    fetchError.value = extractApiError(e).message || '站点列表加载失败，请稍后重试'
   } finally {
     loading.value = false
   }
@@ -107,6 +114,17 @@ onMounted(fetchList)
           <ElButton link type="danger" @click="handleDelete(row as Site)">删除</ElButton>
         </template>
       </ElTableColumn>
+      <!-- #empty 区分：错误态（拉取失败 + 重试）/ 真空态（同 Dashboard 开通引导 §4.2.3） -->
+      <template #empty>
+        <ElResult v-if="fetchError" icon="error" :title="fetchError">
+          <template #extra>
+            <ElButton type="primary" @click="fetchList">重试</ElButton>
+          </template>
+        </ElResult>
+        <ElEmpty v-else description="还没有站点，开通你的第一个站点">
+          <ElButton type="primary" @click="router.push('/onboarding')">免费开通</ElButton>
+        </ElEmpty>
+      </template>
     </ElTable>
 
     <ElDialog v-model="dialogVisible" :title="editingId ? '编辑站点' : '新建站点'" width="500px">

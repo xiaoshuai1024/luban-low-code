@@ -74,12 +74,14 @@ test.describe('数据源管理 API @J-datasource @J-contract-parity', () => {
   test('DS3: 测试连接（api 类型）', async () => {
     const createRes = await apiCtx.post(`${BFF_BASE}/api/datasources?siteId=${siteId}`, {
       headers: authHeaders(token),
-      data: { siteId, name: `${RUN_ID}-test`, type: 'api', config: { url: 'https://httpbin.org/get', method: 'GET' } },
+      // 探测目标用栈内后端 ping（同容器网络恒可达、公开免鉴权）——httpbin.org 外网不稳会间歇 503
+      data: { siteId, name: `${RUN_ID}-test`, type: 'api', config: { url: 'http://backend-java:8080/backend/ping', method: 'GET' } },
     });
     const dsId = (await createRes.json()).id;
     const r = await apiCtx.post(`${BFF_BASE}/api/datasources/${dsId}/test`, { headers: authHeaders(token) });
-    expect(r.status()).toBeLessThan(300);
-    const result = await r.json();
+    const rBody = await r.text();
+    expect(r.status(), `测试连接须 <300，实际 ${r.status()} body=${rBody.slice(0, 300)}`).toBeLessThan(300);
+    const result = JSON.parse(rBody);
     expect(typeof result.ok).toBe('boolean');
     expect(typeof result.latencyMs).toBe('number');
   });

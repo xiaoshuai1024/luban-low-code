@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElForm, ElFormItem, ElInput, ElButton, ElMessage } from 'element-plus'
+import { ElForm, ElFormItem, ElInput, ElButton, ElMessage, ElIcon } from 'element-plus'
+import { User } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores'
 import { login } from '@/api/auth'
 import { setToken } from '@/api/request'
+import { isFeatureEnabled } from '@/config/features'
 
 const router = useRouter()
 const userStore = useUserStore()
+
+/** signup-billing-onboarding：注册互链受 signup gate 控制（关闭时不展示，§6.5） */
+const signupEnabled = isFeatureEnabled('signup')
 
 const form = ref({ username: '', password: '' })
 const loading = ref(false)
@@ -53,7 +58,10 @@ function fillDemo() {
         </ElFormItem>
       </ElForm>
       <div class="login-page__demo">
-        <div class="login-page__demo-title">🎯 体验账号</div>
+        <div class="login-page__demo-title">
+          <ElIcon class="login-page__demo-icon"><User /></ElIcon>
+          体验账号
+        </div>
         <div class="login-page__demo-desc">无需注册，直接登录体验搭建</div>
         <div class="login-page__demo-cred">
           <code>test</code><span class="login-page__demo-sep">/</span><code>test</code>
@@ -61,6 +69,10 @@ function fillDemo() {
         <ElButton size="small" text type="primary" class="login-page__demo-fill" @click="fillDemo">
           一键填充
         </ElButton>
+      </div>
+      <div v-if="signupEnabled" class="login-page__register">
+        <span>没有账号？</span>
+        <router-link to="/register" class="login-page__register-link">免费注册</router-link>
       </div>
     </div>
   </div>
@@ -118,9 +130,17 @@ function fillDemo() {
 }
 
 .login-page__demo-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   font-size: 14px;
   font-weight: 600;
   color: #4f46e5;
+}
+
+.login-page__demo-icon {
+  font-size: 14px;
 }
 
 .login-page__demo-desc {
@@ -150,5 +170,24 @@ function fillDemo() {
 
 .login-page__demo-fill {
   margin-top: 6px;
+}
+
+.login-page__register {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #ebeef5;
+  font-size: 14px;
+  color: #909399;
+  text-align: center;
+}
+
+.login-page__register-link {
+  color: #409eff;
+  text-decoration: none;
+  margin-left: 4px;
+
+  &:hover {
+    text-decoration: underline;
+  }
 }
 </style>

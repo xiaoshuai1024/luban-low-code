@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -25,6 +26,7 @@ import java.util.UUID;
  *  - 账号已存在时不做任何重置（不覆盖密码，避免与 DemoAccountInitializer
  *    等既有机制相互改写）。
  */
+@Order(1)
 @Component
 public class E2EAccountBootstrap implements ApplicationRunner {
 

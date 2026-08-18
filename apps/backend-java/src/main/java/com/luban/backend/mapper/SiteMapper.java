@@ -8,17 +8,23 @@ import java.util.List;
 @Mapper
 public interface SiteMapper {
 
-    @Select("SELECT id, name, slug, base_url, status, seo_json, analytics_json, created_at, updated_at FROM sites ORDER BY created_at DESC")
+    String COLS = "id, name, slug, base_url, owner_user_id, status, seo_json, analytics_json, created_at, updated_at";
+
+    @Select("SELECT " + COLS + " FROM sites ORDER BY created_at DESC")
     List<Site> list();
 
-    @Select("SELECT id, name, slug, base_url, status, seo_json, analytics_json, created_at, updated_at FROM sites WHERE id = #{id}")
+    /** T-be-6：非 admin 站点列表仅本人（owner 过滤）。 */
+    @Select("SELECT " + COLS + " FROM sites WHERE owner_user_id = #{ownerUserId} ORDER BY created_at DESC")
+    List<Site> listByOwner(String ownerUserId);
+
+    @Select("SELECT " + COLS + " FROM sites WHERE id = #{id}")
     Site getById(String id);
 
-    @Select("SELECT id, name, slug, base_url, status, seo_json, analytics_json, created_at, updated_at FROM sites WHERE slug = #{slug}")
+    @Select("SELECT " + COLS + " FROM sites WHERE slug = #{slug}")
     Site getBySlug(String slug);
 
-    @Insert("INSERT INTO sites (id, name, slug, base_url, status, seo_json, analytics_json, created_at, updated_at) " +
-           "VALUES (#{id}, #{name}, #{slug}, #{baseUrl}, #{status}, #{seoJson}, #{analyticsJson}, #{createdAt}, #{updatedAt})")
+    @Insert("INSERT INTO sites (id, name, slug, base_url, owner_user_id, status, seo_json, analytics_json, created_at, updated_at) " +
+           "VALUES (#{id}, #{name}, #{slug}, #{baseUrl}, #{ownerUserId}, #{status}, #{seoJson}, #{analyticsJson}, #{createdAt}, #{updatedAt})")
     int insert(Site site);
 
     @Update("UPDATE sites SET name=#{name}, slug=#{slug}, base_url=#{baseUrl}, status=#{status}, seo_json=#{seoJson}, analytics_json=#{analyticsJson}, updated_at=#{updatedAt} WHERE id=#{id}")

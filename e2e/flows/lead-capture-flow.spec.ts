@@ -19,7 +19,7 @@ import 'dotenv/config';
  */
 
 const WEBSITE_BASE = process.env.LUBAN_E2E_WEBSITE_URL ?? 'http://127.0.0.1:3000';
-const BFF_BASE = process.env.LUBAN_E2E_BFF_URL ?? 'http://localhost:3000';
+const BFF_BASE = process.env.LUBAN_E2E_BFF_URL ?? 'http://127.0.0.1:3100';
 const ACCOUNT = process.env.LUBAN_E2E_ACCOUNT!;
 const PASSWORD = process.env.LUBAN_E2E_PASSWORD!;
 
@@ -84,8 +84,9 @@ test.describe('流程B：线索闭环 @cross @J-leads', () => {
     await page.locator('tr', { hasText: CONTACT_NAME }).first().getByRole('button', { name: '详情' }).click();
     await expect(page.getByRole('heading', { name: '线索详情' })).toBeVisible();
 
-    // 字段一致：姓名（限定详情抽屉，避免与列表行重复匹配触发 strict mode）
-    const detailPanel = page.getByRole('dialog', { name: '线索详情' });
+    // 字段一致：姓名（限定详情 main 区域——详情页路由后列表已卸载，main 仅含详情内容）
+    // 注：LeadDetail 为路由详情页（字段表格+状态变更），非 dialog 抽屉
+    const detailPanel = page.getByRole('main');
     await expect(detailPanel.getByText(CONTACT_NAME)).toBeVisible();
     // 脱敏：手机号 138****.... 格式（不暴露完整）
     const bodyText = await page.locator('body').textContent();

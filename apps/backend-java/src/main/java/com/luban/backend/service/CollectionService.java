@@ -27,28 +27,32 @@ public class CollectionService {
     private final CollectionMapper collectionMapper;
     private final SiteMapper siteMapper;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final SiteOwnershipGuard ownershipGuard;
 
-    public CollectionService(CollectionMapper collectionMapper, SiteMapper siteMapper) {
+    public CollectionService(CollectionMapper collectionMapper, SiteMapper siteMapper,
+                             SiteOwnershipGuard ownershipGuard) {
         this.collectionMapper = collectionMapper;
         this.siteMapper = siteMapper;
+        this.ownershipGuard = ownershipGuard;
     }
 
     // === Collection ===
 
     public List<CollectionResponse> list(String siteId) {
-        if (siteMapper.getById(siteId) == null) throw BusinessException.siteNotFound();
+        ownershipGuard.assertVisible(siteId);
         return collectionMapper.listBySiteId(siteId).stream()
             .map(CollectionResponse::fromEntity).collect(Collectors.toList());
     }
 
     public CollectionResponse get(String siteId, String id) {
+        ownershipGuard.assertVisible(siteId);
         ContentCollection c = collectionMapper.getByIdAndSiteId(id, siteId);
         if (c == null) throw BusinessException.collectionNotFound();
         return CollectionResponse.fromEntity(c);
     }
 
     public CollectionResponse create(String siteId, String name, JsonNode fieldSchema, String status) {
-        if (siteMapper.getById(siteId) == null) throw BusinessException.siteNotFound();
+        ownershipGuard.assertCanWrite(siteId);
         if (status == null || status.isBlank()) status = "active";
         ContentCollection c = new ContentCollection();
         c.setId(UUID.randomUUID().toString());
@@ -62,7 +66,7 @@ public class CollectionService {
         try {
             collectionMapper.insert(c);
         } catch (DataIntegrityViolationException e) {
-            if (e.getMessage() != null && e.getMessage().contains("Duplicate")) {
+            if (isUniqueViolation(e)) {
                 throw BusinessException.collectionNameConflict();
             }
             throw e;
@@ -71,6 +75,7 @@ public class CollectionService {
     }
 
     public CollectionResponse update(String siteId, String id, String name, JsonNode fieldSchema, String status) {
+        ownershipGuard.assertCanWrite(siteId);
         ContentCollection c = collectionMapper.getByIdAndSiteId(id, siteId);
         if (c == null) throw BusinessException.collectionNotFound();
         c.setName(name);
@@ -81,7 +86,7 @@ public class CollectionService {
             int n = collectionMapper.update(c);
             if (n == 0) throw BusinessException.collectionNotFound();
         } catch (DataIntegrityViolationException e) {
-            if (e.getMessage() != null && e.getMessage().contains("Duplicate")) {
+            if (isUniqueViolation(e)) {
                 throw BusinessException.collectionNameConflict();
             }
             throw e;
@@ -90,6 +95,7 @@ public class CollectionService {
     }
 
     public void delete(String siteId, String id) {
+        ownershipGuard.assertCanWrite(siteId);
         int n = collectionMapper.deleteByIdAndSiteId(id, siteId);
         if (n == 0) throw BusinessException.collectionNotFound();
         // collection_items 由 FK ON DELETE CASCADE 自动清理
@@ -98,6 +104,7 @@ public class CollectionService {
     // === CollectionItem ===
 
     public List<CollectionItemResponse> listItems(String siteId, String collectionId) {
+        ownershipGuard.assertVisible(siteId);
         // 校验 collection 属于该 site
         ContentCollection c = collectionMapper.getByIdAndSiteId(collectionId, siteId);
         if (c == null) throw BusinessException.collectionNotFound();
@@ -106,6 +113,7 @@ public class CollectionService {
     }
 
     public CollectionItemResponse getItem(String siteId, String collectionId, String itemId) {
+        ownershipGuard.assertVisible(siteId);
         ContentCollection c = collectionMapper.getByIdAndSiteId(collectionId, siteId);
         if (c == null) throw BusinessException.collectionNotFound();
         ContentCollectionItem it = collectionMapper.getItemByIdAndCollectionId(itemId, collectionId);
@@ -114,6 +122,7 @@ public class CollectionService {
     }
 
     public CollectionItemResponse createItem(String siteId, String collectionId, JsonNode data, String status) {
+        ownershipGuard.assertCanWrite(siteId);
         ContentCollection c = collectionMapper.getByIdAndSiteId(collectionId, siteId);
         if (c == null) throw BusinessException.collectionNotFound();
         if (status == null || status.isBlank()) status = "active";
@@ -130,6 +139,7 @@ public class CollectionService {
     }
 
     public CollectionItemResponse updateItem(String siteId, String collectionId, String itemId, JsonNode data, String status) {
+        ownershipGuard.assertCanWrite(siteId);
         ContentCollection c = collectionMapper.getByIdAndSiteId(collectionId, siteId);
         if (c == null) throw BusinessException.collectionNotFound();
         ContentCollectionItem it = collectionMapper.getItemByIdAndCollectionId(itemId, collectionId);
@@ -143,10 +153,19 @@ public class CollectionService {
     }
 
     public void deleteItem(String siteId, String collectionId, String itemId) {
+        ownershipGuard.assertCanWrite(siteId);
         ContentCollection c = collectionMapper.getByIdAndSiteId(collectionId, siteId);
         if (c == null) throw BusinessException.collectionNotFound();
         int n = collectionMapper.deleteItemByIdAndCollectionId(itemId, collectionId);
         if (n == 0) throw BusinessException.collectionItemNotFound();
+    }
+
+    /** 与 SiteService/LeadService/PageService 同口径：MySQL "Duplicate entry" / H2 "Unique index or primary key violation"
+     * （uk_collections_site_name 冲突须在 H2 测试下也转 409 COLLECTION_NAME_CONFLICT，而非 500）。 */
+    private static boolean isUniqueViolation(DataIntegrityViolationException e) {
+        if (e == null || e.getMessage() == null) return false;
+        String m = e.getMessage();
+        return m.contains("Duplicate") || m.contains("Unique index") || m.contains("primary key violation");
     }
 
     private String jsonToString(JsonNode node) {

@@ -58,6 +58,12 @@ services:
       # e2e 专用账号引导（E2EAccountBootstrap：全新库启动时创建，已存在不重置）
       E2E_BOOTSTRAP_ACCOUNT: "e2e-ci"
       E2E_BOOTSTRAP_PASSWORD: "e2e-ci-pass-2026"
+      # e2e 验证码通道（MAIL_DEV_ECHO）：注册/重发响应附 devCode 供 spec 填 OTP；
+      # 仅 e2e/dev 环境可开，生产 compose 必须缺席（G2 审计项）
+      MAIL_DEV_ECHO: "true"
+      # e2e quota fixture（E2EBillingPlanBootstrap）：幂等插入 e2e-tiny hidden 套餐
+      # （quota_leads=1/quota_pages=1），供 quota-enforcement.spec.ts 触发 429
+      E2E_BILLING_BOOTSTRAP: "true"
     ports:
       - "8080:8080"
     depends_on:
@@ -78,10 +84,26 @@ services:
       AUTH_JWT_SECRET: "e2e-dev-jwt-secret-not-for-prod"
       # 与 backend-java 服务注入同值（X-Internal-Auth）
       INTERNAL_AUTH_SECRET: "e2e-dev-internal-auth-not-for-prod"
+      # AI 服务反代目标（服务根，不含 /ai 前缀）；未配置时 /api/ai/* 返回 503
+      AI_SERVICE_BASE_URL: "http://ai-assistant:8000"
+      AI_SERVICE_TOKEN: "dev-internal-token-change-me"
     ports:
       - "3100:3000"
     depends_on:
       - backend-java
+
+  ai-assistant:
+    build:
+      context: ./packages/ai-assistant
+    environment:
+      # BFF→AI 信任头（与 bff.AI_SERVICE_TOKEN 同值）
+      AI_SERVICE_TOKEN: "dev-internal-token-change-me"
+      BFF_BASE_URL: "http://bff:3000"
+      AUTH_JWT_SECRET: "e2e-dev-jwt-secret-not-for-prod"
+    ports:
+      - "8100:8000"
+    depends_on:
+      - bff
 
   engine:
     build:
@@ -89,6 +111,7 @@ services:
       dockerfile: apps/engine/Dockerfile
     environment:
       VITE_BFF_BASE_URL: "http://127.0.0.1:3100"
+      # AI 面板走 nginx /ai 反代（deploy/docker/nginx-manage.conf → ai-assistant:8000），无需直连 env
     depends_on:
       - bff
     ports:

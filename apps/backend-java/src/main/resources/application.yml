@@ -29,6 +29,29 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
     baseline-version: 0
+  # 注册邮箱验证码 SMTP（全部 env 注入；SMTP_HOST 为空时 MailService 前置检查直接
+  # 503 EMAIL_SERVICE_UNAVAILABLE（fail-closed）——兜底在 MailService，与 JavaMailSender 装配无关）
+  mail:
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SMTP_AUTH:true}
+          # 超时守门：连接 5s / 读 10s / 写 10s，防 SMTP 故障时注册线程长时间挂起
+          connectiontimeout: 5000
+          timeout: 10000
+          writetimeout: 10000
+          starttls:
+            enable: ${SMTP_STARTTLS:true}
+
+app:
+  demo-account:
+    # 内置体验账号（DemoAccountInitializer）开关；默认关闭（安全缺省）。
+    # 本地 dev compose（docker-compose.yml）显式置 true 保留体验入口；生产不配置即关闭。
+    enabled: ${APP_DEMO_ACCOUNT_ENABLED:false}
 
 mybatis:
   configuration:

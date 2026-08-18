@@ -8,6 +8,10 @@ import java.time.Instant;
 public class User {
     private String id;
     private String username;
+    /** 注册邮箱（signup-billing-onboarding；存量行为 NULL，登录不受影响） */
+    private String email;
+    /** 邮箱验证通过时间（status=active 且非空 = 已验证） */
+    private Instant emailVerifiedAt;
     private String name;
     private String role;
     private String status;
@@ -19,6 +23,10 @@ public class User {
     public void setId(String id) { this.id = id; }
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    public Instant getEmailVerifiedAt() { return emailVerifiedAt; }
+    public void setEmailVerifiedAt(Instant emailVerifiedAt) { this.emailVerifiedAt = emailVerifiedAt; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public String getRole() { return role; }

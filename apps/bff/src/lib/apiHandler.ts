@@ -28,6 +28,14 @@ export function unauthenticated() {
   );
 }
 
+/** 429 限流响应（登录/注册等接口共享构造器，错误体统一 code 字段）。 */
+export function rateLimited() {
+  return NextResponse.json(
+    { code: "RATE_LIMITED", message: "too many failed attempts, retry later" },
+    { status: 429 }
+  );
+}
+
 /**
  * 客户端可伪造的内部信任头（小写）。
  * X-User-ID/X-User-Role 只能由 BFF 在 JWT 校验后注入（authHeaders），

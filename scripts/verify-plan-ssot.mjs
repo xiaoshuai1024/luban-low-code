@@ -296,6 +296,7 @@ function scanSpecTags() {
     'packages/web/luban-website/e2e',
     'packages/ui/luban-ui/apps/luban-ui-e2e/src/e2e',
     'e2e/flows',
+    'apps/engine/e2e',
   ];
   const tagRe = /@(J-[A-Za-z0-9_-]+)/g;
   for (const dir of specDirs) {

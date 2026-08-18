@@ -80,6 +80,17 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       LEAD_ENC_KEY: ${LEAD_ENC_KEY:?在 .env.prod 设置 LEAD_ENC_KEY}
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?在 .env.prod 设置 AUTH_JWT_SECRET}
+      # BFF↔backend 内部共享密钥（X-Internal-Auth 校验）：backend 未配置时 fail-open（仅限本地 dev），
+      # 生产 compose 强制注入（.env.prod）
+      INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET:?请在 .env.prod 设置 INTERNAL_AUTH_SECRET}
+      # 注册验证码 SMTP（从 .env.prod 注入；留空则 MailService fail-closed：发码 503）
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      # 生产关闭内置体验账号（DemoAccountInitializer 条件装配，G2 审计项）
+      APP_DEMO_ACCOUNT_ENABLED: "false"
       JAVA_TOOL_OPTIONS: "-Xmx512m"   # JVM 自动读取；叠 mem_limit 900m 防 OOM 殃及 gudu
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/backend/healthz || exit 1"]
@@ -107,6 +118,8 @@ services:
       HOSTNAME: "0.0.0.0"
       BACKEND_BASE_URL: http://luban-backend:8080/backend   # gudu_default 内按容器名寻址
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET}
+      # 与 backend 同值（BFF→backend 注入 X-Internal-Auth 头），生产强制从 .env.prod 注入
+      INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET:?请在 .env.prod 设置 INTERNAL_AUTH_SECRET}
       NODE_ENV: production
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/healthz || exit 1"]

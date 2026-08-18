@@ -1,7 +1,6 @@
 import { test, expect, request as apiRequest, type APIRequestContext } from '@playwright/test';
 import 'dotenv/config';
 
-// ⚠️ 本 spec 尚未在本地全栈环境跑绿验证，待全栈就绪后验证
 
 /**
  * 套餐与用量（J-billing）
@@ -13,7 +12,7 @@ import 'dotenv/config';
  * 参照 v02-funnel.spec.ts 已有的套餐断言（plans.length>=3 + planCode 含三档）。
  */
 
-const BFF_BASE = process.env.LUBAN_E2E_BFF_URL ?? 'http://localhost:3000';
+const BFF_BASE = process.env.LUBAN_E2E_BFF_URL ?? 'http://127.0.0.1:3100';
 const ACCOUNT = process.env.LUBAN_E2E_ACCOUNT!;
 const PASSWORD = process.env.LUBAN_E2E_PASSWORD!;
 

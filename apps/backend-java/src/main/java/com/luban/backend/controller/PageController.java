@@ -67,6 +67,16 @@ public class PageController {
         return pageService.publish(siteId, pageId, actorId);
     }
 
+    @PostMapping("/{pageId}/unpublish")
+    public PageResponse unpublish(@PathVariable("id") String siteId, @PathVariable String pageId) {
+        return pageService.unpublish(siteId, pageId);
+    }
+
+    @GetMapping("/{pageId}/preview")
+    public PageResponse preview(@PathVariable("id") String siteId, @PathVariable String pageId) {
+        return pageService.preview(siteId, pageId);
+    }
+
     @DeleteMapping("/{pageId}")
     public ResponseEntity<Void> delete(@PathVariable("id") String siteId, @PathVariable String pageId) {
         pageService.delete(siteId, pageId);

@@ -42,6 +42,11 @@ nuxtApp.hook('page:finish', () => {
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
+
+    <!-- 访客 AI 助手（C 端问答，全局悬浮；e2e 契约 @J-ai-c-assist） -->
+    <ClientOnly>
+      <VisitorAi />
+    </ClientOnly>
   </div>
 </template>
 

@@ -13,7 +13,7 @@ import 'dotenv/config';
  */
 
 const WEBSITE_BASE = process.env.LUBAN_E2E_WEBSITE_URL ?? 'http://127.0.0.1:3000';
-const BFF_BASE = process.env.LUBAN_E2E_BFF_URL ?? 'http://localhost:3000';
+const BFF_BASE = process.env.LUBAN_E2E_BFF_URL ?? 'http://127.0.0.1:3100';
 const RUN_ID = `e2e-${Date.now()}`;
 const SITE_NAME = `${RUN_ID}-site`;
 const PAGE_NAME = `${RUN_ID}-page`;

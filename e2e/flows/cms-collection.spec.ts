@@ -12,7 +12,7 @@ import 'dotenv/config';
  * 真实性：读取走公开端点（无 token）。setup 走管理端建 collection + item。
  */
 
-const BFF_BASE = process.env.LUBAN_E2E_BFF_URL ?? 'http://localhost:3000';
+const BFF_BASE = process.env.LUBAN_E2E_BFF_URL ?? 'http://127.0.0.1:3100';
 const ACCOUNT = process.env.LUBAN_E2E_ACCOUNT!;
 const PASSWORD = process.env.LUBAN_E2E_PASSWORD!;
 

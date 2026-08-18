@@ -60,6 +60,96 @@ export default async function globalSetup() {
   // DynamicPage 编译，期间可能返回 500。提前访问一次让编译完成，避免后续 spec
   // 首请求命中编译窗口。prod build 无此问题（已预编译）。
   await warmupWebsiteSSR();
+
+  // 种子 default 站（幂等）：C 端 UI spec 访问官网首页（/ → /default/），
+  // 全新 e2e 库无 default 站时首页 404 错误页不挂载全局组件 → 悬浮按钮不可见。
+  await seedDefaultSite();
+}
+
+const BFF_BASE = process.env.LUBAN_E2E_BFF_URL ?? 'http://127.0.0.1:3100';
+
+/** 幂等种子 default 站：已发布首页存在则跳过；否则用 e2e 账号建站/建页/发布。 */
+async function seedDefaultSite() {
+  const ctx = await request.newContext({ timeout: 15_000 });
+  try {
+    // 已就绪检测：公开端点能取到 default 站首页即跳过
+    try {
+      const pub = await ctx.get(`${BFF_BASE}/api/public/sites/default/pages?path=/`);
+      if (pub.ok()) {
+        // eslint-disable-next-line no-console
+        console.log('[e2e] default 站首页已存在，跳过种子');
+        return;
+      }
+    } catch {
+      // 公开端点异常继续走种子流程
+    }
+
+    const account = process.env.LUBAN_E2E_ACCOUNT ?? 'e2e-ci';
+    const password = process.env.LUBAN_E2E_PASSWORD ?? 'e2e-ci-pass-2026';
+    const login = await ctx.post(`${BFF_BASE}/api/auth/login`, {
+      data: { username: account, password },
+    });
+    if (!login.ok()) throw new Error(`种子登录失败: HTTP ${login.status()}`);
+    const token = (await login.json()).token;
+
+    const site = await ctx.post(`${BFF_BASE}/api/sites`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { name: 'Default Site', slug: 'default' },
+    });
+    // 409 = 已存在（如上轮残留），继续用 slug 查列表拿 id
+    let siteId = '';
+    if (site.ok()) {
+      siteId = ((await site.json()) as { id?: string }).id ?? '';
+    }
+    if (!siteId) {
+      const list = await ctx.get(`${BFF_BASE}/api/sites`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const sites = (await list.json()) as Array<{ id: string; slug?: string }>;
+      siteId = (Array.isArray(sites) ? sites : []).find((s) => s.slug === 'default')?.id ?? '';
+    }
+    if (!siteId) throw new Error('default 站创建/查询失败');
+
+    const page = await ctx.post(`${BFF_BASE}/api/sites/${siteId}/pages`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: {
+        name: '首页',
+        path: '/',
+        schema: {
+          root: {
+            id: 'root',
+            type: 'LubanPage',
+            children: [
+              {
+                id: 'title-1',
+                type: 'LubanText',
+                props: { content: 'Luban 低代码平台', tag: 'h1', variant: 'h1' },
+                children: [],
+              },
+              {
+                id: 'para-1',
+                type: 'LubanText',
+                props: { content: '官网首页（e2e 种子数据）', tag: 'p', variant: 'body1' },
+                children: [],
+              },
+            ],
+          },
+        },
+      },
+    });
+    if (!page.ok()) throw new Error(`种子页面创建失败: HTTP ${page.status()}`);
+    const pageId = ((await page.json()) as { id?: string }).id ?? '';
+    if (!pageId) throw new Error('种子页面 id 缺失');
+
+    const pub = await ctx.post(`${BFF_BASE}/api/sites/${siteId}/pages/${pageId}/publish`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!pub.ok()) throw new Error(`种子页面发布失败: HTTP ${pub.status()}`);
+    // eslint-disable-next-line no-console
+    console.log('[e2e] default 站种子完成（已发布首页 /）');
+  } finally {
+    await ctx.dispose();
+  }
 }
 
 /** 预热 website 的 DynamicPage 路由编译（仅 dev 模式需要，失败不阻断）。 */

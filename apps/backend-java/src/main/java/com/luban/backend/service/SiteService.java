@@ -1,5 +1,6 @@
 package com.luban.backend.service;
 
+import com.luban.backend.auth.UserContext;
 import com.luban.backend.dto.SiteResponse;
 import com.luban.backend.entity.Site;
 import com.luban.backend.exception.BusinessException;
@@ -15,11 +16,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
 public class SiteService {
+
+    private static final Pattern SLUG_PATTERN = Pattern.compile("[a-z0-9-]{3,48}");
 
     private final SiteMapper siteMapper;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
@@ -29,34 +34,42 @@ public class SiteService {
     private final LeadMapper leadMapper;
     private final DatasourceMapper datasourceMapper;
     private final CollectionMapper collectionMapper;
+    private final SiteOwnershipGuard ownershipGuard;
 
     public SiteService(SiteMapper siteMapper, PageMapper pageMapper, FormMapper formMapper,
-                       LeadMapper leadMapper, DatasourceMapper datasourceMapper, CollectionMapper collectionMapper) {
+                       LeadMapper leadMapper, DatasourceMapper datasourceMapper, CollectionMapper collectionMapper,
+                       SiteOwnershipGuard ownershipGuard) {
         this.siteMapper = siteMapper;
         this.pageMapper = pageMapper;
         this.formMapper = formMapper;
         this.leadMapper = leadMapper;
         this.datasourceMapper = datasourceMapper;
         this.collectionMapper = collectionMapper;
+        this.ownershipGuard = ownershipGuard;
     }
 
+    /** T-be-6：非 admin 仅返回 owner=self 的站点（admin 全量，含 NULL 平台站点）。 */
     public List<SiteResponse> list() {
-        return siteMapper.list().stream().map(SiteResponse::fromEntity).collect(Collectors.toList());
+        List<Site> sites = UserContext.isAdmin()
+                ? siteMapper.list()
+                : siteMapper.listByOwner(UserContext.getUserId());
+        return sites.stream().map(SiteResponse::fromEntity).collect(Collectors.toList());
     }
 
     public SiteResponse get(String id) {
-        Site s = siteMapper.getById(id);
-        if (s == null) throw BusinessException.siteNotFound();
-        return SiteResponse.fromEntity(s);
+        return SiteResponse.fromEntity(ownershipGuard.assertVisible(id));
     }
 
+    /** T-be-6：create owner=当前登录用户（POST /sites 已放开给登录用户；受 quota_pages 限制）。 */
     public SiteResponse create(String name, String slug, String baseUrl, String status) {
+        validateSlug(slug);
         if (status == null || status.isBlank()) status = "active";
         Site site = new Site();
         site.setId(UUID.randomUUID().toString());
         site.setName(name);
         site.setSlug(slug);
         site.setBaseUrl(baseUrl != null ? baseUrl : "");
+        site.setOwnerUserId(UserContext.getUserId());
         site.setStatus(status);
         Instant now = Instant.now();
         site.setCreatedAt(now);
@@ -65,17 +78,18 @@ public class SiteService {
             siteMapper.insert(site);
         } catch (DataIntegrityViolationException e) {
             if (isUniqueViolation(e)) {
-                throw BusinessException.slugConflict();
+                throw BusinessException.slugTaken(slug);
             }
             throw e;
         }
         return SiteResponse.fromEntity(site);
     }
 
+    /** T-be-6：写入守卫（owner 或 admin；owner=NULL 仅 admin）后更新。 */
     public SiteResponse update(String id, String name, String slug, String baseUrl, String status,
                                com.fasterxml.jackson.databind.JsonNode seo, com.fasterxml.jackson.databind.JsonNode analytics) {
-        Site site = siteMapper.getById(id);
-        if (site == null) throw BusinessException.siteNotFound();
+        Site site = ownershipGuard.assertCanWrite(id);
+        validateSlug(slug);
         site.setName(name);
         site.setSlug(slug);
         site.setBaseUrl(baseUrl != null ? baseUrl : "");
@@ -89,11 +103,27 @@ public class SiteService {
             if (n == 0) throw BusinessException.siteNotFound();
         } catch (DataIntegrityViolationException e) {
             if (isUniqueViolation(e)) {
-                throw BusinessException.slugConflict();
+                throw BusinessException.slugTaken(slug);
             }
             throw e;
         }
         return SiteResponse.fromEntity(site);
+    }
+
+    /** T-be-6：向导防抖预检（GET /sites/slug-check）。200 {available:true,slug} / 409 SLUG_TAKEN / 400。 */
+    public Map<String, Object> checkSlug(String slug) {
+        validateSlug(slug);
+        if (siteMapper.getBySlug(slug) != null) {
+            throw BusinessException.slugTaken(slug);
+        }
+        return Map.of("available", true, "slug", slug);
+    }
+
+    /** slug 格式校验（create/update/checkSlug 统一口径）：[a-z0-9-]{3,48}，不合规 400 INVALID_ARGUMENT。 */
+    private static void validateSlug(String slug) {
+        if (slug == null || !SLUG_PATTERN.matcher(slug).matches()) {
+            throw BusinessException.invalidArgument("slug: 3-48 位小写字母/数字/-");
+        }
     }
 
     /** V2-T10: JsonNode → 字符串；null 返回 null（保留旧值语义） */
@@ -124,10 +154,11 @@ public class SiteService {
      * 再删 site。pages 删除后 page_versions 由 FK CASCADE 自动清。
      * 解决删除站点时 FK RESTRICT 报 500 的问题。
      * @Transactional：6 次跨表删除原子化，中途失败整体回滚（不残留半删状态）。
+     * T-be-6：写入守卫（owner 或 admin）。
      */
     @Transactional(rollbackFor = Exception.class)
     public void delete(String id) {
-        if (siteMapper.getById(id) == null) throw BusinessException.siteNotFound();
+        ownershipGuard.assertCanWrite(id);
         leadMapper.deleteBySiteId(id);
         formMapper.deleteBySiteId(id);
         datasourceMapper.deleteBySiteId(id);

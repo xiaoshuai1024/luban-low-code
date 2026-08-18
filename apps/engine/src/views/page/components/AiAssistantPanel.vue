@@ -14,12 +14,11 @@
  * 落地：确认后经 usePageEditorApi.replaceSchema（整页）落画布，自动入撤销栈
  * （Ctrl+Z 可撤销 AI 改动 plan §3 验收口径）。会话状态经 useAiStore（pinia）。
  */
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import {
   ElDrawer,
   ElTabs,
   ElTabPane,
-  ElInput,
   ElButton,
   ElMessage,
   ElEmpty,
@@ -77,21 +76,27 @@ const schemaEmpty = computed(() => {
   return !props.schema?.root?.children || props.schema.root.children.length === 0
 })
 
-onMounted(async () => {
-  // 拉取模型配置（只读展示当前部署模型 plan §4.3 模型展示只读）
+/** 模型配置惰性拉取：首次交互时才请求。
+ *  不在 onMounted 拉取——无 AI 服务的部署形态（如 dev 栈）下挂载期请求 502 会在浏览器
+ *  console 留网络错误日志，违反引擎零新增 console error 交付门槛；且配置仅展示用途。 */
+let configLoaded = false
+async function ensureConfigLoaded() {
+  if (configLoaded) return
+  configLoaded = true
   try {
     const cfg = await getAiConfig()
     store.setConfig(cfg)
   } catch {
-    // 配置拉取失败不阻断面板（功能可能仍可用）
+    // 配置拉取失败不阻断面板（功能可能仍可用）；下次交互不再重试本轮
   }
-})
+}
 
 /** 发送对话生成请求。 */
 async function send() {
   const text = inputText.value.trim()
   if (!text) return
   if (store.isGenerating) return
+  await ensureConfigLoaded()
 
   inputText.value = ''
   store.pushUserMessage(text)
@@ -289,16 +294,18 @@ async function onDesignSelect(file: File) {
           </div>
         </div>
 
-        <!-- 输入区 -->
-        <div class="ai-panel__input">
-          <ElInput
+        <!-- 输入区（.ai-panel__input 落在真实 textarea 上——e2e fill 契约；容器用 input-area） -->
+        <div class="ai-panel__input-area">
+          <!-- 原生 textarea：.ai-panel__input 必须直接落在可输入元素上（e2e fill 契约；
+               ElInput 的透传 class 落在 wrapper div 上，实测不可 fill） -->
+          <textarea
             v-model="inputText"
-            type="textarea"
-            :rows="2"
+            class="ai-panel__input"
+            rows="2"
             placeholder="描述你想要的页面，如「做一个用户列表页」"
             @keydown.enter.exact.prevent="send"
           />
-          <ElButton type="primary" :loading="store.isGenerating" @click="send">发送</ElButton>
+          <ElButton class="ai-panel__send" type="primary" :loading="store.isGenerating" @click="send">发送</ElButton>
         </div>
       </ElTabPane>
 
@@ -454,6 +461,23 @@ async function onDesignSelect(file: File) {
   }
 
   &__input {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--el-border-color);
+    border-radius: 4px;
+    padding: 6px 10px;
+    font: inherit;
+    color: inherit;
+    background: var(--el-fill-color-blank);
+    resize: vertical;
+    outline: none;
+
+    &:focus {
+      border-color: var(--el-color-primary);
+    }
+  }
+
+  &__input-area {
     display: flex;
     gap: 8px;
     align-items: flex-end;

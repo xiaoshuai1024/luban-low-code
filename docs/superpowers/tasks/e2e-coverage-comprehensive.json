@@ -214,24 +214,26 @@
     {
       "id": "T10",
       "title": "补 AB 全链 spec（X5：engine 配实验→website 渲染变体）",
-      "status": "pending",
+      "status": "done",
       "group": "cross",
       "subsystem": "cross",
       "dependsOn": [
         "T1"
       ],
-      "verification": "cd e2e && pnpm test -- --grep ab 绿"
+      "verification": "cd e2e && pnpm test -- --grep ab 绿",
+      "note": "2026-08-17 wire-e2e-feature-gaps：spec 对应功能已实现（AB 域 / FeatureGate 双端）；e2e 由 CI PR#23 裁决"
     },
     {
       "id": "T11",
       "title": "补 FeatureGate 全链 spec（X6：engine 配置→访客行为）",
-      "status": "pending",
+      "status": "done",
       "group": "cross",
       "subsystem": "cross",
       "dependsOn": [
         "T1"
       ],
-      "verification": "cd e2e && pnpm test -- --grep feature-gate 绿"
+      "verification": "cd e2e && pnpm test -- --grep feature-gate 绿",
+      "note": "2026-08-17 wire-e2e-feature-gaps：spec 对应功能已实现（AB 域 / FeatureGate 双端）；e2e 由 CI PR#23 裁决"
     },
     {
       "id": "T12",

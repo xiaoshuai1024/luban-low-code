@@ -8,7 +8,6 @@ import com.luban.backend.entity.Page;
 import com.luban.backend.exception.BusinessException;
 import com.luban.backend.mapper.FormMapper;
 import com.luban.backend.mapper.PageMapper;
-import com.luban.backend.mapper.SiteMapper;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,32 +21,43 @@ import java.util.stream.Collectors;
 public class PageService {
 
     private final PageMapper pageMapper;
-    private final SiteMapper siteMapper;
     private final FormMapper formMapper;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final PageVersionService versionService;
+    private final SiteOwnershipGuard ownershipGuard;
+    private final QuotaService quotaService;
 
-    public PageService(PageMapper pageMapper, SiteMapper siteMapper, FormMapper formMapper,
-                       PageVersionService versionService) {
+    public PageService(PageMapper pageMapper, FormMapper formMapper,
+                       PageVersionService versionService, SiteOwnershipGuard ownershipGuard,
+                       QuotaService quotaService) {
         this.pageMapper = pageMapper;
-        this.siteMapper = siteMapper;
         this.formMapper = formMapper;
         this.versionService = versionService;
+        this.ownershipGuard = ownershipGuard;
+        this.quotaService = quotaService;
     }
 
     public List<PageResponse> list(String siteId) {
-        if (siteMapper.getById(siteId) == null) throw BusinessException.siteNotFound();
+        ownershipGuard.assertVisible(siteId);
         return pageMapper.listBySiteId(siteId).stream().map(PageResponse::fromEntity).collect(Collectors.toList());
     }
 
     public PageResponse get(String siteId, String pageId) {
+        ownershipGuard.assertVisible(siteId);
         Page p = pageMapper.getByIdAndSiteId(pageId, siteId);
         if (p == null) throw BusinessException.pageNotFound();
         return PageResponse.fromEntity(p);
     }
 
+    /** 事务：配额累加 + insert + 首版快照原子（path 冲突 409 时回滚已累加的 pages 计数）。 */
+    @Transactional(rollbackFor = Exception.class)
     public PageResponse create(String siteId, String name, String path, String status, JsonNode schema, JsonNode seo) {
-        if (siteMapper.getById(siteId) == null) throw BusinessException.siteNotFound();
+        // T-be-6 写守卫 + T-be-5 配额：按 site→owner 计 pages 配额（owner=NULL 平台站点不限）
+        com.luban.backend.entity.Site site = ownershipGuard.assertCanWrite(siteId);
+        String quotaOwner = site.getOwnerUserId();
+        if (quotaOwner != null) {
+            quotaService.checkAndIncrement(quotaOwner, QuotaService.METRIC_PAGES);
+        }
         if (status == null || status.isBlank()) status = "draft";
         String schemaJson = schemaToJson(schema);
         Page page = new Page();
@@ -64,7 +74,7 @@ public class PageService {
         try {
             pageMapper.insert(page);
         } catch (DataIntegrityViolationException e) {
-            if (e.getMessage() != null && e.getMessage().contains("Duplicate")) {
+            if (isUniqueViolation(e)) {
                 throw BusinessException.pagePathConflict();
             }
             throw e;
@@ -75,6 +85,7 @@ public class PageService {
     }
 
     public PageResponse update(String siteId, String pageId, String name, String path, String status, JsonNode schema, JsonNode seo) {
+        ownershipGuard.assertCanWrite(siteId);
         Page page = pageMapper.getByIdAndSiteId(pageId, siteId);
         if (page == null) throw BusinessException.pageNotFound();
         page.setName(name);
@@ -90,7 +101,7 @@ public class PageService {
             int n = pageMapper.update(page);
             if (n == 0) throw BusinessException.pageNotFound();
         } catch (DataIntegrityViolationException e) {
-            if (e.getMessage() != null && e.getMessage().contains("Duplicate")) {
+            if (isUniqueViolation(e)) {
                 throw BusinessException.pagePathConflict();
             }
             throw e;
@@ -104,6 +115,7 @@ public class PageService {
      * 仅 JsonProcessingException 不阻塞发布；DB 异常（createSnapshot 同事务）正常传播回滚，避免宽 catch 吞异常致事务 rollback-only 陷阱。 */
     @Transactional(rollbackFor = Exception.class)
     public PageResponse publish(String siteId, String pageId, String actorId) {
+        ownershipGuard.assertCanWrite(siteId);
         Page page = pageMapper.getByIdAndSiteId(pageId, siteId);
         if (page == null) throw BusinessException.pageNotFound();
         Instant now = Instant.now();
@@ -118,6 +130,27 @@ public class PageService {
         }
         return PageResponse.fromEntity(page);
     }
+    /** 下线页面（published→archived，幂等）。下线后公开端点不再可见（仅 published 可读）。 */
+    @Transactional(rollbackFor = Exception.class)
+    public PageResponse unpublish(String siteId, String pageId) {
+        ownershipGuard.assertCanWrite(siteId);
+        Page page = pageMapper.getByIdAndSiteId(pageId, siteId);
+        if (page == null) throw BusinessException.pageNotFound();
+        Instant now = Instant.now();
+        int n = pageMapper.updateStatus(pageId, siteId, "archived", now);
+        if (n == 0) throw BusinessException.pageNotFound();
+        page.setStatus("archived");
+        page.setUpdatedAt(now);
+        return PageResponse.fromEntity(page);
+    }
+
+    /** 预览页面（返回当前内容，draft 亦可读；供编辑器预览/外链审阅）。 */
+    public PageResponse preview(String siteId, String pageId) {
+        ownershipGuard.assertVisible(siteId);
+        Page page = pageMapper.getByIdAndSiteId(pageId, siteId);
+        if (page == null) throw BusinessException.pageNotFound();
+        return PageResponse.fromEntity(page);
+    }
 
     /**
      * 删除页面（事务内级联删表单）。forms.page_id FK（RESTRICT，无 CASCADE）：
@@ -126,6 +159,7 @@ public class PageService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void delete(String siteId, String pageId) {
+        ownershipGuard.assertCanWrite(siteId);
         if (pageMapper.getByIdAndSiteId(pageId, siteId) == null) throw BusinessException.pageNotFound();
         try {
             formMapper.deleteByPageId(pageId);
@@ -135,6 +169,14 @@ public class PageService {
         }
         int n = pageMapper.deleteByIdAndSiteId(pageId, siteId);
         if (n == 0) throw BusinessException.pageNotFound();
+    }
+
+    /** 与 SiteService/LeadService/RegisterService 同口径：MySQL "Duplicate entry" / H2 "Unique index or primary key violation"
+     * （uk_site_path 冲突须在 H2 测试下也转 409 PAGE_PATH_CONFLICT，而非 500）。 */
+    private static boolean isUniqueViolation(DataIntegrityViolationException e) {
+        if (e == null || e.getMessage() == null) return false;
+        String m = e.getMessage();
+        return m.contains("Duplicate") || m.contains("Unique index") || m.contains("primary key violation");
     }
 
     private String schemaToJson(JsonNode schema) {

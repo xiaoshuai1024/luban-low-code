@@ -64,6 +64,11 @@ export const FEATURES = {
   multiSelect: envBool('VITE_FEATURE_MULTI_SELECT', true),
   /** V2-T12 对齐辅助线 */
   alignGuides: envBool('VITE_FEATURE_ALIGN_GUIDES', true),
+  // === signup-billing-onboarding（§6.5）：注册入口 / 开通向导 ===
+  /** 自助注册入口：/register 页与 Login 互链；关闭时整页替换「注册暂未开放」 */
+  signup: envBool('VITE_FEATURE_SIGNUP', true),
+  /** 开通向导：注册成功后的跳转目标；关闭时直进 /dashboard（空态 CTA 兜底建站） */
+  onboarding: envBool('VITE_FEATURE_ONBOARDING', true),
 } as const
 
 export type FeatureKey = keyof typeof FEATURES

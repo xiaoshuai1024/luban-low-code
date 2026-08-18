@@ -243,6 +243,84 @@ class V2FeaturesContractTest {
             .andExpect(jsonPath("$[0].data.title").exists());
     }
 
+    // === 唯一键冲突契约（R2-F11：三模式 isUniqueViolation 对齐后，H2 也转 409 而非 500）===
+
+    @Test
+    void createPageWithDuplicatePathReturns409PagePathConflict() throws Exception {
+        Instant now = Instant.now();
+        jdbc.update(
+            "INSERT INTO pages (id, site_id, name, path, status, schema_json, seo_json, created_at, updated_at) " +
+            "VALUES (?, ?, '已有页', '/dup-path-conflict', 'draft', '{}', NULL, ?, ?)",
+            "page-dup-001", SITE_ID, now, now
+        );
+
+        String body = mapper.writeValueAsString(Map.of(
+            "name", "同路径页",
+            "path", "/dup-path-conflict",
+            "schema", Map.of("root", Map.of("id", "root", "type", "LubanContainer", "props", Map.of(), "children", List.of()))
+        ));
+        mockMvc.perform(req(post("/backend/sites/" + SITE_ID + "/pages"))
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value("PAGE_PATH_CONFLICT"));
+    }
+
+    @Test
+    void updatePagePathToExistingReturns409PagePathConflict() throws Exception {
+        Instant now = Instant.now();
+        jdbc.update(
+            "INSERT INTO pages (id, site_id, name, path, status, schema_json, seo_json, created_at, updated_at) VALUES (?, ?, '占用页', '/occupied-path', 'draft', '{}', NULL, ?, ?)",
+            "page-occ-001", SITE_ID, now, now
+        );
+        jdbc.update(
+            "INSERT INTO pages (id, site_id, name, path, status, schema_json, seo_json, created_at, updated_at) VALUES (?, ?, '待改页', '/to-be-renamed', 'draft', '{}', NULL, ?, ?)",
+            "page-ren-001", SITE_ID, now, now
+        );
+
+        String body = mapper.writeValueAsString(Map.of(
+            "name", "待改页",
+            "path", "/occupied-path",
+            "schema", Map.of("root", Map.of("id", "root", "type", "LubanContainer", "props", Map.of(), "children", List.of()))
+        ));
+        mockMvc.perform(req(put("/backend/sites/" + SITE_ID + "/pages/" + "page-ren-001"))
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value("PAGE_PATH_CONFLICT"));
+    }
+
+    @Test
+    void createCollectionWithDuplicateNameReturns409CollectionNameConflict() throws Exception {
+        String createBody = mapper.writeValueAsString(Map.of("name", "重名集合", "fieldSchema", Map.of()));
+        mockMvc.perform(req(post("/backend/collections?siteId=" + SITE_ID))
+                .contentType(MediaType.APPLICATION_JSON).content(createBody))
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(req(post("/backend/collections?siteId=" + SITE_ID))
+                .contentType(MediaType.APPLICATION_JSON).content(createBody))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value("COLLECTION_NAME_CONFLICT"));
+    }
+
+    @Test
+    void updateCollectionNameToExistingReturns409CollectionNameConflict() throws Exception {
+        String bodyA = mapper.writeValueAsString(Map.of("name", "集合甲", "fieldSchema", Map.of()));
+        MvcResult crA = mockMvc.perform(req(post("/backend/collections?siteId=" + SITE_ID))
+                .contentType(MediaType.APPLICATION_JSON).content(bodyA))
+            .andExpect(status().isCreated()).andReturn();
+        String idA = mapper.readTree(crA.getResponse().getContentAsString()).get("id").asText();
+        String bodyB = mapper.writeValueAsString(Map.of("name", "集合乙", "fieldSchema", Map.of()));
+        MvcResult crB = mockMvc.perform(req(post("/backend/collections?siteId=" + SITE_ID))
+                .contentType(MediaType.APPLICATION_JSON).content(bodyB))
+            .andExpect(status().isCreated()).andReturn();
+        String idB = mapper.readTree(crB.getResponse().getContentAsString()).get("id").asText();
+
+        // 把乙改名为甲 → uk_collections_site_name 冲突 → 409
+        mockMvc.perform(req(put("/backend/collections/" + idB + "?siteId=" + SITE_ID))
+                .contentType(MediaType.APPLICATION_JSON).content(bodyA))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value("COLLECTION_NAME_CONFLICT"));
+    }
+
     // === V2 级联删除测试（修复清理 500）===
 
     @Test

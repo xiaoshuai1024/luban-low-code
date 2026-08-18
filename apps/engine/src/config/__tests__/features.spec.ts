@@ -86,4 +86,17 @@ describe('FeatureGate features (D15-D1)', () => {
     const { isFeatureEnabled } = await import('../features')
     expect(() => isFeatureEnabled('styple' as never)).toThrow(/unknown FeatureKey/)
   })
+
+  it('parseFeatureEnv：SSOT 解析语义（undefined/空→未覆盖；false/0→关；其余含 1→开）', async () => {
+    vi.resetModules()
+    const { parseFeatureEnv } = await import('../features')
+    expect(parseFeatureEnv(undefined)).toBeUndefined()
+    expect(parseFeatureEnv(null)).toBeUndefined()
+    expect(parseFeatureEnv('')).toBeUndefined()
+    expect(parseFeatureEnv('false')).toBe(false)
+    expect(parseFeatureEnv('0')).toBe(false)
+    expect(parseFeatureEnv('true')).toBe(true)
+    expect(parseFeatureEnv('1')).toBe(true)
+    expect(parseFeatureEnv('yes')).toBe(true)
+  })
 })

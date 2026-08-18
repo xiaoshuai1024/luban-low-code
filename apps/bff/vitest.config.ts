@@ -13,5 +13,10 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.spec.ts"],
+    coverage: {
+      provider: "v8",
+      // json-summary 供 scripts/coverage/coverage-summary.sh 汇总门禁采集（make test-coverage）
+      reporter: ["text", "json-summary"],
+    },
   },
 });

@@ -564,7 +564,11 @@ function onUpdateStyle(nodeId: string, key: string, value: string): void {
   }
 }
 
-/** V2-T5 属性面板动画分区回写：写 node.animation[key]，入撤销栈 */
+/**
+ * V2-T5 属性面板动画分区回写：写 node.animation[key]，入撤销栈。
+ * 撤销时序修复（close-tech-debt-1 1.1）：PropertyPanel 不再直改 node.animation，
+ * 写入统一收口到此处（history.push() 先于 mutation，快照为变更前状态）。
+ */
 function onUpdateAnimation(nodeId: string, key: string, value: unknown): void {
   if (!schema.value?.root) return
   const node = findNode(schema.value.root, nodeId)
@@ -574,9 +578,37 @@ function onUpdateAnimation(nodeId: string, key: string, value: unknown): void {
   ;(node.animation as Record<string, unknown>)[key] = value
 }
 
-/** V2-T7 CMS 绑定回写已由 PropertyPanel 写入 node.cmsBinding；此处入撤销栈 */
-function onUpdateCmsBinding(_nodeId: string): void {
+/** V2-T5 清除节点动画（PropertyPanel emit clear:animation）：入撤销栈 */
+function onClearAnimation(nodeId: string): void {
+  if (!schema.value?.root) return
+  const node = findNode(schema.value.root, nodeId)
+  if (!node) return
   history.push()
+  node.animation = undefined
+}
+
+/**
+ * V2-T7 属性面板 CMS 绑定分区回写：写 node.cmsBinding[key]，入撤销栈。
+ * 撤销时序修复（close-tech-debt-1 1.2）：PropertyPanel 不再直改 node.cmsBinding
+ * （v-model setter 只转发 emit），写入统一收口到此处（history.push() 先于
+ * mutation，快照为变更前状态）。
+ */
+function onUpdateCmsBinding(nodeId: string, key: string, value: unknown): void {
+  if (!schema.value?.root) return
+  const node = findNode(schema.value.root, nodeId)
+  if (!node) return
+  history.push()
+  if (!node.cmsBinding) node.cmsBinding = { collectionId: '' }
+  ;(node.cmsBinding as unknown as Record<string, unknown>)[key] = value
+}
+
+/** V2-T7 解绑节点 CMS（PropertyPanel emit clear:cms-binding）：入撤销栈 */
+function onClearCmsBinding(nodeId: string): void {
+  if (!schema.value?.root) return
+  const node = findNode(schema.value.root, nodeId)
+  if (!node) return
+  history.push()
+  node.cmsBinding = undefined
 }
 
 /** 删除节点：root 不可删；删后清空选中。 */
@@ -911,7 +943,9 @@ watch(siteId, () => {
           @update:datasource="onUpdateDatasource"
           @update:style="onUpdateStyle"
           @update:animation="onUpdateAnimation"
+          @clear:animation="onClearAnimation"
           @update:cms-binding="onUpdateCmsBinding"
+          @clear:cms-binding="onClearCmsBinding"
           @delete="onDeleteNode"
           @duplicate="onDuplicateNode"
           @open-datasource="openDatasourceDialog"

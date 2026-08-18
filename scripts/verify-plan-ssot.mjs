@@ -118,6 +118,9 @@ function cmdValidate(jsonPath) {
     if (j.entrySubsystem && !VALID_ENTRY_SUBSYSTEMS.includes(j.entrySubsystem)) {
       errs.push(`journey ${j.id} entrySubsystem 非法: ${j.entrySubsystem}`);
     }
+    if ('planned' in j && typeof j.planned !== 'boolean') {
+      errs.push(`journey ${j.id} planned 非法: ${JSON.stringify(j.planned)}(应为 boolean)`);
+    }
   }
 
   // 输出
@@ -167,6 +170,8 @@ function cmdJourneyCoverage() {
           entrySubsystem: j.entrySubsystem || '-',
           declaredIn: [rel],
           refOnly: j.ref === true,
+          // planned:false = 显式声明未实现（无 @J spec 绑定预期）→ 门禁跳过 GAP 不阻断
+          explicitUnimplemented: j.planned === false,
         });
       } else {
         existing.declaredIn.push(rel);
@@ -176,6 +181,8 @@ function cmdJourneyCoverage() {
             if (!existing.scenarios.includes(s)) existing.scenarios.push(s);
           }
         }
+        // planned:false 粘性合并（任一声明处标注即生效；显式声明只能加不能撤）
+        if (j.planned === false) existing.explicitUnimplemented = true;
         // 检测冲突:同 id 不同 title/priority
         if (j.ref !== true && j.title && j.title !== existing.title) {
           conflictWarns.push(`${j.id}: title 冲突 (${rel}: "${j.title}" vs "${existing.title}")`);
@@ -197,15 +204,18 @@ function cmdJourneyCoverage() {
   const specJourneyMap = scanSpecTags(); // Map<journeyId, Set<specRelPath>>
 
   // ── Step 3: 计算覆盖率矩阵 ──────────────────────────
+  // planned:false（显式声明未实现、无 @J spec 绑定）的旅程不计入分母、不阻断，
+  // 单列输出；一旦补上 @J 绑定即按普通旅程计覆盖。
   const rows = [];
   let p0Total = 0, p0Covered = 0, p0Gaps = [];
   let p1Total = 0, p1Covered = 0;
   let p2Total = 0, p2Covered = 0;
+  let plannedCount = { P0: 0, P1: 0, P2: 0 };
 
   for (const j of journeys.values()) {
     const specs = specJourneyMap.get(j.id) || new Set();
     const covered = specs.size > 0;
-    const status = covered ? '✓ 已覆盖' : `${C.R}✗ GAP${C.N}`;
+    const plannedSkip = !covered && j.explicitUnimplemented === true;
     rows.push({
       id: j.id,
       title: j.title,
@@ -214,7 +224,12 @@ function cmdJourneyCoverage() {
       specCount: specs.size,
       specs: [...specs],
       covered,
+      plannedSkip,
     });
+    if (plannedSkip) {
+      plannedCount[j.priority] = (plannedCount[j.priority] || 0) + 1;
+      continue;
+    }
     if (j.priority === 'P0') {
       p0Total++;
       if (covered) p0Covered++; else p0Gaps.push(j.id);
@@ -236,23 +251,26 @@ function cmdJourneyCoverage() {
 
   // 主表
   const hdr = ['旅程 ID', '优先级', '场景数', '绑定 spec 数', '状态'];
-  printfRow(hdr, [20, 8, 8, 12, 14]);
-  printfRow(['─'.repeat(20), '─'.repeat(8), '─'.repeat(8), '─'.repeat(12), '─'.repeat(14)], [20, 8, 8, 12, 14]);
+  printfRow(hdr, [22, 8, 8, 12, 18]);
+  printfRow(['─'.repeat(22), '─'.repeat(8), '─'.repeat(8), '─'.repeat(12), '─'.repeat(18)], [22, 8, 8, 12, 18]);
   for (const r of rows) {
     const prioColor = r.priority === 'P0' ? C.R : (r.priority === 'P1' ? C.Y : C.N);
-    const statusStr = r.covered ? `${C.G}✓ 已覆盖${C.N}` : `${C.R}✗ GAP${C.N}`;
+    const statusStr = r.covered
+      ? `${C.G}✓ 已覆盖${C.N}`
+      : (r.plannedSkip ? `${C.Y}○ planned:false${C.N}` : `${C.R}✗ GAP${C.N}`);
     printfRowRaw([
       r.id,
       `${prioColor}${r.priority}${C.N}`,
       String(r.scenarioCount),
       String(r.specCount),
       statusStr,
-    ], [20, 8, 8, 12, 14]);
+    ], [22, 8, 8, 12, 18]);
   }
   console.log('');
 
   // 缺口明细(P0/P1)
-  const gapRows = rows.filter(r => !r.covered);
+  const gapRows = rows.filter(r => !r.covered && !r.plannedSkip);
+  const plannedRows = rows.filter(r => r.plannedSkip);
   if (gapRows.length) {
     console.log(`${C.R}缺口明细:${C.N}`);
     for (const r of gapRows) {
@@ -261,14 +279,23 @@ function cmdJourneyCoverage() {
     }
     console.log('');
   }
+  if (plannedRows.length) {
+    console.log(`${C.Y}显式未实现（planned:false，不计分母、不阻断；补上 @J 绑定后自动转覆盖）:${C.N}`);
+    for (const r of plannedRows) {
+      const prioColor = r.priority === 'P0' ? C.R : C.Y;
+      console.log(`  ${prioColor}[${r.priority}]${C.N} ${r.id} (${r.title})`);
+    }
+    console.log('');
+  }
 
   // 汇总
   const p0Pct = p0Total ? Math.round((p0Covered / p0Total) * 100) : 100;
   const p1Pct = p1Total ? Math.round((p1Covered / p1Total) * 100) : 0;
   const p2Pct = p2Total ? Math.round((p2Covered / p2Total) * 100) : 0;
+  const plannedNote = `  planned:false: P0×${plannedCount.P0 || 0} P1×${plannedCount.P1 || 0} P2×${plannedCount.P2 || 0}`;
   console.log(`${C.C}═══════════════════════════════════════════════════════════${C.N}`);
   console.log(`  ${C.B}P0 覆盖: ${p0Covered}/${p0Total} (${p0Pct}%)${C.N}  ${p0Pct === 100 ? C.G : C.R}${p0Pct === 100 ? '✓' : '✗'}${C.N}  P1: ${p1Covered}/${p1Total} (${p1Pct}%)  P2: ${p2Covered}/${p2Total} (${p2Pct}%)`);
-  console.log(`  旅程总数: ${journeys.size}  已覆盖: ${rows.filter(r => r.covered).length}  GAP: ${gapRows.length}`);
+  console.log(`  旅程总数: ${journeys.size}  已覆盖: ${rows.filter(r => r.covered).length}  GAP: ${gapRows.length}${plannedNote}`);
   console.log(`${C.C}═══════════════════════════════════════════════════════════${C.N}`);
 
   // 冲突警告
@@ -277,14 +304,15 @@ function cmdJourneyCoverage() {
     conflictWarns.forEach(w => console.log(`${C.Y}⚠ 旅程 id 冲突: ${w}${C.N}`));
   }
 
-  // ── 门禁:P0 阻断 ────────────────────────────────────
+  // ── 门禁:P0 阻断（planned:false 显式未实现项不阻断）──
   console.log('');
   if (p0Gaps.length > 0) {
-    console.log(`${C.R}❌ P0 旅程阻断: ${p0Gaps.length} 个 P0 旅程无 spec 绑定 → exit 1${C.N}`);
+    console.log(`${C.R}❌ P0 旅程阻断: ${p0Gaps.length} 个 P0 旅程无 spec 绑定且未声明 planned:false → exit 1${C.N}`);
     console.log(`${C.R}   ${p0Gaps.join(', ')}${C.N}`);
     return 1;
   }
-  console.log(`${C.G}✅ 旅程覆盖率门禁通过(P0 = 100%)${C.N}`);
+  const plannedP0 = plannedCount.P0 || 0;
+  console.log(`${C.G}✅ 旅程覆盖率门禁通过(P0 = 100%)${plannedP0 ? `${C.Y}（另有 ${plannedP0} 个 P0 显式未实现 planned:false，见上表）${C.N}` : ''}`);
   return 0;
 }
 

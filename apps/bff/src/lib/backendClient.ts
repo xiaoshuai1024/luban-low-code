@@ -48,10 +48,16 @@ export class BackendHttpError extends Error {
   }
 }
 
-export async function callBackend<T>(
+/**
+ * 受管后端请求（非 JSON 响应专用）：与 callBackend 同样的
+ * 头注入（Content-Type/X-Internal-Auth 剥离伪造）+ 超时（MID-3）+ 错误映射
+ * （!ok → BackendHttpError），但返回原始 Response 由调用方自行解析
+ * （如 leads/export 的 CSV 流，不能走 JSON 解析）。
+ */
+export async function callBackendRaw(
   path: string,
   init: RequestInit & { headers?: HeadersInit } = {}
-): Promise<T> {
+): Promise<Response> {
   const url = `${BACKEND_BASE_URL}${path}`;
 
   // 调用方 headers 副本：剥离可伪造的 X-Internal-Auth（未配置密钥时也不透传）
@@ -86,6 +92,15 @@ export async function callBackend<T>(
     const msg = errBody?.message || `Backend error ${res.status}`;
     throw new BackendHttpError(res.status, code, msg, errBody?.details);
   }
+
+  return res;
+}
+
+export async function callBackend<T>(
+  path: string,
+  init: RequestInit & { headers?: HeadersInit } = {}
+): Promise<T> {
+  const res = await callBackendRaw(path, init);
 
   // 204 No Content -> return undefined (DELETE, PATCH revoke, etc.)
   if (res.status === 204) {

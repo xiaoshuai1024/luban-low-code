@@ -2,6 +2,7 @@ package com.luban.backend.exception;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -49,12 +50,26 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * DB 完整性冲突（约束/唯一键等，未被业务层收敛的）：500 通用文案，
+     * SQL/约束细节仅记服务端日志（log.warn 含根因），不返回客户端。
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<APIError> handleDataIntegrity(DataIntegrityViolationException ex) {
+        log.warn("data integrity violation: {}", ex.getMostSpecificCause().getMessage(), ex);
+        return internalError();
+    }
+
+    /**
      * 兜底 500：响应统一通用文案（不泄露 ex.getMessage() 中的内部细节，如 SQL/路径），
      * 完整堆栈仅在服务端日志保留。
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<APIError> handleOther(Exception ex) {
         log.error("unhandled exception", ex);
+        return internalError();
+    }
+
+    private static ResponseEntity<APIError> internalError() {
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new APIError("INTERNAL", "服务器内部错误"));

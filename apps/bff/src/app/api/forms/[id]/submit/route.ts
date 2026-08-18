@@ -23,10 +23,20 @@ export async function POST(
         { status: 400 }
       );
     }
+    // 非对象 JSON（number/string/数组）注入 formId 会 TypeError 或静默丢失 → 统一 400
+    if (typeof body !== "object" || Array.isArray(body)) {
+      return NextResponse.json(
+        { code: "INVALID_ARGUMENT", message: "Request body must be a JSON object" },
+        { status: 400 }
+      );
+    }
     // 注入 path formId 到 body（后端 LeadSubmitRequest.formId @NotBlank，前端/e2e 只传 contact）
     body.formId = id;
     const headers = {
-      "X-Forwarded-For": req.headers.get("x-forwarded-for") || "",
+      // XFF 取末段：nginx $proxy_add_x_forwarded_for 在末尾追加真实客户端 IP，
+      // 前段可被客户端伪造（伪造前缀不得影响按 IP 防刷计数）
+      "X-Forwarded-For":
+        (req.headers.get("x-forwarded-for") || "").split(",").pop()?.trim() || "",
       "X-Visitor-ID": req.headers.get("x-visitor-id") || "",
     };
     const data = await callBackend<{ leadId?: string; status: string; dedup: boolean }>(`/lead/forms/${id}/submit`, {

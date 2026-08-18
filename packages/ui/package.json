@@ -7,6 +7,7 @@
     "storybook": "pnpm exec storybook dev -p 6006",
     "build-storybook": "pnpm exec storybook build",
     "test": "nx test @luban-ui/luban-ui",
+    "test:coverage": "vitest run --coverage",
     "test:e2e": "cd apps/luban-ui-e2e && npx playwright test",
     "test:e2e:install": "cd apps/luban-ui-e2e && npx playwright install chrome",
     "test:base": "nx test luban-base",

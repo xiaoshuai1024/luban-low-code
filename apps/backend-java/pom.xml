@@ -96,11 +96,10 @@
                 <configuration>
                     <!-- byte-buddy-agent pre-attached via -javaagent: Mockito 5 inline mock maker
                          otherwise attempts an external-process self-attach which fails under
-                         JDK 21. jacoco's @{argLine} is intentionally NOT referenced here to
-                         avoid double agent instrumentation causing native stack overflow on
-                         this low-memory Windows host; coverage is still reported in the verify
-                         phase by other means if needed. -->
-                    <argLine>-Xmx512m -XX:MaxMetaspaceSize=256m -XX:ReservedCodeCacheSize=128m -javaagent:${project.build.directory}/byte-buddy-agent.jar</argLine>
+                         JDK 21. @{argLine}（jacoco prepare-agent 注入的 agent 参数）置于最前：
+                         缺失时 jacoco.exec 不产出、verify 阶段 report 无数据（覆盖率门禁采集为空）。
+                         jacoco agent 与 byte-buddy agent 各注入一次，非重复插桩。 -->
+                    <argLine>@{argLine} -Xmx512m -XX:MaxMetaspaceSize=256m -XX:ReservedCodeCacheSize=128m -javaagent:${project.build.directory}/byte-buddy-agent.jar</argLine>
                     <forkCount>1</forkCount>
                     <reuseForks>true</reuseForks>
                     <includes>
@@ -118,7 +117,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <configuration>
-                    <argLine>-Xmx512m -XX:MaxMetaspaceSize=256m -XX:ReservedCodeCacheSize=128m -javaagent:${project.build.directory}/byte-buddy-agent.jar</argLine>
+                    <argLine>@{argLine} -Xmx512m -XX:MaxMetaspaceSize=256m -XX:ReservedCodeCacheSize=128m -javaagent:${project.build.directory}/byte-buddy-agent.jar</argLine>
                     <forkCount>1</forkCount>
                     <reuseForks>true</reuseForks>
                     <includes>

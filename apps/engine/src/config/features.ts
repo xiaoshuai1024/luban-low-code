@@ -18,11 +18,21 @@
  * 与 AI 助手端对齐语义：AI 端 ai.* 开关用同样的布尔语义（见 ai 配套 config.py 注释）。
  */
 
+/**
+ * 解析 VITE_FEATURE_* 环境变量值（FeatureGate 判定 SSOT，close-tech-debt-1 1.5）：
+ *  - undefined/null/''（未设置/空）→ undefined（未覆盖，走调用方默认值）；
+ *  - 'false' / '0' → false；
+ *  - 其余（含 'true'/'1'/'yes'）→ true。
+ * useFeatureGate 复用本函数，保证 engine 内判定语义只有这一个实现。
+ */
+export function parseFeatureEnv(raw: unknown): boolean | undefined {
+  if (raw === undefined || raw === null || raw === '') return undefined
+  return raw !== 'false' && raw !== '0'
+}
+
 /** 读 VITE_FEATURE_* 环境变量为布尔，未定义/空 → 默认值。 */
 function envBool(key: string, dft: boolean): boolean {
-  const raw = import.meta.env[key]
-  if (raw === undefined || raw === null || raw === '') return dft
-  return raw !== 'false' && raw !== '0'
+  return parseFeatureEnv(import.meta.env[key]) ?? dft
 }
 
 /**

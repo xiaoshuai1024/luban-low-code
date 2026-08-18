@@ -58,8 +58,8 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   if (siteId && apiCtx) {
     await apiCtx.delete(`${BFF_BASE}/api/sites/${siteId}`, { headers: authHeaders(token) }).catch(() => {});
-    await apiCtx.dispose().catch(() => {});
   }
+  await apiCtx?.dispose().catch(() => {});
 });
 
 test.describe('用量上报与套餐超限拦截 @J-quota-enforcement', () => {
@@ -133,7 +133,7 @@ let tinyToken = '';
 let tinySiteId = '';
 let tinyPageId = '';
 
-test.describe('quota 完整超限（e2e-tiny fixture）', () => {
+test.describe('quota 完整超限（e2e-tiny fixture） @J-quota-enforcement', () => {
   test.beforeAll(async () => {
     tinyCtx = await request.newContext();
     // 1) 新注册用户（devCode 经 MAIL_DEV_ECHO 通道；缺失即 throw，禁 skip）
@@ -202,6 +202,12 @@ test.describe('quota 完整超限（e2e-tiny fixture）', () => {
   });
 
   test('QE6: e2e-tiny(quota_leads=1) 下第 2 条 lead → 429 QUOTA_EXCEEDED(metric=leads, limit=1)', async () => {
+    // 发布页面（对齐 plan §7.3 S6「建站+发布页+表单」字面；lead 计量本身不校验发布态）
+    const pubRes = await tinyCtx.post(`${BFF_BASE}/api/sites/${tinySiteId}/pages/${tinyPageId}/publish`, {
+      headers: authHeaders(tinyToken),
+    });
+    expect(pubRes.status(), `发布页须 2xx，实际 ${pubRes.status()}`).toBeLessThan(300);
+
     // 建表单（既有 /api/forms，参考本文件契约层 beforeAll 的建法）
     const formRes = await tinyCtx.post(`${BFF_BASE}/api/forms?siteId=${tinySiteId}`, {
       headers: authHeaders(tinyToken),

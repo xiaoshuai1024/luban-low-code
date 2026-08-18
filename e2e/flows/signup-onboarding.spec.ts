@@ -20,7 +20,8 @@ import 'dotenv/config';
  *      用户行由 e2e 环境重置/SQL 清理（plan §9.0 裁定 #6：无 DELETE /users API，本 spec 不做）。
  */
 
-const BFF_BASE = process.env.LUBAN_E2E_BFF_URL ?? 'http://localhost:3000';
+// 默认对齐 e2e 编排宿主端口（docker-compose.e2e.yml BFF 映射 3100:3000；3000 是 website 无 /api）
+const BFF_BASE = process.env.LUBAN_E2E_BFF_URL ?? 'http://127.0.0.1:3100';
 const RUN_ID = `e2e-${Date.now()}`;
 // 密码强度契约（§3.4）：≥8 位且同时含字母与数字
 const PASSWORD = 'E2eSignup123';

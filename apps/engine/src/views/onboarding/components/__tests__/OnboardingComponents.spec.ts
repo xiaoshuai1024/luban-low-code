@@ -3,7 +3,7 @@
  *
  * 三个向导子组件的状态机与错误分支（vitest 覆盖率门禁配套）：
  *  - PlanPicker：loading 骨架 / 三卡渲染 / 试用角标 / 点选 emit；
- *  - SiteForm：名称→slug 建议值 / 手动改后不再覆盖 / 防抖 500ms 预检三态 / validate 分支 / setSlugError；
+ *  - SiteForm：名称→slug 建议值 / 手动改后不再覆盖 / 防抖 500ms 预检三态（含过期响应丢弃）/ validate 分支 / setSlugError；
  *  - TemplateSelect：分组渲染 / 点选 emit / 选中态。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
@@ -119,6 +119,31 @@ describe('SiteForm', () => {
     await flushPromises()
     expect(checkSlugMock).toHaveBeenCalledWith('acme-site')
     expect(wrapper.text()).toContain('该地址可用')
+  })
+
+  it('预检竞态：旧请求后返回不得覆盖新 slug 结果', async () => {
+    let resolveOld!: (v: { data: { available: boolean } }) => void
+    checkSlugMock
+      .mockImplementationOnce(() => new Promise((r) => { resolveOld = r }))
+      .mockResolvedValueOnce({ data: { available: true } })
+    const { wrapper } = mountSiteForm()
+    await wrapper.find('[data-testid="site-slug"]').setValue('old-slug')
+    await sleep(600)
+    await flushPromises()
+    expect(checkSlugMock).toHaveBeenCalledWith('old-slug')
+
+    // 改为新 slug → 第二次预检 available
+    await wrapper.find('[data-testid="site-slug"]').setValue('new-slug')
+    await sleep(600)
+    await flushPromises()
+    expect(checkSlugMock).toHaveBeenCalledWith('new-slug')
+    expect(wrapper.text()).toContain('该地址可用')
+
+    // 旧请求（taken）迟达 → 过期结果被丢弃，不覆盖新结果
+    resolveOld({ data: { available: false } })
+    await flushPromises()
+    expect(wrapper.text()).toContain('该地址可用')
+    expect(wrapper.text()).not.toContain('该地址已被占用')
   })
 
   it('预检 taken → 红色「已被占用」；validate 拦截提交', async () => {

@@ -160,6 +160,22 @@ describe('OnboardingWizard Step1 选套餐', () => {
     await flushPromises()
     expect(getPlansMock).toHaveBeenCalledTimes(2)
   })
+
+  it('「立即开通」双击防重复：ordering 守卫，第二次点击不发请求', async () => {
+    // 慢响应（100ms）使 ordering=true 跨越第二次点击，模拟真实双击
+    createOrderMock.mockImplementation(
+      () => new Promise((r) => setTimeout(() => r({ data: {} }), 100)),
+    )
+    const wrapper = await mountWizard()
+    const btn = wrapper.findAll('button').find((b) => b.text().includes('立即开通'))!
+    await btn.trigger('click')
+    await btn.trigger('click')
+    await flushPromises()
+    expect(createOrderMock).toHaveBeenCalledTimes(1)
+    // 排空支付反馈定时器，避免跨用例残留
+    await sleep(1700)
+    await flushPromises()
+  })
 })
 
 describe('OnboardingWizard Step2 创建站点', () => {
@@ -168,7 +184,8 @@ describe('OnboardingWizard Step2 创建站点', () => {
     const wrapper = await mountAtStep2()
 
     await fillSiteForm(wrapper)
-    expect(wrapper.find('[data-testid="site-slug"]').element.value || wrapper.text()).toBeTruthy()
+    const slug = (wrapper.find('[data-testid="site-slug"]').element as HTMLInputElement).value
+    expect(slug).toBe('acme-site')
     expect(wrapper.text()).toContain('该地址可用')
 
     const btn = wrapper.findAll('button').find((b) => b.text().includes('创建站点'))!
@@ -285,5 +302,28 @@ describe('OnboardingWizard Step3 模板建首页', () => {
     await back.trigger('click')
     expect(wrapper.find('[data-testid="site-name"]').exists()).toBe(true)
     expect(createOrderMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('ElStep 头部点击回退：已完步可回退（is-backtrack），当前/未来步不可点', async () => {
+    const wrapper = await mountAtStep3()
+    let steps = wrapper.findAll('.el-step')
+    // step=3：Step1/2 已完成可回退；Step3 当前步恢复默认光标
+    expect(steps[0].classes()).toContain('is-backtrack')
+    expect(steps[1].classes()).toContain('is-backtrack')
+    expect(steps[2].classes()).not.toContain('is-backtrack')
+
+    // 点已完步头部 → step 变更（回退 Step1）
+    await steps[0].trigger('click')
+    expect(wrapper.find('.plan-picker').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="site-name"]').exists()).toBe(false)
+
+    // step=1：无已完步 → 全部默认；点当前/未来步头部 step 不变
+    steps = wrapper.findAll('.el-step')
+    expect(steps.every((s) => !s.classes().includes('is-backtrack'))).toBe(true)
+    await steps[0].trigger('click')
+    await steps[1].trigger('click')
+    await steps[2].trigger('click')
+    expect(wrapper.find('.plan-picker').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="site-name"]').exists()).toBe(false)
   })
 })

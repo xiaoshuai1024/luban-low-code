@@ -19,7 +19,6 @@ import {
   ElDrawer,
   ElTabs,
   ElTabPane,
-  ElInput,
   ElButton,
   ElMessage,
   ElEmpty,
@@ -291,11 +290,12 @@ async function onDesignSelect(file: File) {
 
         <!-- 输入区（.ai-panel__input 落在真实 textarea 上——e2e fill 契约；容器用 input-area） -->
         <div class="ai-panel__input-area">
-          <ElInput
+          <!-- 原生 textarea：.ai-panel__input 必须直接落在可输入元素上（e2e fill 契约；
+               ElInput 的透传 class 落在 wrapper div 上，实测不可 fill） -->
+          <textarea
             v-model="inputText"
             class="ai-panel__input"
-            type="textarea"
-            :rows="2"
+            rows="2"
             placeholder="描述你想要的页面，如「做一个用户列表页」"
             @keydown.enter.exact.prevent="send"
           />
@@ -452,6 +452,23 @@ async function onDesignSelect(file: File) {
   &__confirm-actions {
     display: flex;
     gap: 8px;
+  }
+
+  &__input {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--el-border-color);
+    border-radius: 4px;
+    padding: 6px 10px;
+    font: inherit;
+    color: inherit;
+    background: var(--el-fill-color-blank);
+    resize: vertical;
+    outline: none;
+
+    &:focus {
+      border-color: var(--el-color-primary);
+    }
   }
 
   &__input-area {

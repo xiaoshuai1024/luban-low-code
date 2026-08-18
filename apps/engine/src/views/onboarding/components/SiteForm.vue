@@ -2,7 +2,7 @@
 /**
  * SiteForm.vue — 开通向导 Step2 站点表单（signup-billing-onboarding §4.2.2/§9.5）。
  *
- * props {modelValue:{name,slug}, submitting?}；
+ * props {modelValue:{name,slug}, submitting?}（submitting → name/slug 输入禁用防提交中改值）；
  *  - 站点名变化 → 未手动改过 slug 时自动生成建议值（拉丁字符 slugify，纯中文回退随机 site-xxxx）；
  *  - slug 输入防抖 500ms 调 GET /api/sites/slug-check → 绿「可用」/红「已被占用」/转圈「校验中」；
  *  - expose validate()/setSlugError()：向导「创建站点」按钮整单校验；409 SLUG_TAKEN 回写内联错误。
@@ -90,8 +90,11 @@ watch(
     debounceTimer = setTimeout(async () => {
       try {
         const { data } = await checkSlug(slug)
+        // 竞态丢弃：响应返回时 slug 已被再次修改 → 过期结果不回写状态
+        if (slug !== props.modelValue.slug) return
         slugState.value = data.available ? 'available' : 'taken'
       } catch (e) {
+        if (slug !== props.modelValue.slug) return
         const api = extractApiError(e)
         if (api.code === 'SLUG_TAKEN') {
           slugState.value = 'taken'
@@ -159,6 +162,7 @@ defineExpose({ validate, setSlugError })
         placeholder="1-32 个字符，如「我的品牌官网」"
         size="large"
         maxlength="32"
+        :disabled="submitting"
         data-testid="site-name"
       />
     </ElFormItem>
@@ -167,6 +171,7 @@ defineExpose({ validate, setSlugError })
         v-model="slugValue"
         placeholder="3-48 位小写字母、数字或短横线"
         size="large"
+        :disabled="submitting"
         data-testid="site-slug"
       >
         <template #prepend>/</template>

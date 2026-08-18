@@ -10,7 +10,7 @@
  * 顶部 ElSteps 三步；已完成步可点回退（回退不撤销已开通订单，仅重做后续步）。
  * 四态：加载=骨架卡；错=ElResult error+重试 / 内联 / ElAlert；成功=自动进下一步。
  */
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   ElAlert,
@@ -42,6 +42,8 @@ const selectedPlanCode = ref('')
 const ordering = ref(false)
 /** 0 元订单支付成功反馈（1.5s 后自动进 Step2） */
 const paidSuccess = ref(false)
+/** paidSuccess 自动跳步定时器句柄（卸载清理，防离开向导后残留改状态） */
+let paidSuccessTimer: ReturnType<typeof setTimeout> | null = null
 
 const selectedPlan = computed(
   () => plans.value.find((p) => p.planCode === selectedPlanCode.value) ?? null,
@@ -78,7 +80,8 @@ async function confirmPlan(): Promise<void> {
   try {
     await createOrder(selectedPlanCode.value)
     paidSuccess.value = true
-    setTimeout(() => {
+    paidSuccessTimer = setTimeout(() => {
+      paidSuccessTimer = null
       paidSuccess.value = false
       step.value = 2
     }, 1500)
@@ -161,6 +164,10 @@ function goStep(target: number): void {
 }
 
 onMounted(loadPlans)
+
+onBeforeUnmount(() => {
+  if (paidSuccessTimer) clearTimeout(paidSuccessTimer)
+})
 </script>
 
 <template>
@@ -170,8 +177,8 @@ onMounted(loadPlans)
       <p class="onboarding__subtitle">三步开通你的第一个站点：选套餐 → 创建站点 → 选择模板</p>
 
       <ElSteps :active="step - 1" align-center class="onboarding__steps" finish-status="success">
-        <ElStep title="选套餐" @click="goStep(1)" />
-        <ElStep title="创建站点" @click="goStep(2)" />
+        <ElStep title="选套餐" :class="{ 'is-backtrack': step > 1 }" @click="goStep(1)" />
+        <ElStep title="创建站点" :class="{ 'is-backtrack': step > 2 }" @click="goStep(2)" />
         <ElStep title="选择模板" />
       </ElSteps>
 
@@ -277,8 +284,8 @@ onMounted(loadPlans)
   margin-bottom: 24px;
   background: transparent;
 
-  // 已完成步可点回退（ElStep 根节点透传 click）
-  :deep(.el-step) {
+  // 仅已完成步（target < 当前步）可点回退，显示可点手势；当前/未来步恢复默认（ElStep 根节点透传 class/click）
+  :deep(.el-step.is-backtrack) {
     cursor: pointer;
   }
 }

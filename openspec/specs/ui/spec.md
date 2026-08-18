@@ -2,7 +2,6 @@
 
 > 此文件由 OpenSpec archive 自动维护，请勿手动编辑。
 
-
 ## Purpose
 
 Vue 3 物料库：组件、props schema、注册表与发布包（luban-base / luban-low-code）。
@@ -16,3 +15,18 @@ Vue 3 物料库：组件、props schema、注册表与发布包（luban-base / l
 ## 当前能力
 
 （待首个 UI 相关变更归档后填充）
+## Requirements
+### Requirement: marketing 物料单测覆盖
+marketing 14 组件（Hero/CTA/ContentList/Testimonial/LeadCapture/Navbar/Footer/FeatureGrid/Stats/FAQ/Pricing/TestimonialCarousel/Gallery/LogoCloud）SHALL 各有单测（默认渲染 + 核心 props + slot 最小集）。
+
+#### Scenario: 组件测试存在
+- **WHEN** 列出 test/unit 下 marketing 相关 spec
+- **THEN** 14 组件均有对应文件且通过
+
+### Requirement: 脚手架残留清理
+NxWelcome 等脚手架残留与 .gitkeep 占位 SHALL 从 ui 包移除。
+
+#### Scenario: 无死文件
+- **WHEN** 全局搜索 NxWelcome 引用
+- **THEN** 零命中且文件已删除
+

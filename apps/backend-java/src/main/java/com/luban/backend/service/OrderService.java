@@ -24,14 +24,17 @@ import java.util.stream.Collectors;
  * 订单服务（T-be-4）。0 元直通单事务（plan §3.3）：
  *
  *   lockForMutation(用户行锁) → orders INSERT(pending) → amount==0 自动支付（status=paid + paid_at）
- *                            + SubscriptionService.applyPlan（订阅生效）
+ *                            + SubscriptionService.applyPlanInternal（订阅生效）
  *
  *  - 同用户并发下单先在 subscriptions 行锁上排队（行不存在时插 free 占位抢主键锁），
  *    使 paid 幂等判定可靠读到先提交者的订单（0 元直通幂等竞态防护）；
  *  - amount>0 → 400 PAYMENT_NOT_SUPPORTED（未来接网关的挂载点，本期三档全 0 元不可达防御）；
  *  - order_no 幂等：同用户同套餐已存在 paid 订单 → 幂等返回原单（§3.2「取幂等返回」），
  *    order_no 本身由 UUID 派生保证全局唯一（uk_orders_order_no 兜底）；
- *  - 防御纵深：applyPlan 撞 trial_records uk（隔离级别下幂等判定未见的并发首单）→
+ *  - 事务边界：直调 SubscriptionService.applyPlanInternal（包内方法、无 @Transactional，
+ *    同包直调不经代理）——若改调带事务注解的 public applyPlan，内层 REQUIRED 参与方抛异常
+ *    穿越代理会把本事务标记 rollback-only，下方 catch 后提交抛 UnexpectedRollbackException；
+ *  - 防御纵深（锁序统一后正常路径不可达，纯防御）：applyPlanInternal 撞 trial_records uk →
  *    本单让位删除、重查按幂等收敛返回原单；
  *  - 重复对 paid 订单支付不再有入口（幂等返回即 §3.2 非法态的收敛方式）。
  */
@@ -92,14 +95,17 @@ public class OrderService {
         order.setStatus(STATUS_PAID);
         order.setPaidAt(now);
         try {
-            Subscription subscription = subscriptionService.applyPlan(userId, plan.getPlanCode());
+            // 直调包内无事务注解的内部方法（不经代理）：异常不在内层事务边界被拦截，
+            // 本事务不会被标记 rollback-only，catch 后仍可正常提交
+            Subscription subscription = subscriptionService.applyPlanInternal(userId, plan.getPlanCode());
             // 审计日志（字段均非敏感：单号/用户/套餐/金额）
             log.info("order paid: orderNo={} userId={} planCode={} amount={}",
                     order.getOrderNo(), userId, plan.getPlanCode(), amount);
             return new OrderCreateResponse(OrderResponse.fromEntity(order), subscriptionService.toResponse(subscription));
         } catch (DuplicateKeyException e) {
-            // 防御纵深：trial_records 撞 uk_trial_user_plan（并发首单已提交而行锁序列化之外的隔离场景）
-            // → 本单让位删除，重查按幂等收敛返回先提交者的原单
+            // 防御纵深（applyPlanInternal 已先锁 subscriptions 行，正常路径 uk_trial_user_plan
+            // 冲突不可达；此处兜底隔离级别/外部直插等场景）：trial_records 撞 uk →
+            // 本单让位删除，重查按幂等收敛返回先提交者的原单
             orderMapper.deleteByIdAndUser(order.getId(), userId);
             Order winner = orderMapper.findLatestPaidByUserAndPlan(userId, plan.getPlanCode());
             if (winner == null) {

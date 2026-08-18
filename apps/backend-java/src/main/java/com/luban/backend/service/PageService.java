@@ -74,7 +74,7 @@ public class PageService {
         try {
             pageMapper.insert(page);
         } catch (DataIntegrityViolationException e) {
-            if (e.getMessage() != null && e.getMessage().contains("Duplicate")) {
+            if (isUniqueViolation(e)) {
                 throw BusinessException.pagePathConflict();
             }
             throw e;
@@ -101,7 +101,7 @@ public class PageService {
             int n = pageMapper.update(page);
             if (n == 0) throw BusinessException.pageNotFound();
         } catch (DataIntegrityViolationException e) {
-            if (e.getMessage() != null && e.getMessage().contains("Duplicate")) {
+            if (isUniqueViolation(e)) {
                 throw BusinessException.pagePathConflict();
             }
             throw e;
@@ -148,6 +148,14 @@ public class PageService {
         }
         int n = pageMapper.deleteByIdAndSiteId(pageId, siteId);
         if (n == 0) throw BusinessException.pageNotFound();
+    }
+
+    /** 与 SiteService/LeadService/RegisterService 同口径：MySQL "Duplicate entry" / H2 "Unique index or primary key violation"
+     * （uk_site_path 冲突须在 H2 测试下也转 409 PAGE_PATH_CONFLICT，而非 500）。 */
+    private static boolean isUniqueViolation(DataIntegrityViolationException e) {
+        if (e == null || e.getMessage() == null) return false;
+        String m = e.getMessage();
+        return m.contains("Duplicate") || m.contains("Unique index") || m.contains("primary key violation");
     }
 
     private String schemaToJson(JsonNode schema) {

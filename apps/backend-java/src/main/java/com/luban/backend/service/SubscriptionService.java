@@ -22,9 +22,16 @@ import java.util.UUID;
  *                        └─ Starter 首次（无 trial_records）→ trialing + trial_ends=+trialDays + 插 trial_records
  *   trialing --到期(@Scheduled)--> active(Free)               [TrialDowngradeJob]
  *
- * applyPlan 自带事务边界（REQUIRED）：被 OrderService 0 元支付事务调用时加入外层，
- * 「订单置 paid + 订阅生效」原子（plan §3.3）；subscribe 独立调用时自成一个事务
- * （订阅行更新 + trial_records 插入同生共死）。
+ * 事务边界：核心换档逻辑在包内 {@link #applyPlanInternal}（无 @Transactional 注解）；
+ * 仅 public {@link #applyPlan} 保留 @Transactional（REQUIRED），专供 subscribe 独立路径
+ * （订阅行更新 + trial_records 插入同生共死）。OrderService 支付事务内直调 applyPlanInternal
+ * （同包直调不经 Spring 代理，无第二层事务切面）——否则 REQUIRED 参与方抛异常穿越内层
+ * 代理边界会把共享事务标记 rollback-only，外层 catch DuplicateKeyException 后提交抛
+ * UnexpectedRollbackException，让位删除+重查的幂等收敛失效。
+ *
+ * 锁序：applyPlanInternal 首步 lockForMutation(userId)（先锁 subscriptions 行再写
+ * trial_records），与 OrderService.createOrder 加锁顺序一致——subscribe 与 orders 两写路径
+ * 对同用户串行化，uk_trial_user_plan 冲突在正常写路径不可达（OrderService 的 catch 为纯防御）。
  */
 @Service
 public class SubscriptionService {
@@ -46,14 +53,31 @@ public class SubscriptionService {
     }
 
     /**
-     * 换档：套餐存在性校验（hidden 亦可订，e2e fixture 通道）→
+     * 换档（subscribe 独立路径的事务包装）：自成一个事务（订阅行更新 + trial_records
+     * 插入同生共死），核心逻辑委托 {@link #applyPlanInternal}。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Subscription applyPlan(String userId, String planCode) {
+        return applyPlanInternal(userId, planCode);
+    }
+
+    /**
+     * 换档核心逻辑（无 @Transactional，事务边界由调用方持有——subscribe 走 public
+     * applyPlan 的代理，OrderService 在其支付事务内直调本方法）。
+     *
+     * 锁序：首步 lockForMutation 先锁该用户 subscriptions 行（无则插 free/active 占位，
+     * 首次订阅用户先得到占位行、随后仍被本方法的 update 覆盖为最终态，行为不变），
+     * 再判定/插入 trial_records——与 OrderService.createOrder 相同的加锁顺序，
+     * 消除 subscribe vs orders 的死锁窗口，并使并发首单在计数判定前串行化。
+     *
+     * 套餐存在性校验（hidden 亦可订，e2e fixture 通道）→
      * 套餐含试用期且该用户无该档 trial_records → trialing + trial_ends=now+trialDays + 插记录；
      * 否则 → active（清空 trial 字段）。
      *
      * @return 生效后的订阅
      */
-    @Transactional(rollbackFor = Exception.class)
-    public Subscription applyPlan(String userId, String planCode) {
+    Subscription applyPlanInternal(String userId, String planCode) {
+        lockForMutation(userId);
         Plan plan = planMapper.getByCode(planCode);
         if (plan == null) {
             throw BusinessException.invalidPlan();
@@ -125,8 +149,9 @@ public class SubscriptionService {
     }
 
     /**
-     * 订阅写入串行化点：锁定该用户 subscriptions 行（SELECT ... FOR UPDATE），
-     * 供 OrderService 0 元下单在 paid 幂等判定前排队同用户并发请求。
+     * 订阅写入串行化点：锁定该用户 subscriptions 行（SELECT ... FOR UPDATE）。
+     * 两个写路径共用且都在 trial_records 写入前调用：OrderService 0 元下单在 paid
+     * 幂等判定前排队同用户并发请求；applyPlanInternal 首步调用（锁序统一）。
      * 行不存在（存量用户 / 测试直插 seed）时先插 free/active 占位抢 user_id 主键锁；
      * 并发输家撞主键唯一冲突后重查 FOR UPDATE 收敛到赢家行。
      */

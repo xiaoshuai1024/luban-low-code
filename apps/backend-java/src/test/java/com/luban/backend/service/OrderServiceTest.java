@@ -27,7 +27,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * Order 状态机穷举单测（plan §8.1 T-be-4）：
- * (无) --create--> pending --amount==0 自动支付--> paid（同事务 + applyPlan）；
+ * (无) --create--> pending --amount==0 自动支付--> paid（同事务 + applyPlanInternal）；
  * amount>0 → PAYMENT_NOT_SUPPORTED；未知套餐 → INVALID_PLAN；
  * 已有同套餐 paid 单 → 幂等返回原单；markPaid 0 行 → ORDER_ALREADY_PAID。
  */
@@ -65,7 +65,7 @@ class OrderServiceTest {
         sub.setUserId(USER_ID);
         sub.setPlanCode("growth");
         sub.setStatus("active");
-        when(subscriptionService.applyPlan(USER_ID, "growth")).thenReturn(sub);
+        when(subscriptionService.applyPlanInternal(USER_ID, "growth")).thenReturn(sub);
         when(subscriptionService.toResponse(sub)).thenReturn(
                 new com.luban.backend.dto.SubscriptionResponse("growth", "Growth", "active", Instant.now(), null));
 
@@ -81,7 +81,7 @@ class OrderServiceTest {
         org.mockito.InOrder inOrder = org.mockito.Mockito.inOrder(orderMapper);
         inOrder.verify(orderMapper).insert(any(Order.class));
         inOrder.verify(orderMapper).markPaid(eq(inserted.getId()), any(), any());
-        verify(subscriptionService).applyPlan(USER_ID, "growth"); // 订阅生效同事务
+        verify(subscriptionService).applyPlanInternal(USER_ID, "growth"); // 订阅生效同事务（直调内部方法，不经事务代理）
 
         assertThat(result.order().status()).isEqualTo("paid");
         assertThat(result.order().paidAt()).isNotNull();
@@ -99,7 +99,7 @@ class OrderServiceTest {
                     assertThat(e.getHttpStatus().value()).isEqualTo(400);
                 });
         verify(orderMapper, never()).insert(any());
-        verify(subscriptionService, never()).applyPlan(any(), any());
+        verify(subscriptionService, never()).applyPlanInternal(any(), any());
     }
 
     @Test
@@ -136,7 +136,7 @@ class OrderServiceTest {
 
         assertThat(result.order().orderNo()).isEqualTo("ORDEXISTING");
         verify(orderMapper, never()).insert(any());
-        verify(subscriptionService, never()).applyPlan(any(), any()); // 不重复支付/换档
+        verify(subscriptionService, never()).applyPlanInternal(any(), any()); // 不重复支付/换档
     }
 
     @Test

@@ -66,7 +66,7 @@ public class CollectionService {
         try {
             collectionMapper.insert(c);
         } catch (DataIntegrityViolationException e) {
-            if (e.getMessage() != null && e.getMessage().contains("Duplicate")) {
+            if (isUniqueViolation(e)) {
                 throw BusinessException.collectionNameConflict();
             }
             throw e;
@@ -86,7 +86,7 @@ public class CollectionService {
             int n = collectionMapper.update(c);
             if (n == 0) throw BusinessException.collectionNotFound();
         } catch (DataIntegrityViolationException e) {
-            if (e.getMessage() != null && e.getMessage().contains("Duplicate")) {
+            if (isUniqueViolation(e)) {
                 throw BusinessException.collectionNameConflict();
             }
             throw e;
@@ -158,6 +158,14 @@ public class CollectionService {
         if (c == null) throw BusinessException.collectionNotFound();
         int n = collectionMapper.deleteItemByIdAndCollectionId(itemId, collectionId);
         if (n == 0) throw BusinessException.collectionItemNotFound();
+    }
+
+    /** 与 SiteService/LeadService/PageService 同口径：MySQL "Duplicate entry" / H2 "Unique index or primary key violation"
+     * （uk_collections_site_name 冲突须在 H2 测试下也转 409 COLLECTION_NAME_CONFLICT，而非 500）。 */
+    private static boolean isUniqueViolation(DataIntegrityViolationException e) {
+        if (e == null || e.getMessage() == null) return false;
+        String m = e.getMessage();
+        return m.contains("Duplicate") || m.contains("Unique index") || m.contains("primary key violation");
     }
 
     private String jsonToString(JsonNode node) {

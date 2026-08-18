@@ -1,4 +1,5 @@
 import { reactive, readonly } from 'vue'
+import { parseFeatureEnv } from '@/config/features'
 
 /**
  * useFeatureGate — engine 作用域特性开关（plan §6.5）。
@@ -38,9 +39,9 @@ const overrides: Partial<Record<EngineFeatureKey, boolean>> = reactive({})
 function envValue(key: EngineFeatureKey): boolean | undefined {
   // editor.undo → VITE_FEATURE_EDITOR_UNDO
   const envName = `VITE_FEATURE_${key.toUpperCase().replace(/\./g, '_')}`
-  const raw = (import.meta.env as Record<string, unknown>)[envName]
-  if (raw === undefined) return undefined
-  return String(raw) === 'true'
+  // close-tech-debt-1 1.5：判定语义复用 features.ts 的 SSOT 实现
+  // （'false'/'0' → 关，其余含 '1' → 开；空 → 未覆盖）。
+  return parseFeatureEnv((import.meta.env as Record<string, unknown>)[envName])
 }
 
 /** 程序化覆盖（测试或 app 初始化注入；优先级高于 env）。 */

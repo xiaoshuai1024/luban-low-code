@@ -93,8 +93,12 @@ const emit = defineEmits<{
   (e: 'update:style', nodeId: string, key: string, value: string): void
   /** V2-T5：节点动画更新（key 为 animation 字段名，value 为值） */
   (e: 'update:animation', nodeId: string, key: string, value: unknown): void
-  /** V2-T7：节点 CMS 绑定更新（整体 cmsBinding 已写回 node） */
-  (e: 'update:cms-binding', nodeId: string): void
+  /** V2-T5：清除节点动画配置（type 清空/清除选择） */
+  (e: 'clear:animation', nodeId: string): void
+  /** V2-T7：节点 CMS 绑定更新（key 为 cmsBinding 字段名，value 为值） */
+  (e: 'update:cms-binding', nodeId: string, key: string, value: unknown): void
+  /** V2-T7：解绑节点 CMS */
+  (e: 'clear:cms-binding', nodeId: string): void
 }>()
 
 /** 有序的 propSchema 条目，便于稳定渲染。 */
@@ -334,20 +338,21 @@ function getAnimValue(key: string): unknown {
   return props.node?.animation?.[key as keyof typeof props.node.animation]
 }
 
-/** 写入节点 animation 字段：惰性初始化 animation 对象，emit update:animation */
+/**
+ * 动画分区输入（撤销时序修复，close-tech-debt-1 1.1）：不直改
+ * props.node.animation，仅 emit update:animation（nodeId/key/value），由
+ * PageEditor.onUpdateAnimation 先 history.push() 再写入（惰性初始化在父侧完成）
+ * —— 保证快照是变更前状态，动画修改可撤销。
+ */
 function handleAnimInput(key: string, value: unknown): void {
   if (!props.node) return
-  if (!props.node.animation) props.node.animation = {}
-  ;(props.node.animation as Record<string, unknown>)[key] = value
   emit('update:animation', props.node.id, key, value)
 }
 
-/** 清除动画配置（type 设空即视为无动画，渲染零输出） */
+/** 清除动画配置（撤销时序修复）：只 emit clear:animation，父侧 push 后置 undefined */
 function clearAnimation(): void {
   if (!props.node) return
-  if (!props.node.animation) return
-  props.node.animation = undefined
-  emit('update:animation', props.node.id, 'type', undefined)
+  emit('clear:animation', props.node.id)
 }
 
 // === V2-T7 CMS 绑定分区 ===
@@ -365,21 +370,21 @@ const cmsMode = computed<'single' | 'list'>({
   set: (v: 'single' | 'list') => setCmsField('mode', v),
 })
 
-/** 写入 node.cmsBinding[key]，惰性初始化 cmsBinding 对象 */
+/**
+ * CMS 绑定分区输入（撤销时序修复，close-tech-debt-1 1.2）：v-model computed
+ * setter 只做转发，不直改 props.node.cmsBinding，仅 emit update:cms-binding
+ * （nodeId/key/value），由 PageEditor.onUpdateCmsBinding 先 history.push() 再写入
+ * （惰性初始化在父侧完成）—— 保证快照是变更前状态，CMS 绑定可撤销。
+ */
 function setCmsField(key: string, value: unknown): void {
   if (!props.node) return
-  if (!props.node.cmsBinding) {
-    props.node.cmsBinding = { collectionId: '' }
-  }
-  ;(props.node.cmsBinding as unknown as Record<string, unknown>)[key] = value
-  emit('update:cms-binding', props.node.id)
+  emit('update:cms-binding', props.node.id, key, value)
 }
 
-/** 解绑 CMS */
+/** 解绑 CMS（撤销时序修复）：只 emit clear:cms-binding，父侧 push 后置 undefined */
 function clearCmsBinding(): void {
   if (!props.node) return
-  props.node.cmsBinding = undefined
-  emit('update:cms-binding', props.node.id)
+  emit('clear:cms-binding', props.node.id)
 }
 
 function handleDelete(): void {
@@ -424,25 +429,24 @@ function getCurrentDatasourceId(): string {
 function getCurrentVarName(): string {
   return props.node?.datasource?.varName ?? ''
 }
+/**
+ * 数据源分区输入（撤销时序修复，close-tech-debt-1 1.3）：不直改
+ * props.node.datasource，新值由当前状态派生后仅 emit update:datasource
+ * （nodeId/ds|null），由 PageEditor.onUpdateDatasource 先 history.push() 再写入。
+ * id 置空 → null（解绑语义）；varName 缺省沿用 'data'。
+ */
 function handleDatasourceIdChange(id: string): void {
   if (!props.node) return
-  const varName = props.node.datasource?.varName ?? 'data'
-  if (id) {
-    if (!props.node.datasource) {
-      props.node.datasource = { id, varName }
-    } else {
-      props.node.datasource.id = id
-    }
-    emit('update:datasource', props.node.id, { id, varName: props.node.datasource.varName })
-  } else {
-    props.node.datasource = undefined
+  if (!id) {
     emit('update:datasource', props.node.id, null)
+    return
   }
+  const varName = props.node.datasource?.varName ?? 'data'
+  emit('update:datasource', props.node.id, { id, varName })
 }
 function handleVarNameChange(varName: string): void {
-  if (!props.node || !props.node.datasource) return
-  props.node.datasource.varName = varName
-  emit('update:datasource', props.node.id, { ...props.node.datasource })
+  if (!props.node?.datasource) return
+  emit('update:datasource', props.node.id, { id: props.node.datasource.id, varName })
 }
 </script>
 

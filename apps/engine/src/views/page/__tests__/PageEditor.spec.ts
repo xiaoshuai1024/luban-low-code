@@ -300,6 +300,98 @@ describe('PageEditor.vue', () => {
     expect(cur.props.text).toBe('按钮')
   })
 
+  it('修改动画/CMS 绑定/数据源后 undo 恢复（三分区撤销时序对齐，close-tech-debt-1 1.1-1.3）', { timeout: 15000 }, async () => {
+    const wrapper = mountEditor()
+    await flushPromises()
+    designerEmitHooks.addNode!('LubanButton')
+    await flushPromises()
+    const dp = designerPropsHolder.current as {
+      schema: {
+        root: {
+          children: Array<{
+            id: string
+            animation?: { type?: string }
+            cmsBinding?: { collectionId?: string }
+            datasource?: { id: string; varName: string }
+          }>
+        }
+      }
+    }
+    const nodeId = dp.schema.root.children[0].id
+    designerEmitHooks.select!(nodeId)
+    await flushPromises()
+    const panel = wrapper.findComponent({ name: 'PropertyPanel' })
+    const get = () => (designerPropsHolder.current as typeof dp).schema.root.children[0]
+    const undo = () =>
+      wrapper.findAll('button').find((b) => b.attributes('title') === '撤销 (Ctrl+Z)')!
+
+    // animation：emit → PageEditor push 后写入
+    panel.vm.$emit('update:animation', nodeId, 'type', 'fade')
+    await flushPromises()
+    expect(get().animation?.type).toBe('fade')
+
+    // cmsBinding：emit → PageEditor push 后写入
+    panel.vm.$emit('update:cms-binding', nodeId, 'collectionId', 'col-1')
+    await flushPromises()
+    expect(get().cmsBinding?.collectionId).toBe('col-1')
+
+    // datasource：emit → PageEditor push 后写入
+    panel.vm.$emit('update:datasource', nodeId, { id: 'ds-1', varName: 'data' })
+    await flushPromises()
+    expect(get().datasource).toEqual({ id: 'ds-1', varName: 'data' })
+
+    // undo×3 依次恢复（快照均为变更前状态）
+    await undo().trigger('click')
+    await flushPromises()
+    expect(get().datasource).toBeUndefined()
+    await undo().trigger('click')
+    await flushPromises()
+    expect(get().cmsBinding).toBeUndefined()
+    await undo().trigger('click')
+    await flushPromises()
+    expect(get().animation).toBeUndefined()
+  })
+
+  it('清除动画/解绑 CMS 后 undo 恢复（clear 事件入撤销栈）', { timeout: 15000 }, async () => {
+    const wrapper = mountEditor()
+    await flushPromises()
+    designerEmitHooks.addNode!('LubanButton')
+    await flushPromises()
+    const dp = designerPropsHolder.current as {
+      schema: { root: { children: Array<{ id: string; animation?: { type?: string }; cmsBinding?: { collectionId?: string } }> } }
+    }
+    const nodeId = dp.schema.root.children[0].id
+    designerEmitHooks.select!(nodeId)
+    await flushPromises()
+    const panel = wrapper.findComponent({ name: 'PropertyPanel' })
+    const get = () => (designerPropsHolder.current as typeof dp).schema.root.children[0]
+    const undo = () =>
+      wrapper.findAll('button').find((b) => b.attributes('title') === '撤销 (Ctrl+Z)')!
+
+    panel.vm.$emit('update:animation', nodeId, 'type', 'fade')
+    await flushPromises()
+    panel.vm.$emit('update:cms-binding', nodeId, 'collectionId', 'col-1')
+    await flushPromises()
+    expect(get().animation?.type).toBe('fade')
+    expect(get().cmsBinding?.collectionId).toBe('col-1')
+
+    // 清除动画 / 解绑 CMS → 置 undefined（同样入撤销栈）
+    panel.vm.$emit('clear:animation', nodeId)
+    await flushPromises()
+    expect(get().animation).toBeUndefined()
+    panel.vm.$emit('clear:cms-binding', nodeId)
+    await flushPromises()
+    expect(get().cmsBinding).toBeUndefined()
+
+    // undo：先回退解绑，再回退清动画
+    await undo().trigger('click')
+    await flushPromises()
+    expect(get().cmsBinding?.collectionId).toBe('col-1')
+    await undo().trigger('click')
+    await flushPromises()
+    expect(get().animation?.type).toBe('fade')
+  })
+
   it('切换页面后撤销栈重置（页面隔离：undo 不可跨页）', async () => {
     const wrapper = mountEditor()
     await flushPromises()

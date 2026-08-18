@@ -10,7 +10,8 @@ export default defineConfig({
     include: ['src/**/*.spec.ts', 'src/**/*.spec.tsx'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'html', 'lcov'],
+      // json-summary 供 scripts/coverage/coverage-summary.sh 汇总门禁采集（make test-coverage）
+      reporter: ['text', 'html', 'lcov', 'json-summary'],
       // 聚焦本 plan（AI 助手）交付的代码：画布 API 收口 + AI 通信 + 会话状态 + 面板组件。
       // 全量 src 含大量 plan 之外的既有视图（Login/Dashboard/Lead 等）技术债，不纳入本门禁。
       include: [

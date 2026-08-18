@@ -124,6 +124,14 @@ async function handleSave() {
     ElMessage.warning('请填写数据源名称')
     return
   }
+  // close-tech-debt-1 1.4：config 必须是合法 JSON 对象（handleConfigInput 会把
+  // 非法 JSON 文本以 string 原样暂存）。非法则提示并不发请求，避免把字符串
+  // 原样 as Record 发给后端。
+  const cfg = editForm.value.config as unknown
+  if (typeof cfg !== 'object' || cfg === null || Array.isArray(cfg)) {
+    ElMessage.error('配置（JSON）格式错误：必须是合法的 JSON 对象')
+    return
+  }
   saving.value = true
   try {
     const payload: SaveDatasourcePayload = {
@@ -203,7 +211,7 @@ function handleConfigInput(text: string) {
     try {
       parsed = JSON.parse(text)
     } catch {
-      parsed = text // 保留非法 JSON 文本，保存时由用户修正
+      parsed = text // 暂存非法 JSON 文本（string），handleSave 校验拦截不发请求
     }
   }
   editForm.value.config = parsed as Record<string, unknown>

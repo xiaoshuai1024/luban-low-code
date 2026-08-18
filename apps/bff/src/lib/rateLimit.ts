@@ -22,12 +22,13 @@ function recentFailures(key: string, now: number): number[] {
   return (failuresByKey.get(key) || []).filter((t) => now - t < WINDOW_MS);
 }
 
-/** 顺带清扫：条目滑出窗口即删 key；容量超限时全表过期清扫一次。 */
+/** 顺带清扫：该 key 窗口内已无条目则删；容量超 MAX_KEYS 时全表过期清扫（软上限：全新鲜 key 洪水下仍可能超出，量级受每 key 需一次真实失败制约）。 */
 function prune(key: string, now: number): void {
-  if (!failuresByKey.get(key)?.length) failuresByKey.delete(key);
+  const list = failuresByKey.get(key);
+  if (list && !list.some((t) => now - t < WINDOW_MS)) failuresByKey.delete(key);
   if (failuresByKey.size > MAX_KEYS) {
-    for (const [k, list] of failuresByKey) {
-      if (!list.some((t) => now - t < WINDOW_MS)) failuresByKey.delete(k);
+    for (const [k, l] of failuresByKey) {
+      if (!l.some((t) => now - t < WINDOW_MS)) failuresByKey.delete(k);
     }
   }
 }

@@ -22,7 +22,14 @@ export async function POST(req: NextRequest) {
   try {
     const h = authHeaders(parseTokenFromRequest(req));
     if (!h) return unauthenticated();
-    const body = (await req.json()) as SubscribePayload;
+    // 前置解析：仅客户端坏 JSON 归 400；外层 catch 只兜后端错误
+    const body = (await req.json().catch(() => null)) as SubscribePayload | null;
+    if (body === null) {
+      return NextResponse.json(
+        { code: "BAD_REQUEST", message: "Invalid JSON body" },
+        { status: 400 }
+      );
+    }
     const data = await callBackend<SubscribeResult>("/billing/subscribe", {
       method: "POST",
       headers: h,
@@ -30,12 +37,6 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json(data);
   } catch (e) {
-    if (e instanceof SyntaxError) {
-      return NextResponse.json(
-        { code: "BAD_REQUEST", message: "Invalid JSON body" },
-        { status: 400 }
-      );
-    }
     return toBackendResponse(e);
   }
 }

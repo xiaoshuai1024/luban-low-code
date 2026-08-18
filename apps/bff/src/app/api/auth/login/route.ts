@@ -19,7 +19,15 @@ export async function POST(req: Request) {
   if (isRateLimited(ip)) return rateLimited();
 
   try {
-    const body = (await req.json()) as LoginPayload;
+    // 前置解析：仅客户端坏 JSON 归 400（计入限流）；外层 catch 只兜后端错误（坏响应 500 不误归因）
+    const body = (await req.json().catch(() => null)) as LoginPayload | null;
+    if (body === null) {
+      recordFailure(ip);
+      return NextResponse.json(
+        { code: "BAD_REQUEST", message: "Invalid JSON body" },
+        { status: 400 }
+      );
+    }
 
     // 调用后端校验账号密码
     const backendRes = await callBackend<{
@@ -49,14 +57,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json(result);
   } catch (e) {
-    // 登录失败（后端 401/5xx、body 非法）计入限流窗口
+    // 登录失败（后端 401/5xx）计入限流窗口
     recordFailure(ip);
-    if (e instanceof SyntaxError) {
-      return NextResponse.json(
-        { code: "BAD_REQUEST", message: "Invalid JSON body" },
-        { status: 400 }
-      );
-    }
     return toBackendResponse(e);
   }
 }

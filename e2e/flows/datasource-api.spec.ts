@@ -74,7 +74,8 @@ test.describe('数据源管理 API @J-datasource @J-contract-parity', () => {
   test('DS3: 测试连接（api 类型）', async () => {
     const createRes = await apiCtx.post(`${BFF_BASE}/api/datasources?siteId=${siteId}`, {
       headers: authHeaders(token),
-      data: { siteId, name: `${RUN_ID}-test`, type: 'api', config: { url: 'https://httpbin.org/get', method: 'GET' } },
+      // 探测目标用栈内 BFF healthz（容器网络恒可达）——httpbin.org 外网不稳会间歇 503
+      data: { siteId, name: `${RUN_ID}-test`, type: 'api', config: { url: 'http://bff:3000/healthz', method: 'GET' } },
     });
     const dsId = (await createRes.json()).id;
     const r = await apiCtx.post(`${BFF_BASE}/api/datasources/${dsId}/test`, { headers: authHeaders(token) });

@@ -133,6 +133,11 @@ async function handleDelete(row: CollectionResponse) {
   }
 }
 
+/** el-table expand-change 兼容两种回调形态（expandedRows 数组 / boolean） */
+function handleExpandChange(row: CollectionResponse, expanded: CollectionResponse[] | boolean) {
+  void onExpand(row, typeof expanded === 'boolean' ? expanded : expanded.includes(row))
+}
+
 /** 展开行：加载 items */
 async function onExpand(row: CollectionResponse, expanded: boolean) {
   if (!expanded) return
@@ -195,7 +200,7 @@ onMounted(() => {
       v-loading="loading"
       stripe
       row-key="id"
-      @expand-change="(row: CollectionResponse, expanded: CollectionResponse[]) => onExpand(row, expanded.includes(row))"
+      @expand-change="handleExpandChange"
     >
       <ElTableColumn type="expand">
         <template #default="{ row }">
@@ -206,7 +211,7 @@ onMounted(() => {
             </div>
             <ElTable :data="expandedItems[row.id] ?? []" size="small" border>
               <ElTableColumn label="内容摘要" min-width="200">
-                <template #default="{ row: item }">{{ itemSummary(item) }}</template>
+                <template #default="{ row: item }">{{ itemSummary(item as CollectionItemResponse) }}</template>
               </ElTableColumn>
               <ElTableColumn prop="status" label="状态" width="80" />
               <ElTableColumn prop="updatedAt" label="更新时间" width="160" />
@@ -230,8 +235,8 @@ onMounted(() => {
       <ElTableColumn prop="createdAt" label="创建时间" width="180" />
       <ElTableColumn label="操作" width="160" fixed="right">
         <template #default="{ row }">
-          <ElButton link type="primary" @click="openEdit(row)">编辑</ElButton>
-          <ElButton link type="danger" @click="handleDelete(row)">删除</ElButton>
+          <ElButton link type="primary" @click="openEdit(row as CollectionResponse)">编辑</ElButton>
+          <ElButton link type="danger" @click="handleDelete(row as CollectionResponse)">删除</ElButton>
         </template>
       </ElTableColumn>
     </ElTable>

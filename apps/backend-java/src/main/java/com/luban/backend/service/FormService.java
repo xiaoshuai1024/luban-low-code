@@ -7,8 +7,10 @@ import com.luban.backend.dto.FormSaveRequest;
 import com.luban.backend.entity.Form;
 import com.luban.backend.exception.BusinessException;
 import com.luban.backend.mapper.FormMapper;
+import com.luban.backend.mapper.LeadMapper;
 import com.luban.backend.mapper.SiteMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
@@ -23,11 +25,13 @@ public class FormService {
 
     private final FormMapper formMapper;
     private final SiteMapper siteMapper;
+    private final LeadMapper leadMapper;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public FormService(FormMapper formMapper, SiteMapper siteMapper) {
+    public FormService(FormMapper formMapper, SiteMapper siteMapper, LeadMapper leadMapper) {
         this.formMapper = formMapper;
         this.siteMapper = siteMapper;
+        this.leadMapper = leadMapper;
     }
 
     public List<FormResponse> list(String siteId) {
@@ -48,7 +52,7 @@ public class FormService {
         f.setSiteId(req.siteId());
         f.setPageId(req.pageId());
         f.setName(req.name());
-        f.setFieldSchemaJson(toJson(req.fieldSchema()));
+        f.setFieldSchemaJson(req.fieldSchema() != null ? toJson(req.fieldSchema()) : "[]");
         f.setSubmitConfigJson(req.submitConfig() != null ? toJson(req.submitConfig()) : "{}");
         f.setDedupKeysJson(toJson(req.dedupKeys()));
         f.setDedupWindow(req.dedupWindow() != null ? req.dedupWindow() : 86400);
@@ -76,6 +80,20 @@ public class FormService {
         existing.setUpdatedAt(Instant.now());
         formMapper.update(existing);
         return FormResponse.fromEntity(existing);
+    }
+
+    /**
+     * 删除表单：名下已有 leads 时拒绝（409 FORM_HAS_LEADS，leads 是业务资产不随表单静默删除）；
+     * 无 leads 才物理删除。事务保证「检查 + 删除」原子。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void delete(String siteId, String id) {
+        Form existing = formMapper.getByIdAndSiteId(id, siteId);
+        if (existing == null) throw BusinessException.formNotFound();
+        if (leadMapper.countByFormId(id) > 0) {
+            throw BusinessException.formHasLeads();
+        }
+        formMapper.deleteById(id, siteId);
     }
 
     private String toJson(JsonNode node) {

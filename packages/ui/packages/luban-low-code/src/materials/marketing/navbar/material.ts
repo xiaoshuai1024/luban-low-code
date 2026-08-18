@@ -1,6 +1,6 @@
 import type { MaterialDefinition } from '../../../lib/material/defineMaterial';
 import { defineMaterial } from '../../../lib/material/defineMaterial';
-import { LubanNavbar } from 'luban-base';
+import { LubanNavbar } from '@luban-low-code/luban-base';
 
 export const navbarMaterial: MaterialDefinition = defineMaterial({
   name: 'LubanNavbar',

@@ -168,14 +168,13 @@ if [[ ${#EXTRA_PKGS[@]} -gt 0 ]]; then
     PKG_DIRS+=("$p")
   done
 else
-  # monorepo：显式包清单（apps/* 可部署应用 + packages/ui 物料库 + Java/Go 双后端）
+  # monorepo：显式包清单（apps/* 可部署应用 + packages/ui 物料库 + Java 单端权威后端）
   PKG_DIRS=(
     "apps/engine"
     "apps/bff"
     "packages/ui"
     "apps/website"
     "apps/backend-java"
-    "apps/backend-go"
   )
 fi
 

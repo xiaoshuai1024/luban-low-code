@@ -130,16 +130,16 @@ onMounted(() => {
       <ElTableColumn prop="updatedAt" label="更新时间" width="180" />
       <ElTableColumn label="操作" width="200" fixed="right">
         <template #default="{ row }">
-          <ElButton link type="primary" @click="goEdit(row)">编辑</ElButton>
+          <ElButton link type="primary" @click="goEdit(row as PageMeta)">编辑</ElButton>
           <ElButton
             v-if="row.status === 'published'"
             link
             type="success"
-            @click="openPublishedPreview(row)"
+            @click="openPublishedPreview(row as PageMeta)"
           >
             预览
           </ElButton>
-          <ElButton link type="danger" @click="handleDelete(row)">删除</ElButton>
+          <ElButton link type="danger" @click="handleDelete(row as PageMeta)">删除</ElButton>
         </template>
       </ElTableColumn>
     </ElTable>

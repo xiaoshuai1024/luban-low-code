@@ -1,6 +1,6 @@
 import type { MaterialDefinition } from '../../../lib/material/defineMaterial';
 import { defineMaterial } from '../../../lib/material/defineMaterial';
-import { LubanFooter } from 'luban-base';
+import { LubanFooter } from '@luban-low-code/luban-base';
 
 export const footerMaterial: MaterialDefinition = defineMaterial({
   name: 'LubanFooter',

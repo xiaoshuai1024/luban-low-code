@@ -132,3 +132,54 @@ describe("callBackend", () => {
     }
   });
 });
+
+describe("callBackend X-Internal-Auth 注入", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    delete process.env.INTERNAL_AUTH_SECRET;
+    vi.restoreAllMocks();
+    vi.resetModules();
+  });
+
+  it("配置 INTERNAL_AUTH_SECRET → 注入该头，且覆盖调用方传入的伪造值", async () => {
+    process.env.INTERNAL_AUTH_SECRET = "secret-abc";
+    vi.resetModules();
+    const { callBackend } = await import("@/lib/backendClient");
+
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue(jsonResponse({ ok: true }));
+
+    await callBackend("/users", {
+      method: "GET",
+      headers: { "X-Internal-Auth": "forged-by-caller" },
+    });
+
+    const [, init] = fetchMock.mock.calls[0];
+    const headers = (init as RequestInit).headers as Record<string, string>;
+    expect(headers["X-Internal-Auth"]).toBe("secret-abc");
+  });
+
+  it("未配置 → 不注入，调用方传入的 X-Internal-Auth 被剥离（不透传伪造值），且只 WARN 一次", async () => {
+    delete process.env.INTERNAL_AUTH_SECRET;
+    vi.resetModules();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { callBackend } = await import("@/lib/backendClient");
+
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue(jsonResponse({ ok: true }));
+
+    await callBackend("/users", {
+      method: "GET",
+      headers: { "X-Internal-Auth": "forged-by-caller" },
+    });
+    await callBackend("/users", { method: "GET" });
+
+    const headers = (fetchMock.mock.calls[0][1] as RequestInit)
+      .headers as Record<string, string>;
+    expect(headers["X-Internal-Auth"]).toBeUndefined();
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+});

@@ -15,6 +15,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia } from 'pinia'
+import { reactive } from 'vue'
 
 // luban-low-code 由 vitest.config.ts 的 alias 解析到本地 stub（src/test/lubanLowCodeStub.ts）。
 // 此处 import 拿到 stub 暴露的 hooks / fixtures，供测试触发 LubanDesigner 的 emit。
@@ -25,11 +26,13 @@ import {
 } from '@/test/lubanLowCodeStub'
 
 // === stubs for vue-router（PageEditor 用 useRoute/useRouter） ===
-const routeState = {
+// reactive 化：PageEditor 的 siteId/pageId computed 才能响应 params 变化
+//（watch([siteId, pageId]) → loadPage → history.reset 切页隔离测试依赖此行为）。
+const routeState = reactive({
   params: { siteId: 'site-1', pageId: 'page-1' },
   name: 'PageEditor',
   meta: {},
-}
+})
 const routerPush = vi.fn()
 vi.mock('vue-router', () => ({
   useRoute: () => routeState,
@@ -251,5 +254,71 @@ describe('PageEditor.vue', () => {
     expect(getPageMock).toHaveBeenCalledTimes(2)
     // 重试成功后工作区出现
     expect(wrapper.find('.page-editor__workspace').exists()).toBe(true)
+  })
+
+  it('修改属性后 undo 恢复旧值（撤销时序：快照在变更前）', async () => {
+    const wrapper = mountEditor()
+    await flushPromises()
+    designerEmitHooks.addNode!('LubanButton')
+    await flushPromises()
+    const dp = designerPropsHolder.current as {
+      schema: { root: { children: Array<{ id: string; props: Record<string, unknown>; style?: Record<string, string> }> } }
+    }
+    const nodeId = dp.schema.root.children[0].id
+    expect(dp.schema.root.children[0].props.text).toBe('按钮') // meta.defaultProps 初值
+
+    designerEmitHooks.select!(nodeId)
+    await flushPromises()
+    const panel = wrapper.findComponent({ name: 'PropertyPanel' })
+
+    // 修改 prop（PropertyPanel emit → PageEditor push 后写入）
+    panel.vm.$emit('update:prop', nodeId, 'text', '已点击')
+    await flushPromises()
+    let cur = (designerPropsHolder.current as typeof dp).schema.root.children[0]
+    expect(cur.props.text).toBe('已点击')
+
+    // 修改 style（同一模式：emit → push 后写入）
+    panel.vm.$emit('update:style', nodeId, 'width', '100px')
+    await flushPromises()
+    cur = (designerPropsHolder.current as typeof dp).schema.root.children[0]
+    expect(cur.style?.width).toBe('100px')
+
+    // undo 1：回退 style 修改 → width 键被删除（空值语义）
+    const undoBtn = wrapper.findAll('button').find((b) => b.attributes('title') === '撤销 (Ctrl+Z)')
+    expect(undoBtn).toBeDefined()
+    await undoBtn!.trigger('click')
+    await flushPromises()
+    cur = (designerPropsHolder.current as typeof dp).schema.root.children[0]
+    expect(cur.style?.width).toBeUndefined()
+    expect(cur.props.text).toBe('已点击') // style 撤销不影响 prop
+
+    // undo 2：回退 prop 修改 → 恢复旧值（撤销时序修复的核心验收）
+    const undoBtn2 = wrapper.findAll('button').find((b) => b.attributes('title') === '撤销 (Ctrl+Z)')
+    await undoBtn2!.trigger('click')
+    await flushPromises()
+    cur = (designerPropsHolder.current as typeof dp).schema.root.children[0]
+    expect(cur.props.text).toBe('按钮')
+  })
+
+  it('切换页面后撤销栈重置（页面隔离：undo 不可跨页）', async () => {
+    const wrapper = mountEditor()
+    await flushPromises()
+
+    // 加一个节点 → canUndo=true（撤销按钮可用）
+    designerEmitHooks.addNode!('LubanButton')
+    await flushPromises()
+    const undoBtn = wrapper.findAll('button').find((b) => b.attributes('title') === '撤销 (Ctrl+Z)')
+    expect(undoBtn).toBeDefined()
+    expect(undoBtn!.attributes('disabled')).toBeUndefined()
+
+    // 切换 pageId → watch 触发 loadPage → 成功后 history.reset()
+    routeState.params.pageId = 'page-2'
+    await flushPromises()
+    expect(getPageMock).toHaveBeenCalledWith('site-1', 'page-2')
+
+    // 撤销栈已清空 → 按钮禁用（不会把上一页 schema 写回当前页）
+    const undoBtnAfter = wrapper.findAll('button').find((b) => b.attributes('title') === '撤销 (Ctrl+Z)')
+    expect(undoBtnAfter).toBeDefined()
+    expect(undoBtnAfter!.attributes('disabled')).toBeDefined()
   })
 })

@@ -10,16 +10,16 @@ luban-workspace — luban 低代码平台 monorepo（原 git superproject + 8 su
 
 | 子项目 | 路径 | 技术栈 | 默认分支 |
 |------|------|--------|--------|
-| 低代码引擎 | `packages/engine/luban` | TypeScript | master |
-| BFF | `packages/bff/luban-bff` | TypeScript / Node | master |
-| 组件库/物料 | `packages/ui/luban-ui` | Vue 3 / Vite | master |
-| SSR 站点 | `packages/web/luban-website` | TypeScript / SSR | master |
-| 后端 Java | `packages/backend/luban-backend` | Java / Spring Boot / Maven | master |
-| AI 助手 | `packages/ai/luban-ai-assistant` | （规划中） | main |
-| 桌面端 | `packages/client/luban-electron` | Electron（规划） | main |
-| 移动端 | `packages/client/luban-flutter` | Flutter（规划） | main |
-| 跨平台 | `packages/client/luban-cross-plateform` | （规划） | main |
-| 架构文档 | `packages/docs/luban-architecture-design` | 文档 | main |
+| 低代码引擎 | `apps/engine` | TypeScript / Vue 3 | master |
+| BFF | `apps/bff` | TypeScript / Node（Next） | master |
+| 组件库/物料 | `packages/ui`（nx workspace：luban-base + luban-low-code + apps/luban-ui） | Vue 3 / Vite | master |
+| SSR 站点 | `apps/website` | TypeScript / Nuxt SSR | master |
+| 后端 Java | `apps/backend-java` | Java / Spring Boot / Maven | master |
+| MCP Server | `packages/mcp` | TypeScript（已发布 `@luban-low-code/mcp-server`） | master |
+| Sprint MCP | `packages/sprint-mcp` | TypeScript | master |
+| AI 助手 | `packages/ai-assistant` | Python / FastAPI | main |
+| 移动端 | `packages/client/luban-flutter` | Flutter | main |
+| 文档站 | `apps/docs` | VitePress | master |
 
 非中文用户用英文交互，中文用户用中文。
 
@@ -32,7 +32,7 @@ luban-workspace — luban 低代码平台 monorepo（原 git superproject + 8 su
 凡改动引擎/物料/schema，须满足：本地 `pnpm run build` 成功且渲染器零新增 console error；物料 props schema 合规（见 `.agents/rules/luban-material-schema.md`）；引擎产物在 `apps/website`（SSR）及各端渲染一致；不确定行为标注"需验证"。
 
 ### 3. 后端单端权威（Java）
-Java 后端 `packages/backend/luban-backend` 为唯一后端实现（Go 双后端战略已放弃，Q4=C，2026-06-28，见 `docs/DUAL_BACKEND_PARITY.md`）。不再要求双后端契约对齐。
+Java 后端 `apps/backend-java` 为唯一后端实现（Go 双后端战略已放弃，Q4=C，2026-06-28，`apps/backend-go` 已于 2026-08-15 删除，见 `docs/DUAL_BACKEND_PARITY.md`）。不再要求双后端契约对齐。
 
 ### 4. E2E 禁止跳过/假绿
 所有 E2E 真实执行，禁止 `*.skip`/条件跳过；需跳过须用户明确同意；禁止"未起依赖→全 skip→退出 0"冒充通过。见 `.agents/rules/luban-e2e-execution-contract.md`。

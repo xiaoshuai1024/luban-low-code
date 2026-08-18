@@ -8,14 +8,13 @@ luban-workspace 的测试门禁与 Git/GitHub 工作流脚本。全部 POSIX-ish
 
 | 脚本 | 用途 | 入口 |
 |------|------|------|
-| `coverage/coverage-summary.sh` | 遍历 `packages/*` 各包，按技术栈（TS/Java/Go）收集覆盖率，输出汇总表 + 各 HTML 报告路径；任一存在测试的包未达标 → exit 1 | `make test-coverage` |
+| `coverage/coverage-summary.sh` | 遍历 `packages/*` 各包，按技术栈（TS/Java）收集覆盖率，输出汇总表 + 各 HTML 报告路径；任一存在测试的包未达标 → exit 1 | `make test-coverage` |
 
 技术栈分发：
 - **TS**（engine/bff/ui/website）→ `pnpm test:coverage`（回退 `pnpm test -- --coverage`），读 `coverage/coverage-summary.json` 的 `lines.pct`
 - **Java**（luban-backend）→ `mvn -q verify`，读 `target/site/jacoco/jacoco.xml` 的 `<counter type="LINE">`
-- **Go**（luban-backend-go）→ `go test ./... -coverprofile=coverage.out`，`go tool cover -func` 取 total
 
-覆盖率目标（来自 CLAUDE.md）：TS 引擎/bff/website 85% · UI 90% · Java 80% · Go 75%。
+覆盖率目标（来自 CLAUDE.md）：TS 引擎/bff/website 85% · UI 90% · Java 80%。
 
 ### Git 工作流
 
@@ -25,7 +24,7 @@ luban-workspace 的测试门禁与 Git/GitHub 工作流脚本。全部 POSIX-ish
 | `git/push-all.sh` | 遍历 submodule + 主仓，有改动则按规范 commit + push 当前分支（**不建 PR**） | `make push-all` |
 | `git/push-all-commit-msg.lib.sh` | push-all 的语义化提交说明生成库（按暂存文件路径推断 type/scope，可从方案 md 取标题）。**被 source，勿单独执行** | — |
 | `git/pr-all.sh` | 各 submodule + meta 仓 `gh pr create --base <默认分支>`（替代云效 MR）。先子模块后 meta（便于 meta 含子模块指针更新） | `make pr-all` |
-| `git/run-per-pkg.sh` | 通用按包执行命令（test/lint/install/build），按技术栈分发：TS→pnpm · Java→mvn · Go→go。工具/脚本缺失→SKIP | `make test` / `make lint` / `make install-deps` |
+| `git/run-per-pkg.sh` | 通用按包执行命令（test/lint/install/build），按技术栈分发：TS→pnpm · Java→mvn。工具/脚本缺失→SKIP | `make test` / `make lint` / `make install-deps` |
 
 ### GitHub 封装（`scripts/github/`）
 

@@ -1,6 +1,6 @@
 import type { MaterialDefinition } from '../../../lib/material/defineMaterial';
 import { defineMaterial } from '../../../lib/material/defineMaterial';
-import { LubanGallery } from 'luban-base';
+import { LubanGallery } from '@luban-low-code/luban-base';
 
 export const galleryMaterial: MaterialDefinition = defineMaterial({
   name: 'LubanGallery',

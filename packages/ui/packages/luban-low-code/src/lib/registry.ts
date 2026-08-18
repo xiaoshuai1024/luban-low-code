@@ -34,7 +34,7 @@ import {
   LubanCheckbox,
   LubanRadioGroup,
   LubanSwitch,
-} from 'luban-base';
+} from '@luban-low-code/luban-base';
 import { materialRegistry } from './material/registry';
 
 /**

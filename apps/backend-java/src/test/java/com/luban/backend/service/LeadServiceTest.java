@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.Map;
 
@@ -204,5 +205,90 @@ class LeadServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getCode())
                 .isEqualTo("FORM_NOT_FOUND");
+    }
+
+    // === uk_form_dedup 唯一键冲突（并发竞态）收敛路径（close-review-gaps 3.3） ===
+
+    /** H2/MySQL 唯一键冲突消息（对齐 SiteService.isUniqueViolation 口径）。 */
+    private static DataIntegrityViolationException ukViolation() {
+        return new DataIntegrityViolationException(
+                "Unique index or primary key violation: uk_form_dedup ON leads");
+    }
+
+    @Test
+    void submitUniqueKeyConflict_rejectPolicyReturns409Not500() {
+        when(formMapper.getById("form-1")).thenReturn(sampleForm());
+        when(antiSpamService.isRateLimited(anyString(), anyString(), anyInt(), anyInt())).thenReturn(false);
+        // 窗口内查不到（另一并发请求刚插入未提交 / 窗口过期）→ ACCEPT → insert 撞唯一键
+        when(leadMapper.countByFormHashInWindow(eq("form-1"), anyString(), any())).thenReturn(0);
+        when(leadMapper.insert(any())).thenThrow(ukViolation());
+
+        assertThatThrownBy(() -> service.submit(req("13800000001")))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getCode())
+                .isEqualTo("LEAD_DUPLICATE"); // 409，不再 500
+    }
+
+    @Test
+    void submitUniqueKeyConflict_mergePolicyMergesExisting() {
+        Form f = sampleForm();
+        f.setDedupPolicy("merge");
+        when(formMapper.getById("form-1")).thenReturn(f);
+        when(antiSpamService.isRateLimited(anyString(), anyString(), anyInt(), anyInt())).thenReturn(false);
+        when(leadMapper.countByFormHashInWindow(eq("form-1"), anyString(), any())).thenReturn(0);
+        // 竞态时序：MERGE 预检 findLatest 为 null（对方未提交）→ insert 撞唯一键 → 冲突后再查命中
+        Lead existing = new Lead();
+        existing.setId("lead-existing");
+        existing.setFormId("form-1");
+        existing.setSiteId("site-1");
+        existing.setContactJson(new LeadCryptoService("").encrypt("{\"phone\":\"13800000001\"}"));
+        existing.setStatus("new");
+        existing.setUpdatedAt(java.time.Instant.now());
+        when(leadMapper.findLatestByFormHash(eq("form-1"), anyString())).thenReturn(null, existing);
+        when(leadMapper.insert(any())).thenThrow(ukViolation());
+        when(leadMapper.updateContactByDedup(eq("form-1"), anyString(), anyString(), any(), any())).thenReturn(1);
+
+        LeadSubmitResult result = service.submit(req("13800000001"));
+
+        assertThat(result.leadId()).isEqualTo("lead-existing"); // 复用既有 lead
+        assertThat(result.dedup()).isTrue();
+        verify(leadMapper).updateContactByDedup(eq("form-1"), anyString(), anyString(), any(), any());
+        verify(notifyService, never()).notifyNewLead(any(), any()); // 不重复通知
+    }
+
+    @Test
+    void submitUniqueKeyConflict_markPolicyReturnsExistingState() {
+        Form f = sampleForm();
+        f.setDedupPolicy("mark");
+        when(formMapper.getById("form-1")).thenReturn(f);
+        when(antiSpamService.isRateLimited(anyString(), anyString(), anyInt(), anyInt())).thenReturn(false);
+        when(leadMapper.countByFormHashInWindow(eq("form-1"), anyString(), any())).thenReturn(0);
+        Lead existing = new Lead();
+        existing.setId("lead-existing");
+        existing.setFormId("form-1");
+        existing.setSiteId("site-1");
+        existing.setStatus("invalid");
+        existing.setUpdatedAt(java.time.Instant.now());
+        when(leadMapper.findLatestByFormHash(eq("form-1"), anyString())).thenReturn(existing);
+        when(leadMapper.insert(any())).thenThrow(ukViolation());
+
+        LeadSubmitResult result = service.submit(req("13800000001"));
+
+        assertThat(result.leadId()).isEqualTo("lead-existing");
+        assertThat(result.status()).isEqualTo("invalid");
+        assertThat(result.dedup()).isTrue();
+        verify(notifyService, never()).notifyNewLead(any(), any());
+    }
+
+    @Test
+    void submitNonUniqueIntegrityViolation_propagates() {
+        when(formMapper.getById("form-1")).thenReturn(sampleForm());
+        when(antiSpamService.isRateLimited(anyString(), anyString(), anyInt(), anyInt())).thenReturn(false);
+        when(leadMapper.countByFormHashInWindow(eq("form-1"), anyString(), any())).thenReturn(0);
+        // 非唯一键的完整性冲突（如 FK）不吞掉，原样传播
+        when(leadMapper.insert(any())).thenThrow(new DataIntegrityViolationException("Referential integrity constraint violation"));
+
+        assertThatThrownBy(() -> service.submit(req("13800000001")))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 }

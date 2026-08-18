@@ -77,17 +77,38 @@ withDefaults(
   &--full .lb-cta__content { max-width: none; }
 }
 .lb-cta__content {
+  position: relative;
   max-width: 1200px; margin: 0 auto; padding: 80px 24px;
-  background: linear-gradient(135deg, var(--lb-primary) 0%, var(--lb-secondary) 100%);
+  /* 极光流动渐变：indigo → violet → cyan 缓慢循环 */
+  background: linear-gradient(120deg, #4f46e5, #7c3aed, #0891b2, #4f46e5);
+  background-size: 300% 300%;
+  animation: lb-cta-aurora 14s ease-in-out infinite;
   border-radius: 24px; color: #fff;
+  overflow: hidden;
+  /* 装饰光球 */
+  &::before, &::after {
+    content: ""; position: absolute; border-radius: 50%; filter: blur(64px); opacity: .35; pointer-events: none;
+  }
+  &::before { width: 300px; height: 300px; top: -120px; left: -60px; background: #22d3ee; }
+  &::after  { width: 340px; height: 340px; bottom: -160px; right: -80px; background: #7c3aed; }
 }
-.lb-cta__heading { font-size: 2.25rem; font-weight: 800; margin: 0 0 16px; color: #fff; }
-.lb-cta__description { font-size: 1.05rem; opacity: .85; margin: 0 auto 32px; max-width: 500px; line-height: 1.6; }
-.lb-cta__actions { display: inline-flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
-.lb-cta__button { display:inline-block;padding:14px 32px;font-size:1rem;font-weight:600;border-radius:10px;text-decoration:none;transition:all .15s;
-  &--primary { background:#fff;color:var(--lb-primary); &:hover { background:#f1f5f9; } }
-  &--outline,&--secondary { background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.3); &:hover { background:rgba(255,255,255,.1);border-color:#fff; } }
+@keyframes lb-cta-aurora {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+.lb-cta__heading { font-size: 2.25rem; font-weight: 800; margin: 0 0 16px; color: #fff; position: relative; }
+.lb-cta__description { font-size: 1.05rem; opacity: .85; margin: 0 auto 32px; max-width: 500px; line-height: 1.6; position: relative; }
+.lb-cta__actions { display: inline-flex; gap: 16px; flex-wrap: wrap; justify-content: center; position: relative; }
+.lb-cta__button { display:inline-block;padding:14px 32px;font-size:1rem;font-weight:600;border-radius:12px;text-decoration:none;transition:all .2s ease;
+  &--primary { background:#fff;color:var(--lb-primary); box-shadow:0 4px 16px rgba(0,0,0,.18);
+    &:hover { background:#f8fafc; transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,.28); } }
+  &--outline,&--secondary { background:rgba(255,255,255,.08);color:#fff;border:1.5px solid rgba(255,255,255,.35); backdrop-filter:blur(6px);
+    &:hover { background:rgba(255,255,255,.16);border-color:#fff; transform:translateY(-2px); } }
   &--ghost { background:transparent;color:#fff; &:hover { text-decoration:underline; } }
   &--disabled { opacity:.6;cursor:default; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lb-cta__content { animation: none; }
+  .lb-cta__button { transition: none; }
 }
 </style>

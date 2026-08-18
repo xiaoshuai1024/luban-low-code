@@ -272,14 +272,14 @@ onMounted(() => {
       </ElTableColumn>
       <ElTableColumn label="操作" width="240" fixed="right">
         <template #default="{ row }">
-          <ElButton link type="primary" @click="goDetail(row)">详情</ElButton>
+          <ElButton link type="primary" @click="goDetail(row as LeadResponse)">详情</ElButton>
           <template v-if="hasTransitionTargets(row.status)">
             <ElButton
               v-for="target in (LEAD_STATUS_TRANSITIONS[row.status] ?? [])"
               :key="target"
               link
               :type="target === 'converted' ? 'success' : 'primary'"
-              @click="handleTransitStatus(row, target)"
+              @click="handleTransitStatus(row as LeadResponse, target)"
             >
               {{ LEAD_STATUS_LABELS[target] }}
             </ElButton>

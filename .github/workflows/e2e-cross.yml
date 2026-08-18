@@ -1,8 +1,7 @@
 name: E2E Cross-project
 
-# 跨项目流程性 E2E（发布闭环 / 线索闭环 / 双后端一致性）
-# 注意：需要完整 docker-compose 栈，当前基础设施未完全就绪
-# 标记为 non-blocking 直到种子脚本和 docker-compose.e2e.yml 完成
+# 跨项目流程性 E2E（发布闭环 / 线索闭环）
+# 测试失败必须阻断合入（仓库硬约束：E2E 禁止跳过/假绿）
 
 on:
   pull_request:
@@ -18,11 +17,9 @@ jobs:
     name: Cross-project E2E
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    continue-on-error: true # 非阻塞：基础设施未完全就绪前不阻断合入
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: pnpm/action-setup@v4
@@ -33,47 +30,38 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: e2e/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Check e2e prerequisites
         run: |
-          if [ ! -f docker-compose.e2e.yml ]; then
-            echo "⚠️ docker-compose.e2e.yml not found — skipping E2E"
-            echo "SKIP_E2E=true" >> "$GITHUB_ENV"
-          fi
-          if [ ! -d e2e ]; then
-            echo "⚠️ e2e directory not found — skipping E2E"
-            echo "SKIP_E2E=true" >> "$GITHUB_ENV"
-          fi
+          test -f docker-compose.e2e.yml || { echo "::error::docker-compose.e2e.yml 缺失"; exit 1; }
+          test -d e2e || { echo "::error::e2e 目录缺失"; exit 1; }
 
-      - name: Install e2e deps
-        if: env.SKIP_E2E != 'true'
-        working-directory: e2e
-        run: pnpm install
+      - name: Install workspace deps (root)
+        run: pnpm install --frozen-lockfile
 
       - name: Install Playwright Chromium
-        if: env.SKIP_E2E != 'true'
         working-directory: e2e
-        run: pnpm run install:e2e:ci || echo "Playwright install skipped"
+        run: pnpm run install:e2e:ci
 
       - name: Start service stack
-        if: env.SKIP_E2E != 'true'
-        run: make e2e-up || echo "Service stack startup may have issues"
+        run: make e2e-up
 
       - name: Run cross-project E2E
-        if: env.SKIP_E2E != 'true'
         env:
           LUBAN_E2E_USE_PLAYWRIGHT_CHROMIUM: "1"
           LUBAN_E2E_ENGINE_URL: http://127.0.0.1:4200
           LUBAN_E2E_WEBSITE_URL: http://127.0.0.1:3000
           LUBAN_E2E_JAVA_API: http://127.0.0.1:8080
-          LUBAN_E2E_GO_API: http://127.0.0.1:8081
           LUBAN_E2E_BFF_URL: http://127.0.0.1:3100
+          # 与 docker-compose.e2e.yml 的 E2E_BOOTSTRAP_* 同值（栈为全新临时库，自建账号）
+          LUBAN_E2E_ACCOUNT: e2e-ci
+          LUBAN_E2E_PASSWORD: e2e-ci-pass-2026
         working-directory: e2e
-        run: pnpm test || echo "E2E tests may fail due to incomplete infrastructure"
+        run: pnpm test
 
       - name: Upload Playwright report
-        if: ${{ !cancelled() && env.SKIP_E2E != 'true' }}
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
@@ -81,5 +69,5 @@ jobs:
           retention-days: 14
 
       - name: Stop service stack
-        if: always() && env.SKIP_E2E != 'true'
-        run: make e2e-down || true
+        if: always()
+        run: make e2e-down

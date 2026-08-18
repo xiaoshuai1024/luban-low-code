@@ -13,7 +13,7 @@
 
 import type { MaterialDefinition } from '../../../lib/material/defineMaterial';
 import { defineMaterial } from '../../../lib/material/defineMaterial';
-import { LubanCTA } from 'luban-base';
+import { LubanCTA } from '@luban-low-code/luban-base';
 
 export const ctaMaterial: MaterialDefinition = defineMaterial({
   name: 'LubanCTA',

@@ -7,9 +7,9 @@
 #   MySQL     3307（避免与本地 3306 冲突）
 #   Redis     6380（避免与本地 6379 冲突）
 #   Java      8080  context-path /backend
-#   BFF       3100
-#   engine    4200  (vite.config.ts 固定)
-#   website   3000
+#   BFF       3100（宿主）→ 容器内 3000（engine nginx 写死反代 bff:3000）
+#   engine    4200  (nginx listen 4200)
+#   website   3000（宿主）→ 容器内 4173（nitro 默认端口）
 #
 # Go 后端已废弃（Q4=C，2026-06-28），E2E 不再起 Go 后端。
 
@@ -53,6 +53,11 @@ services:
       MYSQL_PASSWORD: luban
       REDIS_HOST: redis
       REDIS_PORT: "6379"
+      # BFF↔backend 共享密钥（X-Internal-Auth 校验），与 bff 服务注入同值；e2e 固定 dev 值，勿用于生产
+      INTERNAL_AUTH_SECRET: "e2e-dev-internal-auth-not-for-prod"
+      # e2e 专用账号引导（E2EAccountBootstrap：全新库启动时创建，已存在不重置）
+      E2E_BOOTSTRAP_ACCOUNT: "e2e-ci"
+      E2E_BOOTSTRAP_PASSWORD: "e2e-ci-pass-2026"
     ports:
       - "8080:8080"
     depends_on:
@@ -67,28 +72,38 @@ services:
     environment:
       # 默认指向 Java 后端（/backend context-path）
       BACKEND_BASE_URL: "http://backend-java:8080/backend"
-      PORT: "3100"
+      # 容器内监听 3000（engine nginx 写死反代 bff:3000）；宿主经 3100 访问
+      PORT: "3000"
+      # 覆盖 authToken.ts 的弱默认密钥；e2e 固定 dev 值，勿用于生产
+      AUTH_JWT_SECRET: "e2e-dev-jwt-secret-not-for-prod"
+      # 与 backend-java 服务注入同值（X-Internal-Auth）
+      INTERNAL_AUTH_SECRET: "e2e-dev-internal-auth-not-for-prod"
     ports:
-      - "3100:3100"
+      - "3100:3000"
     depends_on:
       - backend-java
 
   engine:
     build:
-      context: ./apps/engine
+      context: .
+      dockerfile: apps/engine/Dockerfile
     environment:
       VITE_BFF_BASE_URL: "http://127.0.0.1:3100"
+    depends_on:
+      - bff
     ports:
       - "4200:4200"
 
   website:
     build:
-      context: ./apps/website
+      context: .
+      dockerfile: apps/website/Dockerfile
     environment:
-      NUXT_PUBLIC_BFF_BASE_URL: "http://127.0.0.1:3100"
+      # SSR 走容器间 DNS 调 BFF（容器内 3000）；公开页渲染用
+      NUXT_PUBLIC_BFF_BASE_URL: "http://bff:3000"
       NUXT_PUBLIC_DEFAULT_SITE_SLUG: "default"
     ports:
-      - "3000:3000"
+      - "3000:4173"
     depends_on:
       - bff
 

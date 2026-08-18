@@ -44,7 +44,7 @@ import {
   ElDropdownItem,
 } from 'element-plus'
 import { getPage, savePage, createPage, publishPage } from '@/api/page'
-import { getDatasources, queryDatasource, testDatasource } from '@/api/datasource'
+import { getDatasources, queryDatasource, testDatasource, normalizeDatasourceError } from '@/api/datasource'
 import { getCollections } from '@/api/collection'
 import type { PageSchema, NodeSchema } from '@/types/schema'
 import {
@@ -264,6 +264,9 @@ async function loadPage() {
         root: { id: 'root', type: 'LubanContainer', props: {}, children: [] },
       }
     }
+    // 撤销栈页面隔离：切换页面/重新加载成功后清空历史，避免 undo 把
+    // 上一页 schema 写回当前页（回滚版本重载同理，以新基线重新开始）。
+    history.reset()
   } catch (e) {
     // 不再静默回退；记录错误供 UI 显示重试卡片。
     loadError.value = (e as Error)?.message || '加载页面失败'
@@ -528,19 +531,36 @@ function onUpdateDatasource(nodeId: string, ds: { id: string; varName: string } 
 }
 
 /**
- * D15-A3 属性面板样式分区回写：写 node.style[key]，入撤销栈。
+ * D15-A3 属性面板样式分区回写：写 node.style[key]（desktop）或
+ * node.responsive[bp][key]（tablet/mobile），入撤销栈。
  * 安全过滤已在 PropertyPanel.handleStyleInput 完成（拒绝 expression()/javascript: 等）。
+ * 撤销时序修复：PropertyPanel 不再直改 props.node，写入统一收口到此处
+ * （history.push() 先于 mutation，快照为变更前状态）。
  */
 function onUpdateStyle(nodeId: string, key: string, value: string): void {
   if (!schema.value?.root) return
   const node = findNode(schema.value.root, nodeId)
   if (!node) return
   history.push()
-  if (!node.style) node.style = {}
-  if (value === '') {
-    delete node.style[key]
+  let target: Record<string, string>
+  if (currentBreakpoint.value === 'desktop') {
+    if (!node.style) node.style = {}
+    target = node.style
   } else {
-    node.style[key] = value
+    if (!node.responsive) node.responsive = {}
+    const bp = currentBreakpoint.value
+    if (bp === 'tablet') {
+      if (!node.responsive.tablet) node.responsive.tablet = {}
+      target = node.responsive.tablet
+    } else {
+      if (!node.responsive.mobile) node.responsive.mobile = {}
+      target = node.responsive.mobile
+    }
+  }
+  if (value === '') {
+    delete target[key]
+  } else {
+    target[key] = value
   }
 }
 
@@ -632,8 +652,10 @@ async function loadDatasources() {
   try {
     const { data } = await getDatasources(siteId.value)
     datasources.value = (data ?? []).map((d) => ({ id: d.id, name: d.name }))
-  } catch {
+  } catch (e) {
+    // 不再静默吞错：经 normalizeDatasourceError 映射后向用户展示（空列表仍兜底）
     datasources.value = []
+    ElMessage.error(normalizeDatasourceError(e).message)
   }
 }
 

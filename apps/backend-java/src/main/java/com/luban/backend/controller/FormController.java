@@ -42,4 +42,11 @@ public class FormController {
     public FormResponse update(@RequestParam String siteId, @PathVariable String id, @Valid @RequestBody FormSaveRequest req) {
         return formService.update(siteId, id, req);
     }
+
+    /** 删除表单：无 leads → 204；有 leads → 409 FORM_HAS_LEADS（GlobalExceptionHandler 映射）；不存在 → 404。 */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@RequestParam String siteId, @PathVariable String id) {
+        formService.delete(siteId, id);
+        return ResponseEntity.noContent().build();
+    }
 }

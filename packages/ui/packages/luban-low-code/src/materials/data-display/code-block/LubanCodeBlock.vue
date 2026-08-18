@@ -76,7 +76,10 @@ function onToggle() {
 <template>
   <div
     class="lb-code-block"
-    :class="{ 'lb-code-block--collapsed': collapsedState }"
+    :class="{
+      'lb-code-block--collapsed': collapsedState,
+      'lb-code-block--scrollable': !!maxHeight,
+    }"
     :style="{ maxHeight: maxHeight || undefined }"
   >
     <div v-if="showHeader || showCopy" class="lb-code-block__header">
@@ -139,8 +142,40 @@ function onToggle() {
     font-family: 'Fira Code', 'Consolas', monospace;
   }
 
+  // 语法高亮 token 着色（GitHub Dark 调色板，与 #1e1e1e 背景协调）。
+  // 本组件为深色容器，不能复用 LubanMarkdown 引入的全局 github.css 浅色
+  // 主题（hljs class 全局同名会互相覆盖），故在 scoped 层自带深色 token。
+  :deep(code.hljs) {
+    background: transparent; // 覆盖全局 .hljs 白底（如消费方页面引入了浅色主题）
+    color: inherit;
+  }
+  :deep(.hljs-comment),
+  :deep(.hljs-quote) { color: #8b949e; }
+  :deep(.hljs-keyword),
+  :deep(.hljs-selector-tag),
+  :deep(.hljs-deletion) { color: #ff7b72; }
+  :deep(.hljs-string),
+  :deep(.hljs-regexp),
+  :deep(.hljs-addition) { color: #a5d6ff; }
+  :deep(.hljs-title),
+  :deep(.hljs-section) { color: #d2a8ff; }
+  :deep(.hljs-number),
+  :deep(.hljs-literal),
+  :deep(.hljs-type) { color: #79c0ff; }
+  :deep(.hljs-name),
+  :deep(.hljs-tag) { color: #7ee787; }
+  :deep(.hljs-attr),
+  :deep(.hljs-attribute),
+  :deep(.hljs-variable),
+  :deep(.hljs-template-variable) { color: #ffa657; }
+
   &--collapsed &__pre {
     display: none;
+  }
+
+  // maxHeight 限高时可纵向滚动，超出的代码不丢失（spec: 超高代码可滚动）
+  &--scrollable {
+    overflow-y: auto;
   }
 }
 </style>

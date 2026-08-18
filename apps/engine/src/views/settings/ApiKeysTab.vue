@@ -147,24 +147,24 @@ onMounted(fetchKeys)
         <ElTableColumn prop="name" label="名称" min-width="140" />
         <ElTableColumn prop="prefix" label="前缀" min-width="120" />
         <ElTableColumn label="状态" width="100">
-          <template #default="{ row }: { row: ApiKey }">
+          <template #default="{ row }">
             <ElTag :type="row.status === 'active' ? 'success' : 'info'">
               {{ row.status === 'active' ? '启用' : '已撤销' }}
             </ElTag>
           </template>
         </ElTableColumn>
         <ElTableColumn label="最后使用时间" min-width="160">
-          <template #default="{ row }: { row: ApiKey }">
+          <template #default="{ row }">
             {{ formatTime(row.lastUsedAt) }}
           </template>
         </ElTableColumn>
         <ElTableColumn label="过期时间" min-width="160">
-          <template #default="{ row }: { row: ApiKey }">
+          <template #default="{ row }">
             {{ formatTime(row.expiresAt) }}
           </template>
         </ElTableColumn>
         <ElTableColumn label="操作" width="120" fixed="right">
-          <template #default="{ row }: { row: ApiKey }">
+          <template #default="{ row }">
             <ElPopconfirm
               v-if="row.status === 'active'"
               title="确定要撤销此 Key 吗？撤销后使用该 Key 的 MCP Server 将无法访问"

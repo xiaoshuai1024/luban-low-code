@@ -6,10 +6,11 @@
     "outDir": "dist",
     "tsBuildInfoFile": "dist/tsconfig.lib.tsbuildinfo",
     "emitDeclarationOnly": true,
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["esnext", "dom", "dom.iterable"],
     "forceConsistentCasingInFileNames": true,
-    "types": ["node", "vite/client", "vue", "dom"]
+    "types": ["node", "vite/client", "vue"]
   },
   "include": ["src/**/*.ts", "src/**/*.vue"],
   "references": [

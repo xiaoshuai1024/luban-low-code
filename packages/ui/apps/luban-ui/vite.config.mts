@@ -20,6 +20,12 @@ export default defineConfig(() => ({
         import.meta.dirname,
         '../../packages/luban-base/src/index.ts',
       ),
+      // registry.ts 等用发布的 scoped npm 包名 import '@luban-low-code/luban-base'，
+      // 测试期解析到源码
+      '@luban-low-code/luban-base': path.resolve(
+        import.meta.dirname,
+        '../../packages/luban-base/src/index.ts',
+      ),
       '@luban-ui/luban-low-code': path.resolve(
         import.meta.dirname,
         '../../packages/luban-low-code/src/index.ts',

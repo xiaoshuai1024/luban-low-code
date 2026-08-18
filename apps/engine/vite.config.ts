@@ -7,7 +7,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
-      'luban-base': fileURLToPath(
+      // luban-low-code 源码经 scoped 包名引用基础包（与 package.json 依赖一致）
+      '@luban-low-code/luban-base': fileURLToPath(
         new URL('../../packages/ui/packages/luban-base/src/index.ts', import.meta.url)
       ),
       // luban-low-code 直接别名到源码（dist 需 nx 构建，dev 直接用 src）

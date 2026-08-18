@@ -17,7 +17,8 @@ import java.util.List;
  * list is filtered by the {@code siteId} query parameter for multi-tenant isolation.
  *
  * <p>Aligned with luban-backend-go router/router.go datasources group. Auth is
- * RequireUser for all routes; write operations (POST/PUT/DELETE) are additionally
+ * RequireUser for all routes; write operations (POST/PUT/DELETE) and the
+ * connection test ({@code POST /:id/test}, 服务端出网探测) are additionally
  * RequireAdmin via AuthFilter's {@code ADMIN_DATASOURCES} pattern.
  */
 @RestController

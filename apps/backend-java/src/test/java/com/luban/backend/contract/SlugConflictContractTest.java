@@ -37,6 +37,8 @@ class SlugConflictContractTest {
     void seed() {
         // pages + datasources FK → sites; delete children first to avoid referential integrity violation.
         jdbc.update("DELETE FROM datasources");
+        jdbc.update("DELETE FROM leads");
+        jdbc.update("DELETE FROM forms");
         jdbc.update("DELETE FROM pages");
         jdbc.update("DELETE FROM sites");
         Instant now = Instant.now();

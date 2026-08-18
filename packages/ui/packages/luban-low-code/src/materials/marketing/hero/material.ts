@@ -15,7 +15,7 @@
 
 import type { MaterialDefinition } from '../../../lib/material/defineMaterial';
 import { defineMaterial } from '../../../lib/material/defineMaterial';
-import { LubanHero } from 'luban-base';
+import { LubanHero } from '@luban-low-code/luban-base';
 
 export const heroMaterial: MaterialDefinition = defineMaterial({
   name: 'LubanHero',

@@ -82,7 +82,7 @@ function handleLogout() {
         <ElMenuItem
           v-for="item in menuItems"
           :key="item.path || item.key"
-          :index="item.path || item.key"
+          :index="item.path || item.key || ''"
         >
           <ElIcon><component :is="item.icon" /></ElIcon>
           <span>{{ item.title }}</span>

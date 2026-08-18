@@ -12,7 +12,7 @@
  * @since 0.1.0
  */
 
-import { LubanRow } from 'luban-base';
+import { LubanRow } from '@luban-low-code/luban-base';
 import { defineMaterial } from '../../../lib/material/defineMaterial';
 
 export const rowMaterial = defineMaterial({

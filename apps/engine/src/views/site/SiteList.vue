@@ -101,10 +101,10 @@ onMounted(fetchList)
       <ElTableColumn prop="status" label="状态" width="80" />
       <ElTableColumn label="操作" width="260" fixed="right">
         <template #default="{ row }">
-          <ElButton link type="primary" @click="goDetail(row)">详情</ElButton>
-          <ElButton link type="primary" @click="goPages(row)">页面</ElButton>
-          <ElButton link type="primary" @click="openEdit(row)">编辑</ElButton>
-          <ElButton link type="danger" @click="handleDelete(row)">删除</ElButton>
+          <ElButton link type="primary" @click="goDetail(row as Site)">详情</ElButton>
+          <ElButton link type="primary" @click="goPages(row as Site)">页面</ElButton>
+          <ElButton link type="primary" @click="openEdit(row as Site)">编辑</ElButton>
+          <ElButton link type="danger" @click="handleDelete(row as Site)">删除</ElButton>
         </template>
       </ElTableColumn>
     </ElTable>

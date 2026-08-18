@@ -26,6 +26,9 @@ RUN cd packages/ui && \
     pnpm exec nx run-many --target=build --projects=luban-base,luban-low-code
 
 # 构建 website
+# NUXT_APP_BASE_URL：生产根域名部署为 /（默认 /luban-low-code/ 是 GitHub Pages 子路径遗留）
+ARG NUXT_APP_BASE_URL=/
+ENV NUXT_APP_BASE_URL=${NUXT_APP_BASE_URL}
 RUN pnpm --config.verifyDepsBeforeRun=false --filter ./apps/website run build
 
 # ---- runtime ----

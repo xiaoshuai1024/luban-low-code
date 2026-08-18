@@ -7,9 +7,10 @@ export default defineNuxtConfig({
   pages: true,
   modules: ["@pinia/nuxt"],
   typescript: { strict: true },
-  // GitHub Pages 子路径：https://user.github.io/luban-low-code/
+  // baseURL：NUXT_APP_BASE_URL 显式优先（Docker 生产构建传 /，根域名部署）。
+  // 未设置时保留 GitHub Pages 子路径默认（https://user.github.io/luban-low-code/）。
   app: {
-    baseURL: process.env.NODE_ENV === 'production' ? '/luban-low-code/' : '/',
+    baseURL: process.env.NUXT_APP_BASE_URL || (process.env.NODE_ENV === 'production' ? '/luban-low-code/' : '/'),
     head: {
       charset: "utf-8",
       viewport: "width=device-width, initial-scale=1",
@@ -42,10 +43,14 @@ export default defineNuxtConfig({
   vite: {
     resolve: {
       alias: {
+        // scoped 包名（与 packages/ui npm 包名一致，low-code dist 外部依赖此名）
+        "@luban-low-code/luban-base": fileURLToPath(new URL("../../packages/ui/packages/luban-base/dist/index.js", import.meta.url)),
+        "@luban-low-code/luban-low-code": fileURLToPath(new URL("../../packages/ui/packages/luban-low-code/dist/index.js", import.meta.url)),
+        // 旧裸名保留（app.vue 相对导入 css / 历史引用兼容）
         "luban-base": fileURLToPath(new URL("../../packages/ui/packages/luban-base/dist/index.js", import.meta.url)),
         "luban-low-code": fileURLToPath(new URL("../../packages/ui/packages/luban-low-code/dist/index.js", import.meta.url)),
       },
     },
-    optimizeDeps: { exclude: ["luban-low-code", "luban-base"] },
+    optimizeDeps: { exclude: ["luban-low-code", "luban-base", "@luban-low-code/luban-low-code", "@luban-low-code/luban-base"] },
   },
 });

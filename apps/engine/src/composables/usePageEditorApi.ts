@@ -1,23 +1,23 @@
 /**
- * usePageEditorApi ¡ª »­²¼²Ù×÷Í³Ò» API ÊÕ¿Ú£¨plan P1-T8£©¡£
+ * usePageEditorApi â€” ç”»å¸ƒæ“ä½œç»Ÿä¸€ API æ”¶å£ï¼ˆplan P1-T8ï¼‰ã€‚
  *
- * ÊÕ¿Ú PageEditor.vue Ô­±¾µÄ 10 ¸ö on* Ë½ÓĞº¯Êı£¨onSelect/onAddNode/onReorder/
+ * æ”¶å£ PageEditor.vue åŸæœ¬çš„ 10 ä¸ª on* ç§æœ‰å‡½æ•°ï¼ˆonSelect/onAddNode/onReorder/
  * onMoveNode/onUpdateProp/onUpdateEvent/onUpdateDatasource/onDeleteNode/onDuplicateNode/
- * onMove£©£¬²¢ĞÂÔö AI ¼¯³ÉËùĞèµÄ replaceSchema£¨ÕûÊ÷Ìæ»»£¬AI Éú³ÉÒ³Âä»­²¼£©Óë
- * Ö»¶Á²éÑ¯ findNodeById/getSelectedNode£¨AI ³éÌëÏû·Ñµ±Ç° schema£©¡£
+ * onMoveï¼‰ï¼Œå¹¶æ–°å¢ AI é›†æˆæ‰€éœ€çš„ replaceSchemaï¼ˆæ•´æ ‘æ›¿æ¢ï¼ŒAI ç”Ÿæˆé¡µè½ç”»å¸ƒï¼‰ä¸
+ * åªè¯»æŸ¥è¯¢ findNodeById/getSelectedNodeï¼ˆAI æŠ½å±‰æ¶ˆè´¹å½“å‰ schemaï¼‰ã€‚
  *
- * Éè¼ÆÄ¿±ê£º
- * 1. µ¥Ò»Ğ´ÈëÈë¿Ú ¡ª¡ª ËùÓĞ schema mutation ¾­´Ë hook£¬³·ÏúÕ»ÓïÒåÍ³Ò»
- *    £¨snapshot¡úmutate¡ú³É¹¦²Å pushSnapshot£¬no-op ²»ÈëÕ»£¬Óë PageEditor ¼ÈÓĞÊµÏÖÒ»ÖÂ£©¡£
- * 2. schema SSOT ±£³Ö PageEditor ¾Ö²¿ ref£¨history °ó¶¨¸Ã ref ×ö undo/redo£©£»
- *    ±¾ hook ½ÓÊÕ¸Ã ref µÄĞ´ÈëÈ¨£¬PageEditor ×ÔÉíÖ»¶ÁÓÃÓÚ v-model Í¸´«¡£
- * 3. AI Ãæ°å£¨AiAssistantPanel£©ÓëÓÃ»§²Ù×÷£¨LubanDesigner/PropertyPanel/ComponentTree£©
- *    ¹²ÏíÍ¬Ò»·İ schema + Í¬Ò»³·ÏúÕ» ¡ª¡ª AI ¸Ä¶¯¿É±» Ctrl+Z ³·Ïú£¨plan ¡ì3 ÑéÊÕ¿Ú¾¶£©¡£
+ * è®¾è®¡ç›®æ ‡ï¼š
+ * 1. å•ä¸€å†™å…¥å…¥å£ â€”â€” æ‰€æœ‰ schema mutation ç»æ­¤ hookï¼Œæ’¤é”€æ ˆè¯­ä¹‰ç»Ÿä¸€
+ *    ï¼ˆsnapshotâ†’mutateâ†’æˆåŠŸæ‰ pushSnapshotï¼Œno-op ä¸å…¥æ ˆï¼Œä¸ PageEditor æ—¢æœ‰å®ç°ä¸€è‡´ï¼‰ã€‚
+ * 2. schema SSOT ä¿æŒ PageEditor å±€éƒ¨ refï¼ˆhistory ç»‘å®šè¯¥ ref åš undo/redoï¼‰ï¼›
+ *    æœ¬ hook æ¥æ”¶è¯¥ ref çš„å†™å…¥æƒï¼ŒPageEditor è‡ªèº«åªè¯»ç”¨äº v-model é€ä¼ ã€‚
+ * 3. AI é¢æ¿ï¼ˆAiAssistantPanelï¼‰ä¸ç”¨æˆ·æ“ä½œï¼ˆLubanDesigner/PropertyPanel/ComponentTreeï¼‰
+ *    å…±äº«åŒä¸€ä»½ schema + åŒä¸€æ’¤é”€æ ˆ â€”â€” AI æ”¹åŠ¨å¯è¢« Ctrl+Z æ’¤é”€ï¼ˆplan Â§3 éªŒæ”¶å£å¾„ï¼‰ã€‚
  *
- * ²»±äÁ¿£º
- * - root ½Úµã²»¿ÉÉ¾³ı/ÒÆ¶¯£¨schemaTree.removeNode ·µ»Ø false£©¡£
- * - ½Úµã id ÓÃ crypto.randomUUID ¶µµ×£¨ÑØÓÃ PageEditor Ô­ genId£©¡£
- * - Ôö/É¾/¸´ÖÆºó¸üĞÂ selectedId£¨Ñ¡ÖĞĞÂÔö½Úµã£»É¾³ıÑ¡ÖĞ½ÚµãÊ±Çå¿Õ£©¡£
+ * ä¸å˜é‡ï¼š
+ * - root èŠ‚ç‚¹ä¸å¯åˆ é™¤/ç§»åŠ¨ï¼ˆschemaTree.removeNode è¿”å› falseï¼‰ã€‚
+ * - èŠ‚ç‚¹ id ç”¨ crypto.randomUUID å…œåº•ï¼ˆæ²¿ç”¨ PageEditor åŸ genIdï¼‰ã€‚
+ * - å¢/åˆ /å¤åˆ¶åæ›´æ–° selectedIdï¼ˆé€‰ä¸­æ–°å¢èŠ‚ç‚¹ï¼›åˆ é™¤é€‰ä¸­èŠ‚ç‚¹æ—¶æ¸…ç©ºï¼‰ã€‚
  */
 import type { Ref } from 'vue'
 import type { PageSchema, NodeSchema } from '@/types/schema'
@@ -30,8 +30,8 @@ import {
 } from '@/views/page/components/schemaTree'
 import { getComponentMeta, isContainerType, reorderRootChildren } from 'luban-low-code'
 
-/** useHistory µÄ×îĞ¡ÒÀÀµÇĞÆ¬£¨±ÜÃâñîºÏÍêÕûÀàĞÍ£¬±ãÓÚ²âÊÔ mock£©¡£
- *  °óËÀµ½ PageSchema£ºusePageEditorApi ½ö´¦Àí PageSchema µÄ¿ìÕÕ¡£ */
+/** useHistory çš„æœ€å°ä¾èµ–åˆ‡ç‰‡ï¼ˆé¿å…è€¦åˆå®Œæ•´ç±»å‹ï¼Œä¾¿äºæµ‹è¯• mockï¼‰ã€‚
+ *  ç»‘æ­»åˆ° PageSchemaï¼šusePageEditorApi ä»…å¤„ç† PageSchema çš„å¿«ç…§ã€‚ */
 export interface PageEditorHistoryLike {
   snapshot(): PageSchema | null
   pushSnapshot(prev: PageSchema | null): void
@@ -41,47 +41,47 @@ export interface PageEditorApiDeps {
   schema: Ref<PageSchema | null>
   history: PageEditorHistoryLike
   selectedId: Ref<string | null>
-  /** id Éú³ÉÆ÷£¬Ä¬ÈÏ crypto.randomUUID ¶µµ×£¨¿É×¢Èë±ãÓÚ²âÊÔ¹Ì¶¨ id£©¡£ */
+  /** id ç”Ÿæˆå™¨ï¼Œé»˜è®¤ crypto.randomUUID å…œåº•ï¼ˆå¯æ³¨å…¥ä¾¿äºæµ‹è¯•å›ºå®š idï¼‰ã€‚ */
   genId?: (prefix?: string) => string
 }
 
 export interface PageEditorApi {
-  /** Ñ¡ÖĞ½Úµã£¨null Çå¿Õ£©£¬²»Èë³·ÏúÕ»¡£ */
+  /** é€‰ä¸­èŠ‚ç‚¹ï¼ˆnull æ¸…ç©ºï¼‰ï¼Œä¸å…¥æ’¤é”€æ ˆã€‚ */
   select(id: string | null): void
   /**
-   * ĞÂÔö½Úµã¡£parentId Î´´«»òÈİÆ÷²»´æÔÚÊ±×·¼Óµ½ root.children£»·ñÔò×·¼Óµ½ÈİÆ÷ children¡£
-   * props ÓÉ meta.defaultProps ÅÉÉú£»ÈİÆ÷ÀàĞÍ¸ø¿Õ children Êı×é¡£
-   * @returns ĞÂ½Úµã id£¨Ê§°Ü·µ»Ø null£©¡£
+   * æ–°å¢èŠ‚ç‚¹ã€‚parentId æœªä¼ æˆ–å®¹å™¨ä¸å­˜åœ¨æ—¶è¿½åŠ åˆ° root.childrenï¼›å¦åˆ™è¿½åŠ åˆ°å®¹å™¨ childrenã€‚
+   * props ç”± meta.defaultProps æ´¾ç”Ÿï¼›å®¹å™¨ç±»å‹ç»™ç©º children æ•°ç»„ã€‚
+   * @returns æ–°èŠ‚ç‚¹ idï¼ˆå¤±è´¥è¿”å› nullï¼‰ã€‚
    */
   addNode(type: string, parentId?: string): string | null
-  /** root ¼¶ Sortable ÖØÅÅ¡£ */
+  /** root çº§ Sortable é‡æ’ã€‚ */
   reorder(fromIdx: number, toIdx: number): void
-  /** ¿çÈİÆ÷ÍÏ×§£ºnodeId ÒÆµ½ toParentId£¨null=root ¼¶£©µÄ toIdx¡£ */
+  /** è·¨å®¹å™¨æ‹–æ‹½ï¼šnodeId ç§»åˆ° toParentIdï¼ˆnull=root çº§ï¼‰çš„ toIdxã€‚ */
   moveNode(nodeId: string, toParentId: string | null, toIdx: number): void
-  /** ÊôĞÔÃæ°å»ØĞ´ props¡£ */
+  /** å±æ€§é¢æ¿å›å†™ propsã€‚ */
   updateProp(nodeId: string, key: string, value: unknown): void
-  /** ÊÂ¼ş·ÖÇø»ØĞ´ node.events[eventName]¡£ */
+  /** äº‹ä»¶åˆ†åŒºå›å†™ node.events[eventName]ã€‚ */
   updateEvent(nodeId: string, eventName: string, actionExpr: string): void
-  /** Êı¾İÔ´·ÖÇø»ØĞ´ node.datasource¡£ */
+  /** æ•°æ®æºåˆ†åŒºå›å†™ node.datasourceã€‚ */
   updateDatasource(nodeId: string, ds: { id: string; varName: string } | null): void
-  /** É¾³ı½Úµã£¨root ²»¿ÉÉ¾£©£»É¾Ñ¡ÖĞ½ÚµãÊ±Çå¿Õ selectedId¡£ */
+  /** åˆ é™¤èŠ‚ç‚¹ï¼ˆroot ä¸å¯åˆ ï¼‰ï¼›åˆ é€‰ä¸­èŠ‚ç‚¹æ—¶æ¸…ç©º selectedIdã€‚ */
   deleteNode(nodeId: string): void
-  /** ¸´ÖÆ½Úµã£¨Éî¿ËÂ¡ children£¬ĞÂ id£©£¬Ñ¡ÖĞ¸´ÖÆ½Úµã¡£@returns ĞÂ clone id »ò null¡£ */
+  /** å¤åˆ¶èŠ‚ç‚¹ï¼ˆæ·±å…‹éš† childrenï¼Œæ–° idï¼‰ï¼Œé€‰ä¸­å¤åˆ¶èŠ‚ç‚¹ã€‚@returns æ–° clone id æˆ– nullã€‚ */
   duplicateNode(nodeId: string): string | null
-  /** ×é¼şÊ÷ÉÏÒÆ/ÏÂÒÆ£ºparentId=null ±íÊ¾ root ¼¶¡£ */
+  /** ç»„ä»¶æ ‘ä¸Šç§»/ä¸‹ç§»ï¼šparentId=null è¡¨ç¤º root çº§ã€‚ */
   move(parentId: string | null, fromIdx: number, toIdx: number): void
   /**
-   * AI ÕûÊ÷Ìæ»»£¨plan P1-T8 AI Ãæ°åÂä»­²¼£©¡£ÕûÌåÌæ»» root£¬×ß³·ÏúÕ»¿É±» Ctrl+Z ³·Ïú¡£
-   * ÓÃÓÚ¡¸ÕûÒ³Éú³É/¸²¸Ç¡¹³¡¾°£»µ¥ÊôĞÔ±à¼­×ß updateProp¡£
+   * AI æ•´æ ‘æ›¿æ¢ï¼ˆplan P1-T8 AI é¢æ¿è½ç”»å¸ƒï¼‰ã€‚æ•´ä½“æ›¿æ¢ rootï¼Œèµ°æ’¤é”€æ ˆå¯è¢« Ctrl+Z æ’¤é”€ã€‚
+   * ç”¨äºã€Œæ•´é¡µç”Ÿæˆ/è¦†ç›–ã€åœºæ™¯ï¼›å•å±æ€§ç¼–è¾‘èµ° updatePropã€‚
    */
   replaceSchema(newRoot: NodeSchema): void
-  /** °´ id ²é½Úµã£¨Ö»¶Á£¬AI ³éÌëÏû·Ñ£©¡£ */
+  /** æŒ‰ id æŸ¥èŠ‚ç‚¹ï¼ˆåªè¯»ï¼ŒAI æŠ½å±‰æ¶ˆè´¹ï¼‰ã€‚ */
   findNodeById(id: string): NodeSchema | null
-  /** µ±Ç°Ñ¡ÖĞ½Úµã£¨Ö»¶ÁÅÉÉú£©¡£ */
+  /** å½“å‰é€‰ä¸­èŠ‚ç‚¹ï¼ˆåªè¯»æ´¾ç”Ÿï¼‰ã€‚ */
   getSelectedNode(): NodeSchema | null
 }
 
-/** crypto.randomUUID ¶µµ×ÊµÏÖ£¨Óë PageEditor Ô­ genId ÍêÈ«Ò»ÖÂ£©¡£ */
+/** crypto.randomUUID å…œåº•å®ç°ï¼ˆä¸ PageEditor åŸ genId å®Œå…¨ä¸€è‡´ï¼‰ã€‚ */
 export function defaultGenId(prefix = 'n'): string {
   try {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {

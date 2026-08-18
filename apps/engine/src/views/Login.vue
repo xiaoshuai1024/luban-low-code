@@ -26,6 +26,12 @@ async function onSubmit() {
     loading.value = false
   }
 }
+
+/** 体验账号一键填充（test / test，后台内置） */
+function fillDemo() {
+  form.value.username = 'test'
+  form.value.password = 'test'
+}
 </script>
 
 <template>
@@ -46,6 +52,16 @@ async function onSubmit() {
           </ElButton>
         </ElFormItem>
       </ElForm>
+      <div class="login-page__demo">
+        <div class="login-page__demo-title">🎯 体验账号</div>
+        <div class="login-page__demo-desc">无需注册，直接登录体验搭建</div>
+        <div class="login-page__demo-cred">
+          <code>test</code><span class="login-page__demo-sep">/</span><code>test</code>
+        </div>
+        <ElButton size="small" text type="primary" class="login-page__demo-fill" @click="fillDemo">
+          一键填充
+        </ElButton>
+      </div>
     </div>
   </div>
 </template>
@@ -89,5 +105,50 @@ async function onSubmit() {
 
 .login-page__btn {
   width: 100%;
+}
+
+/* 体验账号提示卡片 */
+.login-page__demo {
+  margin-top: 24px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  text-align: center;
+  background: #f5f7ff;
+  border: 1px dashed #b9c4f7;
+}
+
+.login-page__demo-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4f46e5;
+}
+
+.login-page__demo-desc {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.login-page__demo-cred {
+  margin-top: 8px;
+  font-size: 14px;
+
+  code {
+    padding: 2px 10px;
+    border-radius: 4px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    color: #303133;
+  }
+}
+
+.login-page__demo-sep {
+  margin: 0 6px;
+  color: #c0c4cc;
+}
+
+.login-page__demo-fill {
+  margin-top: 6px;
 }
 </style>

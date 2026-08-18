@@ -14,7 +14,7 @@
 
 import type { MaterialDefinition } from '../../../lib/material/defineMaterial';
 import { defineMaterial } from '../../../lib/material/defineMaterial';
-import { LubanButton } from 'luban-base';
+import { LubanButton } from '@luban-low-code/luban-base';
 
 /**
  * 按钮物料。

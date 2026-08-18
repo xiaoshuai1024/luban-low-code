@@ -56,3 +56,23 @@ export async function PATCH(
     return toBackendResponse(e);
   }
 }
+
+/** DELETE /api/forms/:id?siteId= → 删除表单（204；含 leads 时后端 409 FORM_HAS_LEADS；无权限 403） */
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const h = authHeaders(parseTokenFromRequest(req));
+    if (!h) return unauthenticated();
+    const { id } = await params;
+    const siteId = new URL(req.url).searchParams.get("siteId") || "";
+    await callBackend<void>(`/forms/${id}?siteId=${encodeURIComponent(siteId)}`, {
+      method: "DELETE",
+      headers: h,
+    });
+    return new NextResponse(null, { status: 204 });
+  } catch (e) {
+    return toBackendResponse(e);
+  }
+}

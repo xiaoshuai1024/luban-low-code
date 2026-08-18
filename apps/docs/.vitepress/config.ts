@@ -15,11 +15,16 @@ export default defineConfig({
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/luban-logo.svg' }]
   ],
 
-  // Vite 配置：alias luban-base/luban-low-code 用于文档内组件实时预览
+  // Vite 配置：alias luban-base/luban-low-code 用于文档内组件实时预览。
+  // luban-low-code dist 以 scoped 包名引用基础包（与 package.json 依赖一致），
+  // docs 无 node_modules 依赖，需同步 alias scoped 名。
   vite: {
     resolve: {
       alias: {
         'luban-base': fileURLToPath(
+          new URL('../../../packages/ui/packages/luban-base/dist/index.js', import.meta.url),
+        ),
+        '@luban-low-code/luban-base': fileURLToPath(
           new URL('../../../packages/ui/packages/luban-base/dist/index.js', import.meta.url),
         ),
         'luban-low-code': fileURLToPath(

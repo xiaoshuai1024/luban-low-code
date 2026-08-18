@@ -1,6 +1,6 @@
 import type { MaterialDefinition } from '../../../lib/material/defineMaterial';
 import { defineMaterial } from '../../../lib/material/defineMaterial';
-import { LubanStats } from 'luban-base';
+import { LubanStats } from '@luban-low-code/luban-base';
 
 export const statsMaterial: MaterialDefinition = defineMaterial({
   name: 'LubanStats',
@@ -20,6 +20,7 @@ export const statsMaterial: MaterialDefinition = defineMaterial({
             value: { type: 'string', label: '数值' },
             label: { type: 'string', label: '标签' },
             suffix: { type: 'string', label: '后缀' },
+            icon: { type: 'string', label: '图标（emoji）' },
           },
         },
       },

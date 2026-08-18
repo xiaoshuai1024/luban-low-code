@@ -9,7 +9,7 @@
  */
 import type { MaterialDefinition } from '../../../lib/material/defineMaterial';
 import { defineMaterial } from '../../../lib/material/defineMaterial';
-import { LubanContentList } from 'luban-base';
+import { LubanContentList } from '@luban-low-code/luban-base';
 
 export const contentListMaterial: MaterialDefinition = defineMaterial({
   name: 'LubanContentList',

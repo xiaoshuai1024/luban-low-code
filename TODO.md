@@ -15,7 +15,7 @@
 | 优先级 `priority` | `high` / `medium` / `low` |
 | 迭代 `iteration` | 未排期填 `未排期`，排入后改为 `vXX`。`feature/lead-capture-mvp` 分支 = v01 |
 | ID 前缀 | `T-` 工程层（技术债/基建）· `P-` 产品层（商业化功能缺口）· `D-` 已交付（v01 收敛回写） |
-| 模块 `scope` | `workspace` / `luban-ui` / `luban-engine` / `luban-bff` / `luban-website` / `backend-java` / `backend-go` / `product`（跨模块产品能力）等 |
+| 模块 `scope` | `workspace` / `ui` / `engine` / `bff` / `website` / `backend-java` / `product`（跨模块产品能力）等 |
 
 ---
 
@@ -38,12 +38,12 @@
 | ID | 状态 | 优先级 | 迭代 | 模块 | 标题 |
 |----|------|--------|------|------|------|
 | T-001 | pending | high | 未排期 | luban-ui | 前端 monorepo 选型合理性论证 + 是否更换 nx（Turborepo/pnpm 原生/裸 scripts 候选矩阵） |
-| T-002 | pending | high | 未排期 | client | 初始化 Flutter 客户端子仓（packages/client/luban-flutter） |
-| T-003 | pending | high | 未排期 | client | 初始化 Electron 客户端子仓（packages/client/luban-electron） |
-| T-004 | pending | high | 未排期 | luban-bff | 补齐 BFF 测试（当前零测试文件，违反测试门禁） |
+| T-002 | done | high | 未排期 | client | 初始化 Flutter 客户端子仓（packages/client/luban-flutter）— 2026-08-15 对账：已有完整实现（render/deeplink/测试） |
+| T-003 | pending | high | 未排期 | client | 初始化 Electron 客户端子仓（packages/client/luban-electron，目录尚不存在） |
+| T-004 | pending | high | 未排期 | luban-bff | 补齐 BFF 测试（现有 4 个 spec，~25 路由中大多数仍零测试，违反测试门禁） |
 | T-005 | pending | high | v02 | luban-website | 补齐 website 测试（当前零测试文件，违反测试门禁）— v02 补 vitest + composables 单测止血 |
 | T-006 | pending | medium | 未排期 | workspace | meta 仓 + 子仓 CI 补齐（meta 无 .github/workflows） |
-| T-007 | pending | medium | 未排期 | backend-go | Go 后端修复 detached HEAD + 补测试 + 补 CI（v02 开 issue 追赶 v01+v02 parity） |
+| ~~T-007~~ | cancelled | — | — | — | Go 后端补测试补 CI — **已取消**：Go 双后端战略放弃（Q4=C，2026-06-28），`apps/backend-go` 已于 2026-08-15 从仓库删除，Java 单端权威 |
 | T-008 | pending | low | 未排期 | workspace | docker-compose 端口暴露面核查（6 服务全开 ports） |
 | T-009 | pending | high | 未排期 | workspace | 前端架构守护 + lint 配置检查（eslint/stylelint/导入边界/commitlint/CI 拦截） |
 | P-001 | pending | high | v02 | product | 计费/订阅/支付闭环（billing/payment 当前 0 实现）— v02 做商业化骨架（三档 Plan 价格全 0 + 逻辑完整），支付后置 |
@@ -111,8 +111,8 @@
 
 ### T-002 初始化 Flutter 客户端子仓
 
-- **状态**：pending
-- **影响路径**：`packages/client/luban-flutter/`（当前**不存在**）
+- **状态**：done（2026-08-15 对账：`packages/client/luban-flutter/` 已存在，含 render/deeplink 实现与测试）
+- **影响路径**：`packages/client/luban-flutter/`
 - **背景**：`packages/client/` 目录整体缺失。README 规划 4 个空仓（`ai-assistant`/`electron`/`flutter`/`cross-plateform`），GitHub 上为空仓（无初始提交）。规则 `luban-multi-client-consistency.md` 明确要求 `packages/client/luban-flutter` 存在并与 web/electron 业务一致。`/pr-client` 命令与 `pr-create-package.sh client:flutter` 已就绪，但无实体可操作。
 - **执行步骤**：
   1. 在 GitHub `xiaoshuai1024/luban-flutter` 创建空仓（若未建）
@@ -141,9 +141,9 @@
 
 ### T-004 补齐 BFF 测试
 
-- **状态**：pending
-- **影响路径**：`packages/bff/luban-bff/`（当前 **0 个测试文件**）
-- **背景**：实测 engine 10 个、ui 29 个测试，但 **bff 零测试**，违反 `.agents/rules/luban-testing-coverage.md` 门禁。BFF 是前后端契约边界，无测试 = 契约无防护。`vitest.config` 在 bff 也缺失。
+- **状态**：pending（2026-08-15 对账：已有 4 个 spec（proxy/fetch 路由级 1 个），~25 个 route 中大多数仍零测试）
+- **影响路径**：`apps/bff/`
+- **背景**：BFF 是前后端契约边界，无测试 = 契约无防护；且约 10 个旧路由无统一错误处理（4xx 被吞成 500），违反 `.agents/rules/luban-testing-coverage.md` 门禁。BFF 是前后端契约边界，无测试 = 契约无防护。`vitest.config` 在 bff 也缺失。
 - **待办**：
   - [ ] 补 `vitest.config.ts`
   - [ ] 为现有接口/中间件/数据转换补单测，覆盖 BFF→后端契约映射
@@ -173,10 +173,10 @@
   - [ ] 统一各仓 CI 触发条件与缓存策略
 - **验收标准**：所有子仓 + meta 仓有 CI；PR 合并需 CI 绿。
 
-### T-007 修复 Go 后端（detached HEAD + 零测试 + 无 CI）
+### ~~T-007 修复 Go 后端（detached HEAD + 零测试 + 无 CI）~~
 
-- **状态**：pending
-- **影响路径**：`packages/backend/luban-backend-go/`
+- **状态**：cancelled（Go 双后端战略放弃 Q4=C 2026-06-28；`apps/backend-go` 已于 2026-08-15 删除）
+- **影响路径**：~~`apps/backend-go/`~~（已删除，历史保留在 git）
 - **背景**：实测 Go 后端**不在任何分支**（detached HEAD）、**0 测试文件**、**无 CI workflow**。作为 Java 双实现（`luban-dual-backend-parity.md` 要求行为一致），当前无任何验证手段。
 - **v01 实测注记（2026-06-17）**：本迭代 Go 后端**完全未被纳入**——本地 detached HEAD @ `eadf721`，远端仅有 `master`/`dev`/`feat/auth-middleware-role-guard`，**无 `feature/lead-capture-mvp` 分支**。grep 显示 Go 端连 Lead/UTM/visitor 都未实现（Java 端已完整交付 D-001）。parity 缺口随每轮迭代扩大。
 - **待办**：
@@ -202,7 +202,7 @@
 ### T-009 前端架构守护 + lint 配置检查
 
 - **状态**：pending
-- **影响仓**：meta 仓治理 + 各前端子仓（`packages/engine/luban`、`packages/bff/luban-bff`、`packages/ui/luban-ui`、`packages/web/luban-website`）
+- **影响仓**：meta 仓治理 + 各前端子仓（`apps/engine`、`apps/bff`、`packages/ui`、`apps/website`）
 - **背景**：当前各前端子仓 lint 配置分散且强度不明（engine/bff/website 的 eslint flat config、ui 的 `@nx/eslint-plugin`）；无统一的架构守护规则（包间导入边界、禁用 `any`、禁止 `console` 等），也无 commit message / CI 拦截。低代码引擎门禁要求「零新增 console error」（见 `AGENTS.md` + `.agents/rules/luban-lowcode-engine-quality.md`），但缺乏自动化校验。随着 v02 多端（website 埋点 / engine 报表）并行开发，无架构守护会让各仓代码风格与依赖方向快速漂移。
 - **待办**：
   - [ ] **盘点现状**：逐仓核对 `eslint.config.{js,mjs,ts}` / `tsconfig.json` / 是否有 `.stylelintrc` / 是否有 `commitlint` / husky/lint-staged 钩子；列出每仓规则强度差异

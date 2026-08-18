@@ -239,7 +239,7 @@ function handleConfigInput(text: string) {
               link
               size="small"
               :loading="testingIds.has(row.id)"
-              @click="handleTest(row)"
+              @click="handleTest(row as DatasourceMeta)"
             >
               测试连通
             </ElButton>
@@ -254,8 +254,8 @@ function handleConfigInput(text: string) {
         </ElTableColumn>
         <ElTableColumn label="操作" width="140">
           <template #default="{ row }">
-            <ElButton link size="small" @click="handleEdit(row)">编辑</ElButton>
-            <ElButton link type="danger" size="small" @click="handleDelete(row)">删除</ElButton>
+            <ElButton link size="small" @click="handleEdit(row as DatasourceMeta)">编辑</ElButton>
+            <ElButton link type="danger" size="small" @click="handleDelete(row as DatasourceMeta)">删除</ElButton>
           </template>
         </ElTableColumn>
       </ElTable>

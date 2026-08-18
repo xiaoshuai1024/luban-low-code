@@ -28,6 +28,13 @@ function mountUploader(props: Record<string, unknown> = {}): VueWrapper {
 describe('DesignUploader.vue', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // jsdom 无 URL.createObjectURL/revokeObjectURL，stub 避免 handleFile unhandled error
+    if (typeof URL.createObjectURL !== 'function') {
+      URL.createObjectURL = vi.fn(() => 'blob:mock') as unknown as typeof URL.createObjectURL
+    }
+    if (typeof URL.revokeObjectURL !== 'function') {
+      URL.revokeObjectURL = vi.fn() as unknown as typeof URL.revokeObjectURL
+    }
   })
 
   it('空态渲染提示文案', () => {
@@ -70,8 +77,7 @@ describe('DesignUploader.vue', () => {
       dataTransfer: { files: [makeFile('d.png', 'image/png')] },
     })
     await flushPromises()
-    // jsdom 下 drop 的 file 处理依赖环境；合法文件应 emit select 或至少不报错
-    // 主要验证组件不抛异常 + drop 事件被消费
-    expect(w.find('input[type=file]').exists()).toBe(true)
+    // 合法文件经 handleFile validate 后 emit('select', file)（预览态下 input 被 v-if 隐藏）
+    expect(w.emitted('select')).toBeTruthy()
   })
 })

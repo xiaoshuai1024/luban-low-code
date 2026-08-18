@@ -179,11 +179,11 @@ onMounted(fetchList)
       </ElTableColumn>
       <ElTableColumn label="操作" width="180" fixed="right">
         <template #default="{ row }">
-          <ElButton link type="primary" @click="openEdit(row)">编辑</ElButton>
+          <ElButton link type="primary" @click="openEdit(row as User)">编辑</ElButton>
           <ElButton
             link
             :type="row.status === 'active' ? 'warning' : 'primary'"
-            @click="handleStatus(row)"
+            @click="handleStatus(row as User)"
           >
             {{ row.status === 'active' ? '禁用' : '启用' }}
           </ElButton>

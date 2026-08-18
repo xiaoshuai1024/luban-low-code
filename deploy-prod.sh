@@ -61,6 +61,10 @@ fi
 if [ "${MODE}" = "local" ]; then
   echo "» [local] 本机构建并启动 luban 栈（自带 DB，内网，不碰 gudu）..."
   ${COMPOSE_REMOTE} up -d --build --remove-orphans
+  # 容器重建后 IP 变化，gudu-nginx 需 reload 刷新 proxy_pass 解析（否则 502）
+  if docker ps --format '{{.Names}}' | grep -q '^gudu-nginx$'; then
+    docker exec gudu-nginx nginx -t && docker exec gudu-nginx nginx -s reload && echo "  ✓ gudu-nginx reloaded"
+  fi
   echo "✓ 栈已起。接入公网入口：bash deploy-prod.sh edge"; exit 0
 fi
 
@@ -95,6 +99,15 @@ EXTRACT
 echo "» [4/4] 远端串行 build + up（自带 DB，内网不抢 gudu 端口；首次 ~10-15min）..."
 sshpass -e ssh "${SSHO[@]}" -o ServerAliveInterval=30 "${REMOTE}" \
   "cd ${REMOTE_DIR} && ${COMPOSE_REMOTE} up -d --build --remove-orphans"
+
+echo "» [reload] 刷新 gudu-nginx（容器重建后 IP 变化，不 reload 会 502）..."
+sshpass -e ssh "${SSHO[@]}" "${REMOTE}" 'bash -s' <<'RELOAD' || echo "  ⚠ gudu-nginx reload 失败（非 gudu 共存部署可忽略，不影响 luban 栈）"
+  if docker ps --format '{{.Names}}' | grep -q '^gudu-nginx$'; then
+    docker exec gudu-nginx nginx -t && docker exec gudu-nginx nginx -s reload && echo "  ✓ gudu-nginx reloaded"
+  else
+    echo "  (无 gudu-nginx，跳过)"
+  fi
+RELOAD
 
 echo ""
 echo "✓ luban 栈已起（未碰 gudu-nginx）。接入公网入口：bash deploy-prod.sh edge"

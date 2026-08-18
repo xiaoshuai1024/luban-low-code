@@ -7,6 +7,28 @@ export const BACKEND_BASE_URL =
  * BFF (DoS surface). Tunable via env for unusual environments. */
 const BACKEND_TIMEOUT_MS = Number(process.env.BACKEND_TIMEOUT_MS) || 15_000;
 
+/**
+ * BFF→backend 内部共享密钥（X-Internal-Auth 头）。
+ * 配置后所有后端请求统一注入（以 BFF 配置为准，覆盖调用方传参），
+ * 防止客户端伪造的同名头透传到 Java 后端。
+ * 未配置时 fail-open（仅限本地 dev）并 WARN 一次，且剥离调用方传入的同名头。
+ */
+const INTERNAL_AUTH_SECRET = process.env.INTERNAL_AUTH_SECRET || "";
+let internalAuthWarned = false;
+
+function internalAuthHeader(): Record<string, string> {
+  if (INTERNAL_AUTH_SECRET) {
+    return { "X-Internal-Auth": INTERNAL_AUTH_SECRET };
+  }
+  if (!internalAuthWarned) {
+    internalAuthWarned = true;
+    console.warn(
+      "[backendClient] INTERNAL_AUTH_SECRET 未配置，BFF→backend 请求未携带 X-Internal-Auth（fail-open，仅限本地 dev；生产请在 compose 注入）"
+    );
+  }
+  return {};
+}
+
 export interface BackendError {
   code: string;
   message: string;
@@ -32,11 +54,20 @@ export async function callBackend<T>(
 ): Promise<T> {
   const url = `${BACKEND_BASE_URL}${path}`;
 
+  // 调用方 headers 副本：剥离可伪造的 X-Internal-Auth（未配置密钥时也不透传）
+  const callerHeaders = {
+    ...((init.headers as Record<string, string>) || {}),
+  };
+  delete callerHeaders["X-Internal-Auth"];
+  delete callerHeaders["x-internal-auth"];
+
   const res = await fetch(url, {
     ...init,
     headers: {
       "Content-Type": "application/json",
-      ...(init.headers || {}),
+      ...callerHeaders,
+      // X-Internal-Auth 最后合并：以 env 密钥为准（覆盖任何调用方传参）
+      ...internalAuthHeader(),
     },
     // MID-3: cap backend latency so a hung backend can't lock up the BFF. Callers
     // can pass their own signal to override per-route; absent that we apply a

@@ -28,4 +28,19 @@ describe('LubanCodeBlock', () => {
     const wrapper = mount(LubanCodeBlock, { props: { code: 'x', collapsed: true } });
     expect(wrapper.classes()).toContain('lb-code-block--collapsed');
   });
+
+  it('applies maxHeight inline style and scrollable class when maxHeight set', () => {
+    const wrapper = mount(LubanCodeBlock, {
+      props: { code: 'x', maxHeight: '200px' },
+    });
+    expect(wrapper.attributes('style')).toContain('max-height: 200px');
+    // maxHeight 限高时容器可纵向滚动，超高内容不被裁剪丢失
+    expect(wrapper.classes()).toContain('lb-code-block--scrollable');
+  });
+
+  it('does not add scrollable class without maxHeight', () => {
+    const wrapper = mount(LubanCodeBlock, { props: { code: 'x' } });
+    expect(wrapper.classes()).not.toContain('lb-code-block--scrollable');
+    expect(wrapper.attributes('style')).toBeFalsy();
+  });
 });

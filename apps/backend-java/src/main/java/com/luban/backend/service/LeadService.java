@@ -9,6 +9,7 @@ import com.luban.backend.entity.Lead;
 import com.luban.backend.exception.BusinessException;
 import com.luban.backend.mapper.FormMapper;
 import com.luban.backend.mapper.LeadMapper;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -110,12 +111,48 @@ public class LeadService {
         Instant now = Instant.now();
         lead.setCreatedAt(now);
         lead.setUpdatedAt(now);
-        leadMapper.insert(lead);
+        try {
+            leadMapper.insert(lead);
+        } catch (DataIntegrityViolationException e) {
+            // 并发竞态（如双击双发）：check-then-insert 之间另一请求已插入同指纹 lead，
+            // insert 撞 uk_form_dedup 唯一键 → 按去重策略收敛为幂等结果，不再冒泡 500
+            if (!isUniqueViolation(e)) throw e;
+            return onConcurrentDuplicate(form, req, hash, policy);
+        }
 
         // 4. 通知（失败不阻塞主流程）
         notifyService.notifyNewLead(lead, form);
 
         return new LeadSubmitResult(lead.getId(), lead.getStatus(), exists > 0);
+    }
+
+    /**
+     * 唯一键冲突后的幂等收敛（并发重复提交/窗口过期重复指纹）：
+     * REJECT → 409 LEAD_DUPLICATE；MERGE → 走既有 findLatestByFormHash 合并路径；
+     * MARK → 返回既有 lead 当前态（dedup=true）。返回前不触发通知（与 MERGE 语义一致）。
+     */
+    private LeadSubmitResult onConcurrentDuplicate(Form form, LeadSubmitRequest req, String hash,
+                                                   DedupService.Policy policy) {
+        Lead existing = leadMapper.findLatestByFormHash(req.formId(), hash);
+        if (existing == null) {
+            // 理论不可达（唯一键冲突意味着必有同指纹行）；防御性兜底为去重响应
+            throw BusinessException.leadDuplicate();
+        }
+        if (policy == DedupService.Policy.MERGE) {
+            return mergeExistingLead(form, req, hash, existing);
+        }
+        if (policy == DedupService.Policy.MARK) {
+            return new LeadSubmitResult(existing.getId(), existing.getStatus(), true);
+        }
+        // REJECT / OVERWRITE：返回去重响应（409），不再 500
+        throw BusinessException.leadDuplicate();
+    }
+
+    /** 与 SiteService.isUniqueViolation 同口径：MySQL "Duplicate entry" / H2 "Unique index or primary key violation"。 */
+    private static boolean isUniqueViolation(DataIntegrityViolationException e) {
+        if (e == null || e.getMessage() == null) return false;
+        String m = e.getMessage();
+        return m.contains("Duplicate") || m.contains("Unique index") || m.contains("primary key violation");
     }
 
     /**

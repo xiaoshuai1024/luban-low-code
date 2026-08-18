@@ -191,6 +191,8 @@ function nodeStyleProps(node: NodeSchema): Record<string, unknown> {
   }
   // V2-T4：始终挂 data-lb-node，使 treeResponsiveCss 的 @media 选择器能命中组件根
   out['data-lb-node'] = node.id;
+  // 节点 id 同步输出为 DOM id，供营销页锚点导航（navbar #features 等）定位分区
+  out.id = node.id;
   return out;
 }
 

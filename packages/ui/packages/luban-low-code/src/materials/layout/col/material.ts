@@ -12,7 +12,7 @@
  * @since 0.1.0
  */
 
-import { LubanCol } from 'luban-base';
+import { LubanCol } from '@luban-low-code/luban-base';
 import { defineMaterial } from '../../../lib/material/defineMaterial';
 
 export const colMaterial = defineMaterial({

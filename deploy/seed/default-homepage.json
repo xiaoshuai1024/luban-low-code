@@ -1,0 +1,168 @@
+{
+  "root": {
+    "id": "page",
+    "type": "LubanContainer",
+    "props": { "maxWidth": "full", "padded": false },
+    "children": [
+      {
+        "id": "navbar",
+        "type": "LubanNavbar",
+        "props": {
+          "brand": "Luban 鲁班",
+          "sticky": true,
+          "backgroundColor": "#ffffff",
+          "textColor": "#1e293b",
+          "links": [
+            { "label": "特性", "url": "#features" },
+            { "label": "组件", "url": "#components" },
+            { "label": "控制台", "url": "https://manage.xiaoshuai1024.top" },
+            { "label": "GitHub", "url": "https://github.com/xiaoshuai1024/luban-low-code" }
+          ]
+        }
+      },
+      {
+        "id": "hero",
+        "type": "LubanHero",
+        "props": {
+          "eyebrow": "开源 · MIT 协议",
+          "title": "像搭积木一样，构建你的应用",
+          "subtitle": "拖拽式可视化低代码平台：75+ Material Design 组件、连接任意数据库、随处部署。Vue 3 + Spring Boot 全栈开源。",
+          "ctaText": "开始使用",
+          "ctaUrl": "https://manage.xiaoshuai1024.top",
+          "secondaryCtaText": "GitHub 仓库",
+          "secondaryCtaUrl": "https://github.com/xiaoshuai1024/luban-low-code",
+          "backgroundColor": "#ffffff",
+          "textColor": "#1e293b",
+          "height": "560px",
+          "align": "center",
+          "layout": "centered"
+        }
+      },
+      {
+        "id": "stats",
+        "type": "LubanStats",
+        "animation": { "type": "slide-up", "trigger": "in-view", "duration": 600, "easing": "cubic-bezier(0.22,1,0.36,1)" },
+        "props": {
+          "backgroundColor": "#f8fafc",
+          "textColor": "#1e293b",
+          "stats": [
+            { "value": "75", "suffix": "+", "label": "开箱即用组件", "icon": "🧩" },
+            { "value": "Vue 3", "label": "现代前端框架", "icon": "⚡" },
+            { "value": "MIT", "label": "开源协议", "icon": "🔓" },
+            { "value": "SSR", "label": "服务端渲染", "icon": "🚀" }
+          ]
+        }
+      },
+      {
+        "id": "features",
+        "type": "LubanFeatureGrid",
+        "animation": { "type": "slide-up", "trigger": "in-view", "duration": 600, "easing": "cubic-bezier(0.22,1,0.36,1)" },
+        "props": {
+          "heading": "核心特性",
+          "columns": 3,
+          "backgroundColor": "#ffffff",
+          "features": [
+            { "icon": "🎨", "title": "可视化搭建", "description": "拖拽即所得的设计器，实时预览，无需编码即可完成页面布局。" },
+            { "icon": "📚", "title": "75+ 组件", "description": "按钮、表单、表格、图表一应俱全的 Material Design 组件库。" },
+            { "icon": "⚡", "title": "SSR 就绪", "description": "Nuxt Nitro 服务端渲染，SEO 友好，首屏秒开。" },
+            { "icon": "🤖", "title": "AI 智能生成", "description": "用自然语言描述页面，AI 自动生成页面 Schema。" },
+            { "icon": "📊", "title": "数据驱动", "description": "可视化查询构建器，连接 MySQL、PostgreSQL 或 REST API。" },
+            { "icon": "🌐", "title": "多端适配", "description": "一次搭建，桌面、平板、手机全尺寸响应式渲染。" }
+          ]
+        }
+      },
+      {
+        "id": "components",
+        "type": "LubanFeatureGrid",
+        "animation": { "type": "zoom", "trigger": "in-view", "duration": 700, "easing": "cubic-bezier(0.22,1,0.36,1)" },
+        "props": {
+          "heading": "75+ 开箱即用的物料组件",
+          "columns": 4,
+          "backgroundColor": "#f8fafc",
+          "features": [
+            { "icon": "🧭", "title": "Navbar 导航栏" },
+            { "icon": "🦸", "title": "Hero 主视觉" },
+            { "icon": "🎯", "title": "CTA 行动号召" },
+            { "icon": "📊", "title": "Stats 数据统计" },
+            { "icon": "📋", "title": "Table 表格" },
+            { "icon": "📝", "title": "Form 表单" },
+            { "icon": "✏️", "title": "Input 输入框" },
+            { "icon": "✅", "title": "Select 选择器" },
+            { "icon": "☑️", "title": "Checkbox 复选框" },
+            { "icon": "🔄", "title": "Switch 开关" },
+            { "icon": "⬜", "title": "Button 按钮" },
+            { "icon": "📄", "title": "Card 卡片" },
+            { "icon": "🖼", "title": "Image 图片" },
+            { "icon": "🔗", "title": "Link 链接" },
+            { "icon": "📑", "title": "Tabs 标签页" },
+            { "icon": "📐", "title": "Row/Col 栅格" },
+            { "icon": "🧩", "title": "Container 容器" },
+            { "icon": "🔔", "title": "Modal 弹窗" },
+            { "icon": "📌", "title": "Drawer 抽屉" },
+            { "icon": "💬", "title": "Toast 轻提示" },
+            { "icon": "⚠️", "title": "Alert 警告条" },
+            { "icon": "❓", "title": "FAQ 常见问题" },
+            { "icon": "⭐", "title": "Rating 评分" },
+            { "icon": "🔄", "title": "Carousel 轮播" },
+            { "icon": "📈", "title": "Gallery 图库" },
+            { "icon": "💳", "title": "Pricing 定价" },
+            { "icon": "📝", "title": "Markdown" },
+            { "icon": "💻", "title": "CodeBlock 代码块" },
+            { "icon": "🪜", "title": "Steps 步骤条" },
+            { "icon": "⬆️", "title": "BackToTop 回顶" }
+          ]
+        }
+      },
+      {
+        "id": "cta",
+        "type": "LubanCTA",
+        "animation": { "type": "slide-up", "trigger": "in-view", "duration": 600, "easing": "cubic-bezier(0.22,1,0.36,1)" },
+        "props": {
+          "heading": "准备开始了吗？",
+          "description": "进入控制台，2 分钟搭建你的第一个页面。",
+          "buttonText": "进入控制台",
+          "buttonUrl": "https://manage.xiaoshuai1024.top",
+          "secondaryButtonText": "GitHub 仓库",
+          "secondaryButtonUrl": "https://github.com/xiaoshuai1024/luban-low-code",
+          "backgroundColor": "#0f172a",
+          "textColor": "#ffffff"
+        }
+      },
+      {
+        "id": "footer",
+        "type": "LubanFooter",
+        "animation": { "type": "fade", "trigger": "in-view", "duration": 600 },
+        "props": {
+          "backgroundColor": "#0f172a",
+          "textColor": "#ffffff",
+          "columns": [
+            {
+              "title": "产品",
+              "links": [
+                { "label": "核心特性", "url": "#features" },
+                { "label": "组件库", "url": "#components" },
+                { "label": "控制台", "url": "https://manage.xiaoshuai1024.top" }
+              ]
+            },
+            {
+              "title": "资源",
+              "links": [
+                { "label": "GitHub 仓库", "url": "https://github.com/xiaoshuai1024/luban-low-code" },
+                { "label": "Issue 反馈", "url": "https://github.com/xiaoshuai1024/luban-low-code/issues" }
+              ]
+            }
+          ],
+          "copyright": "© 2026 Luban · 基于 Vue 3 + Spring Boot 构建 · MIT 开源协议"
+        }
+      }
+    ]
+  },
+  "seo": {
+    "title": "Luban 鲁班 — 开源低代码平台",
+    "description": "拖拽式可视化低代码平台：75+ Material Design 组件、连接任意数据库、SSR 服务端渲染、AI 智能生成页面。Vue 3 + Spring Boot 全栈开源。",
+    "keywords": ["低代码", "低代码平台", "开源", "可视化搭建", "拖拽建站", "Vue 3", "Spring Boot", "低代码引擎"],
+    "ogTitle": "Luban 鲁班 — 开源低代码平台",
+    "ogDescription": "拖拽式可视化低代码平台，75+ 组件，随处部署，MIT 开源。",
+    "canonical": "https://luban.xiaoshuai1024.top/"
+  }
+}

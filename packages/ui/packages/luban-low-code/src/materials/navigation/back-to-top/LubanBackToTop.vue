@@ -21,16 +21,50 @@ const props = withDefaults(
 
 const visible = ref(false);
 
+/** 进行中的滚动动画帧 id（重复点击/卸载时取消，避免动画叠加） */
+let rafId = 0;
+
 function onScroll() {
   visible.value = window.scrollY > props.visibilityHeight;
 }
 
+/** easeOutCubic：先快后慢，与浏览器 smooth 滚动观感一致 */
+function easeOutCubic(t: number): number {
+  return 1 - Math.pow(1 - t, 3);
+}
+
+/**
+ * 按 duration(ms) 插值滚动回顶部。
+ * window.scrollTo 无 duration 参数（behavior 只有 auto/smooth），
+ * 故用 requestAnimationFrame 手写缓动；duration<=0 时直接跳顶。
+ */
 function scrollToTop() {
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  const start = window.scrollY;
+  if (start <= 0) return;
+  const duration = Math.max(props.duration ?? 0, 0);
+  cancelAnimationFrame(rafId);
+
+  if (duration <= 0 || typeof requestAnimationFrame !== 'function') {
+    window.scrollTo(0, 0);
+    return;
+  }
+
+  const startTime = performance.now();
+  // 用 performance.now() 取时序而非 rAF 回调入参：部分环境（如 jsdom
+  // 非 visual 模式）回调不传时间戳，入参会是 undefined 导致插值 NaN。
+  const step = () => {
+    const t = Math.min((performance.now() - startTime) / duration, 1);
+    window.scrollTo(0, start * (1 - easeOutCubic(t)));
+    if (t < 1) rafId = requestAnimationFrame(step);
+  };
+  rafId = requestAnimationFrame(step);
 }
 
 onMounted(() => window.addEventListener('scroll', onScroll, { passive: true }));
-onBeforeUnmount(() => window.removeEventListener('scroll', onScroll));
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', onScroll);
+  cancelAnimationFrame(rafId);
+});
 </script>
 
 <template>

@@ -1,0 +1,106 @@
+name: CI Test & Build
+
+# 单测 + 构建门禁：TS 分栈（engine / bff / ui）+ Java 后端
+# 测试失败必须阻断合入（仓库硬约束：禁止假绿）
+
+on:
+  pull_request:
+    branches: [main, master, dev]
+  push:
+    branches: [main, master, dev]
+
+permissions:
+  contents: read
+
+jobs:
+  engine:
+    name: engine (test + build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install workspace deps (root)
+        run: pnpm install --frozen-lockfile
+      - name: Install ui workspace deps
+        run: pnpm install --frozen-lockfile
+        working-directory: packages/ui
+      - name: Build ui packages (engine 类型依赖其 dist .d.ts)
+        run: pnpm exec nx run-many --target=build --projects=luban-base,luban-low-code --skip-nx-cache
+        working-directory: packages/ui
+      - name: test
+        run: pnpm test
+        working-directory: apps/engine
+      - name: build
+        run: pnpm run build
+        working-directory: apps/engine
+
+  bff:
+    name: bff (test + build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install workspace deps (root)
+        run: pnpm install --frozen-lockfile
+      - name: test
+        run: pnpm test
+        working-directory: apps/bff
+      - name: build
+        run: pnpm run build
+        working-directory: apps/bff
+
+  ui:
+    name: ui (test + build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: packages/ui/pnpm-lock.yaml
+      - name: Install ui workspace deps
+        run: pnpm install --frozen-lockfile
+        working-directory: packages/ui
+      - name: test
+        run: pnpm test
+        working-directory: packages/ui
+      - name: build
+        run: pnpm exec nx run-many --target=build --skip-nx-cache
+        working-directory: packages/ui
+
+  backend-java:
+    name: backend-java (mvn verify)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/backend-java
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - run: mvn -B -q verify

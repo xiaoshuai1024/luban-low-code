@@ -35,6 +35,13 @@ spring:
     baseline-on-migrate: true
     baseline-version: 0
     clean-disabled: false
+  sql:
+    init:
+      # schema.sql（已废弃，仅历史参考）此前以 embedded 默认模式在 H2 上兜底建
+      # forms/leads 表；h2-migration 补齐 V20260620000001/V20260729000001 后，
+      # 测试 schema 完全由 Flyway 管理，显式关闭脚本初始化以摆脱该兜底依赖。
+      # 生产 MySQL 不受影响（sql.init 默认只对 embedded 数据源生效）。
+      mode: never
 
 mybatis:
   configuration:

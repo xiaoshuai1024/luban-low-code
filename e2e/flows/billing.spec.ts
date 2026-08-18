@@ -1,7 +1,6 @@
 import { test, expect, request as apiRequest, type APIRequestContext } from '@playwright/test';
 import 'dotenv/config';
 
-// ⚠️ 本 spec 尚未在本地全栈环境跑绿验证，待全栈就绪后验证
 
 /**
  * 套餐与用量（J-billing）

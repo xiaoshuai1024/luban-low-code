@@ -217,7 +217,7 @@
         "T-be-5",
         "T-be-6"
       ],
-      "status": "in_progress",
+      "status": "completed",
       "journey": "J-signup-onboarding"
     },
     {
@@ -230,7 +230,7 @@
         "T-eng-2",
         "T-eng-3"
       ],
-      "status": "in_progress",
+      "status": "completed",
       "journey": "J-signup-onboarding"
     },
     {

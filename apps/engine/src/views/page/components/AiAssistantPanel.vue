@@ -14,7 +14,7 @@
  * 落地：确认后经 usePageEditorApi.replaceSchema（整页）落画布，自动入撤销栈
  * （Ctrl+Z 可撤销 AI 改动 plan §3 验收口径）。会话状态经 useAiStore（pinia）。
  */
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import {
   ElDrawer,
   ElTabs,
@@ -76,21 +76,27 @@ const schemaEmpty = computed(() => {
   return !props.schema?.root?.children || props.schema.root.children.length === 0
 })
 
-onMounted(async () => {
-  // 拉取模型配置（只读展示当前部署模型 plan §4.3 模型展示只读）
+/** 模型配置惰性拉取：首次交互时才请求。
+ *  不在 onMounted 拉取——无 AI 服务的部署形态（如 dev 栈）下挂载期请求 502 会在浏览器
+ *  console 留网络错误日志，违反引擎零新增 console error 交付门槛；且配置仅展示用途。 */
+let configLoaded = false
+async function ensureConfigLoaded() {
+  if (configLoaded) return
+  configLoaded = true
   try {
     const cfg = await getAiConfig()
     store.setConfig(cfg)
   } catch {
-    // 配置拉取失败不阻断面板（功能可能仍可用）
+    // 配置拉取失败不阻断面板（功能可能仍可用）；下次交互不再重试本轮
   }
-})
+}
 
 /** 发送对话生成请求。 */
 async function send() {
   const text = inputText.value.trim()
   if (!text) return
   if (store.isGenerating) return
+  await ensureConfigLoaded()
 
   inputText.value = ''
   store.pushUserMessage(text)

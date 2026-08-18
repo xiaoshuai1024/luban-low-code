@@ -298,7 +298,7 @@ async function onDesignSelect(file: File) {
             placeholder="描述你想要的页面，如「做一个用户列表页」"
             @keydown.enter.exact.prevent="send"
           />
-          <ElButton type="primary" :loading="store.isGenerating" @click="send">发送</ElButton>
+          <ElButton class="ai-panel__send" type="primary" :loading="store.isGenerating" @click="send">发送</ElButton>
         </div>
       </ElTabPane>
 

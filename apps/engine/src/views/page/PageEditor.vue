@@ -754,7 +754,7 @@ watch(siteId, () => {
           >
             发布
           </ElButton>
-          <ElButton v-if="aiAssistantEnabled" type="primary" @click="aiPanelVisible = true">
+          <ElButton v-if="aiAssistantEnabled" class="meta-ai-btn" type="primary" @click="aiPanelVisible = true">
             AI 助手
           </ElButton>
           <ElButton @click="goBack">返回列表</ElButton>
@@ -835,7 +835,7 @@ watch(siteId, () => {
         <ElButton size="small" type="success" :loading="publishing" :disabled="isNew" @click="handlePublish">
           发布
         </ElButton>
-        <ElButton v-if="aiAssistantEnabled" size="small" type="primary" @click="aiPanelVisible = true">
+        <ElButton v-if="aiAssistantEnabled" class="meta-ai-btn" size="small" type="primary" @click="aiPanelVisible = true">
           AI 助手
         </ElButton>
       </div>

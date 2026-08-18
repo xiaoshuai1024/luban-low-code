@@ -5,7 +5,8 @@
 # 代理到 scripts/verify-plan-ssot.mjs journey-coverage:
 #   - 聚合所有 docs/superpowers/tasks/*.json 的 journeys（分母）
 #   - 扫描所有 spec 的 @J-<journey-id> 标签（分子）
-#   - 输出覆盖率矩阵；P0 旅程无 spec 绑定 → exit 1（阻断）
+#   - 输出覆盖率矩阵；P0 旅程无 spec 绑定且未声明 planned:false → exit 1（阻断）。
+#     planned:false（journey-registry 显式声明未实现）不计分母、不阻断，单列展示。
 #
 # 与 coverage-summary.sh（代码行覆盖率）正交，二者构成双维度门禁。
 # 详见 docs/dev/ssot-task-graph.md「旅程覆盖」。

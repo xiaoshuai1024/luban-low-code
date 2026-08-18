@@ -67,24 +67,24 @@ require_cmd_or_skip() {
   return 1
 }
 
-# 读取 JaCoCo index.xml 中的行覆盖率百分比（<counter type='LINE' missed=.. covered=..>）
+# 读取 JaCoCo 报告中的行覆盖率百分比。
+# jacoco.xml 的报告级 <counter type="LINE" missed=.. covered=../> 在 </report> 前最后
+# 出现（其后缀顺序：package 级 → report 级），故取「最后一个」LINE counter 即全量汇总。
+# 注意：不用 awk match($0, re, arr)（gawk 专属，macOS BSD awk 报 illegal statement）。
 jacoco_line_pct() {
-  local idx="$1"
-  [[ -f "$idx" ]] || return 1
-  # 兼容老（HTML 内嵌 XML 不再用）与新版本：直接读 target/site/jacoco/jacoco.xml 或 index.xml 同目录
-  local xml="$idx"
-  [[ -f "$xml" ]] || xml="${idx%/index.xml}/jacoco.xml"
-  [[ -f "$xml" ]] || xml="${idx}"
-  awk '
-    /<counter type="LINE"/ {
-      miss=0; cov=0
-      match($0, /missed="([0-9]+)"/, m); if (m[1]!="") miss=m[1]
-      match($0, /covered="([0-9]+)"/, c); if (c[1]!="") cov=c[1]
-      total=miss+cov
-      if (total>0) { printf "%.2f\n", (cov*100.0)/total; exit }
-    }
-  ' "$xml" 2>/dev/null
-  # 兜底：index.xml（旧版报告根节点有 counter 聚合）
+  local xml="$1"
+  [[ -f "$xml" ]] || xml="${xml%/index.html}/jacoco.xml"   # 兼容传 index.html 路径
+  [[ -f "$xml" ]] || xml="${xml%/index.xml}/jacoco.xml"    # 兼容传 index.xml / 目录
+  [[ -f "$xml" ]] || return 1
+  local last miss cov
+  last="$(grep -o '<counter type="LINE" missed="[0-9]*" covered="[0-9]*"/>' "$xml" 2>/dev/null | tail -1)"
+  [[ -n "$last" ]] || return 1
+  miss="${last#*missed=\"}"; miss="${miss%%\"*}"
+  cov="${last#*covered=\"}"; cov="${cov%%\"*}"
+  local total=$(( ${miss:-0} + ${cov:-0} ))
+  (( total > 0 )) || return 1
+  printf "%.2f\n" "$(echo "scale=2; ${cov} * 100 / ${total}" | bc -l 2>/dev/null)" 2>/dev/null \
+    || awk "BEGIN { printf \"%.2f\n\", ${cov} * 100 / ${total} }"
 }
 
 # 从 Go coverprofile 计算 total 行覆盖率（带 go 工具优先）
@@ -108,20 +108,28 @@ go_line_pct() {
   fi
 }
 
-# 从 TS coverage/coverage-summary.json 读 lines.pct（@vitest/istanbul 或 c8）
+# 从 TS coverage/coverage-summary.json 读 total.lines.pct（vitest json-summary / istanbul）
+# 格式：{"total": {"lines":{"total":1764,"covered":1046,"skipped":0,"pct":59.29},...}}
+# 取文件中第一个 "lines":{...} 对象（total 条目恒为首键）内的 pct；并做 0-100 区间
+# 兜底校验，防止字段错位时把 total 计数当百分比（如 1764）误报为门禁通过。
 ts_line_pct() {
   local pkg_dir="$1"
   local f
   for f in \
       "${pkg_dir}/coverage/coverage-summary.json" \
-      "${pkg_dir}/coverage/lcov-report/coverage-summary.json" \
-      "${pkg_dir}/coverage/coverage-final.json"; do
+      "${pkg_dir}/coverage/lcov-report/coverage-summary.json"; do
     if [[ -f "$f" ]]; then
-      # coverage-summary.json: { "total": { "lines": { "pct": 87.5 } } }
-      local pct
-      pct="$(awk -F'"pct"' '/"lines"/{print}' "$f" 2>/dev/null | head -1)"
-      pct="${pct#*:}"; pct="${pct%%,*}"; pct="${pct//[^0-9.]/}"
-      if [[ -n "$pct" ]]; then printf "%.2f\n" "$pct"; return 0; fi
+      local seg pct
+      # tr 展平换行：vitest json-summary 为紧凑单行，istanbul 经典输出为多行 pretty
+      seg="$(tr -d '\n\r' < "$f" | grep -o '"lines" *: *{[^}]*}' | head -1)"
+      [[ -n "$seg" ]] || continue
+      # "pct": 后紧跟数值（pretty 格式可能带空格）；取前导数字
+      # （避免字符类内 } 破坏 bash 参数展开解析）
+      pct="${seg#*\"pct\"*[:]}"
+      pct="$(printf '%s' "$pct" | grep -oE '^ *[0-9]+(\.[0-9]+)?' | tr -d ' ' || true)"
+      if [[ -n "$pct" ]] && awk "BEGIN{exit !($pct >= 0 && $pct <= 100)}"; then
+        printf "%.2f\n" "$pct"; return 0
+      fi
     fi
   done
   return 1
@@ -137,6 +145,12 @@ run_ts_pkg() {
     SUMMARY_ROWS+=("${name}|ts|${target}|-|SKIP|${html_path}"); return 0; fi
   if ! require_cmd_or_skip node; then
     SUMMARY_ROWS+=("${name}|ts|${target}|-|SKIP|${html_path}"); return 0; fi
+  # 无 test/test:coverage 脚本的包（如 website：官网范围单测另立）按设计跳过并提示，
+  # 不作为测试失败阻断（脚本头注释契约：无测试用例则跳过）。
+  if ! grep -q '"test":\|"test:coverage":' "${pkg_dir}/package.json" 2>/dev/null; then
+    printf "  ${YELLOW}⚠${NC} %s 无 test/test:coverage 脚本（未配置单测），跳过\n" "$name"
+    SUMMARY_ROWS+=("${name}|ts|${target}|-|SKIP|${html_path}"); return 0
+  fi
 
   local exit_code
   set +e
@@ -197,10 +211,10 @@ run_java_pkg() {
   fi
 
   local actual="-"
-  actual="$(jacoco_line_pct "${jacoco_idx%/index.xml}" 2>/dev/null || echo -)"
-  # jacoco_line_pct 接收 xml 路径，这里传目录让它兜底到 jacoco.xml
+  actual="$(jacoco_line_pct "${pkg_dir}/target/site/jacoco/jacoco.xml" 2>/dev/null || echo -)"
+  # 兜底：旧版报告根目录 index.xml
   if [[ "$actual" == "-" ]]; then
-    actual="$(jacoco_line_pct "${pkg_dir}/target/site/jacoco/jacoco.xml" 2>/dev/null || echo -)"
+    actual="$(jacoco_line_pct "${pkg_dir}/target/site/jacoco/index.xml" 2>/dev/null || echo -)"
   fi
   if [[ "$actual" == "-" ]]; then
     printf "  ${YELLOW}⚠${NC} %s 构建成功但未找到 JaCoCo 报告（pom 未配 jacoco-maven-plugin？）\n" "$name"

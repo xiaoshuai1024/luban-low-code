@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { ElCard, ElForm, ElFormItem, ElInput, ElSwitch, ElButton, ElMessage, ElTabs, ElTabPane } from 'element-plus'
 import { getSettings, updateSettings, type SystemSettings } from '@/api/settings'
 import ApiKeysTab from './ApiKeysTab.vue'
+import AiModelTab from './AiModelTab.vue'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -80,6 +81,9 @@ onMounted(fetchSettings)
       </ElTabPane>
       <ElTabPane label="API Key 管理">
         <ApiKeysTab />
+      </ElTabPane>
+      <ElTabPane label="AI 模型">
+        <AiModelTab />
       </ElTabPane>
     </ElTabs>
     <div class="settings__actions">

@@ -71,7 +71,13 @@ export async function POST(req: NextRequest) {
   try {
     const h = authHeaders(parseTokenFromRequest(req));
     if (!h) return unauthenticated();
-    const body = (await req.json()) as AbExperimentCreatePayload;
+    const body = (await req.json().catch(() => null)) as AbExperimentCreatePayload | null;
+    if (body === null) {
+      return NextResponse.json(
+        { code: "BAD_REQUEST", message: "Invalid JSON body" },
+        { status: 400 }
+      );
+    }
     const data = await callBackend<AbExperiment>("/ab/experiments", {
       method: "POST",
       headers: h,
@@ -79,12 +85,6 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json(data);
   } catch (e) {
-    if (e instanceof SyntaxError) {
-      return NextResponse.json(
-        { code: "BAD_REQUEST", message: "Invalid JSON body" },
-        { status: 400 }
-      );
-    }
     return toBackendResponse(e);
   }
 }

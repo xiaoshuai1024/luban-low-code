@@ -111,7 +111,7 @@ test.describe('用量上报与套餐超限拦截 @J-quota-enforcement', () => {
 });
 
 // ---------- quota 完整超限（plan §7.3 S6，signup-billing-onboarding）----------
-// 旅程标签：本文件已在上方 describe 绑定 @J-quota-enforcement，此处不重复。
+// 旅程标签：本 describe 与上方契约层 describe 均各自绑定 @J-quota-enforcement（--grep 旅程跑法双覆盖）。
 
 /**
  * 完整超限链路：新注册用户 → 订阅 e2e-tiny（quota_leads=1 / quota_pages=1，hidden）

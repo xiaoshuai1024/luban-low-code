@@ -31,11 +31,11 @@
 ## 5. 验证与对账
 
 - [x] 5.1 本地：mvn verify + BFF pnpm test/build 全绿
-- [ ] 5.2 push → CI：ci-test 四 job 绿 + e2e 6 spec（ab/billing/collab/fg×2/ai）23 用例全绿（循环修复直至全绿，禁止 skip/假绿）
+- [x] 5.2 push → CI：ci-test 四 job 绿 + e2e 6 spec（ab/billing/collab/fg×2/ai）23 用例全绿（循环修复直至全绿，禁止 skip/假绿）
 - [x] 5.3 任务图对账：v02 ab 条目 done（注重实现）、analytics 系 todo；e2e-coverage T10/T11 done
-- [ ] 5.4 归档本 change + PR（叠加 signup 分支之上，注明合并顺序）
+- [x] 5.4 归档本 change + PR（叠加 signup 分支之上，注明合并顺序）
 
 ## 6. 收口
 
-- [ ] 6.1 `/opsx:archive` 归档（specs 同步）
-- [ ] 6.2 汇总报告（e2e 门禁红→绿全程证据链）
+- [x] 6.1 `/opsx:archive` 归档（specs 同步）
+- [x] 6.2 汇总报告（e2e 门禁红→绿全程证据链）

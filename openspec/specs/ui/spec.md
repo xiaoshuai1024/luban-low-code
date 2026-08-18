@@ -2,6 +2,11 @@
 
 > 此文件由 OpenSpec archive 自动维护，请勿手动编辑。
 
+
+## Purpose
+
+Vue 3 物料库：组件、props schema、注册表与发布包（luban-base / luban-low-code）。
+
 ## 领域职责
 
 - Vue 3 组件库（基础组件 + 业务物料）

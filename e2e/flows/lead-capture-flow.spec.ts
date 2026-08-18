@@ -84,8 +84,9 @@ test.describe('流程B：线索闭环 @cross @J-leads', () => {
     await page.locator('tr', { hasText: CONTACT_NAME }).first().getByRole('button', { name: '详情' }).click();
     await expect(page.getByRole('heading', { name: '线索详情' })).toBeVisible();
 
-    // 字段一致：姓名（限定详情抽屉，避免与列表行重复匹配触发 strict mode）
-    const detailPanel = page.getByRole('dialog', { name: '线索详情' });
+    // 字段一致：姓名（限定详情区域，避免与列表行重复匹配触发 strict mode）
+    // 注：LeadDetail 为路由详情页（main 区域，字段表格+状态变更），非 dialog 抽屉
+    const detailPanel = page.getByRole('heading', { name: '线索详情' }).locator('..');
     await expect(detailPanel.getByText(CONTACT_NAME)).toBeVisible();
     // 脱敏：手机号 138****.... 格式（不暴露完整）
     const bodyText = await page.locator('body').textContent();

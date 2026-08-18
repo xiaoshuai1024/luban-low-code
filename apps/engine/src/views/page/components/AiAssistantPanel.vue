@@ -289,10 +289,11 @@ async function onDesignSelect(file: File) {
           </div>
         </div>
 
-        <!-- 输入区 -->
-        <div class="ai-panel__input">
+        <!-- 输入区（.ai-panel__input 落在真实 textarea 上——e2e fill 契约；容器用 input-area） -->
+        <div class="ai-panel__input-area">
           <ElInput
             v-model="inputText"
+            class="ai-panel__input"
             type="textarea"
             :rows="2"
             placeholder="描述你想要的页面，如「做一个用户列表页」"
@@ -453,7 +454,7 @@ async function onDesignSelect(file: File) {
     gap: 8px;
   }
 
-  &__input {
+  &__input-area {
     display: flex;
     gap: 8px;
     align-items: flex-end;

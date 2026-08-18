@@ -182,6 +182,8 @@ function onOtpInput(i: number, e: Event): void {
       : (e.target as HTMLInputElement).value
   const raw = source.replace(/\D/g, '')
   if (!raw) {
+    // 键入非数字/清空：同步清 model，避免 v-model 已写入的非法字符残留进 join('') 的验证码
+    otpDigits[i] = ''
     otpError.value = ''
     return
   }

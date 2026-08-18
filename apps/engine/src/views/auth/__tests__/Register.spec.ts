@@ -278,6 +278,19 @@ describe('Register.vue Step2 OTP', () => {
     }
   })
 
+  it('键入非数字 → 早退分支同步清 model，非法字符不残留', async () => {
+    const wrapper = await mountAtOtp()
+    const boxes = wrapper.findAll('.register-page__otp-box')
+    await boxes[0].setValue('7')
+    expect((boxes[0].element as HTMLInputElement).value).toBe('7')
+    // 已有数字的格键入字母：格内值与 model 一并清空
+    await boxes[0].setValue('a')
+    expect((boxes[0].element as HTMLInputElement).value).toBe('')
+    // 空格直接键入字母：同样不落入 model
+    await boxes[2].setValue('x')
+    expect((boxes[2].element as HTMLInputElement).value).toBe('')
+  })
+
   it('Backspace：空格退格 → 清除前一格并回焦前一格', async () => {
     const wrapper = await mountAtOtp()
     const boxes = wrapper.findAll('.register-page__otp-box')

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores'
 import { logout } from '@/api/auth'
@@ -71,6 +72,14 @@ function handleCommand(command: string | number | object) {
     router.push('/settings/billing')
   }
 }
+
+/** 套餐面板引用：dropdown 打开时重拉，保证每次展开看到最新用量（数据新鲜度） */
+const planPanelRef = ref<{ refresh: () => Promise<void> } | null>(null)
+
+/** ElDropdown visible-change 透传：仅在展开时刷新 */
+function onUserDropdownVisible(visible: boolean): void {
+  if (visible) planPanelRef.value?.refresh()
+}
 </script>
 
 <template>
@@ -103,7 +112,7 @@ function handleCommand(command: string | number | object) {
     <ElContainer direction="vertical">
       <ElHeader class="default-layout__header">
         <span class="default-layout__title">{{ $route.meta.title ?? '管理后台' }}</span>
-        <ElDropdown trigger="click" @command="handleCommand">
+        <ElDropdown trigger="click" @command="handleCommand" @visible-change="onUserDropdownVisible">
           <span class="default-layout__user">
             <span class="default-layout__avatar">
               {{ (userStore.name || userStore.username || '用户').slice(0, 1).toUpperCase() }}
@@ -128,7 +137,7 @@ function handleCommand(command: string | number | object) {
               </ElDropdownItem>
               <!-- 套餐+用量分组（signup-billing-onboarding §4.2.3）：自取数据，失败显「—」不阻断菜单 -->
               <ElDropdownItem divided disabled class="default-layout__plan-item">
-                <UserPlanPanel />
+                <UserPlanPanel ref="planPanelRef" />
               </ElDropdownItem>
               <ElDropdownItem command="billing">
                 <ElIcon><Tickets /></ElIcon>套餐与订单

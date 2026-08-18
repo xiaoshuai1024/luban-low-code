@@ -89,7 +89,7 @@ const compareRows = computed<CompareRow[]>(() => [
   {
     key: 'price',
     label: '价格',
-    values: plans.value.map((p) => `¥${(p.priceMonthly ?? 0) / 100}/月`),
+    values: plans.value.map((p) => `${formatAmount(p.priceMonthly)}/月`),
   },
   {
     key: 'pages',
@@ -175,6 +175,8 @@ async function switchPlan(target: Plan): Promise<void> {
   try {
     await createOrder(target.planCode)
     ElMessage.success(`已切换至 ${target.name}`)
+    // 新订单插到首页：回第 1 页再刷新，避免停留超界页码
+    ordersPage.value = 1
     const [meRes] = await Promise.all([getMyPlan(), loadOrders()])
     plan.value = meRes.data
   } catch (e) {

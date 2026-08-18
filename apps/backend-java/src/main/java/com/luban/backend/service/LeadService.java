@@ -1,5 +1,6 @@
 package com.luban.backend.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.luban.backend.dto.LeadResponse;
 import com.luban.backend.dto.LeadSubmitRequest;
@@ -28,7 +29,7 @@ import java.util.UUID;
 @Service
 public class LeadService {
 
-    /** P0 防刷默认值（P1 从 form.antiSpamJson 解析）。 */
+    /** 防刷默认值（form 未配置 antiSpamJson 或配置非法时回退，close-tech-debt-1 3.1）。 */
     static final int DEFAULT_RATE_MAX = 5;
     static final int DEFAULT_RATE_WINDOW_SEC = 60;
     private static final List<String> DEFAULT_DEDUP_KEYS = List.of("phone");
@@ -86,8 +87,9 @@ public class LeadService {
             throw BusinessException.leadDisabled();
         }
 
-        // 1. 防刷（IP + form 维度）
-        if (antiSpamService.isRateLimited(req.ip(), req.formId(), DEFAULT_RATE_MAX, DEFAULT_RATE_WINDOW_SEC)) {
+        // 1. 防刷（IP + form 维度；阈值/窗口取自 form.antiSpamJson，缺省/非法回退 5 次/60s）
+        AntiSpamConfig antiSpam = parseAntiSpamConfig(form);
+        if (antiSpamService.isRateLimited(req.ip(), req.formId(), antiSpam.max(), antiSpam.windowSeconds())) {
             throw BusinessException.leadSpamBlocked();
         }
 
@@ -302,6 +304,35 @@ public class LeadService {
             return objectMapper.readValue(plain, Map.class);
         } catch (Exception e) {
             return Map.of();
+        }
+    }
+
+    /** 防刷参数（form.antiSpamJson 的 {max, windowSeconds}）。 */
+    record AntiSpamConfig(int max, int windowSeconds) {
+        static final AntiSpamConfig DEFAULT =
+                new AntiSpamConfig(DEFAULT_RATE_MAX, DEFAULT_RATE_WINDOW_SEC);
+    }
+
+    /**
+     * 解析 form.antiSpamJson（FormService.create/update 已持久化）：
+     * null/空/非法 JSON/任一字段非正 → 整体回退默认 5 次/60s（与 parseDedupKeys 的容错口径一致，
+     * 配置错误不阻断正常提交）。字段缺失时逐字段回退默认值。
+     */
+    private AntiSpamConfig parseAntiSpamConfig(Form form) {
+        String json = form.getAntiSpamJson();
+        if (json == null || json.isBlank()) {
+            return AntiSpamConfig.DEFAULT;
+        }
+        try {
+            JsonNode node = objectMapper.readTree(json);
+            int max = node.path("max").asInt(DEFAULT_RATE_MAX);
+            int windowSeconds = node.path("windowSeconds").asInt(DEFAULT_RATE_WINDOW_SEC);
+            if (max <= 0 || windowSeconds <= 0) {
+                return AntiSpamConfig.DEFAULT;
+            }
+            return new AntiSpamConfig(max, windowSeconds);
+        } catch (Exception e) {
+            return AntiSpamConfig.DEFAULT;
         }
     }
 

@@ -1,16 +1,35 @@
 package com.luban.backend.service;
 
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
+import java.util.List;
 
 /**
  * 留资防刷：基于 Redis 的固定窗口频控（维度 IP + formId）+ 验证码占位。
+ * 计数与 TTL 通过单条 Lua 脚本原子执行（close-tech-debt-1 3.2），进程中断不会留下永不过期的计数键。
  * 纯逻辑通过 mock StringRedisTemplate 单测覆盖，不依赖 Redis 实际运行。
  */
 @Service
 public class AntiSpamService {
+
+    /**
+     * 固定窗口频控原子脚本：
+     * - INCR 计数；EXPIRE NX 仅在键无 TTL 时设置窗口（INCR 新建的键必无 TTL → 必设置；
+     *   历史遗留的无 TTL 键再次命中时自愈补上 TTL）。
+     * - 单脚本由 Redis 单线程原子执行，消除旧「increment + expire 两步」在进程中断后
+     *   留下永不过期键 → 该 IP/form 永久限流的问题。
+     * - EXPIRE NX 需 Redis 7.0+（部署栈为 redis:7-alpine，见 docker-compose.yml）。
+     */
+    static final String RATE_LIMIT_LUA =
+            "local count = redis.call('INCR', KEYS[1]) "
+            + "redis.call('EXPIRE', KEYS[1], ARGV[1], 'NX') "
+            + "return count";
+
+    private static final RedisScript<Long> RATE_LIMIT_SCRIPT =
+            new DefaultRedisScript<>(RATE_LIMIT_LUA, Long.class);
 
     private final StringRedisTemplate redis;
 
@@ -23,18 +42,15 @@ public class AntiSpamService {
      *
      * @param ip             客户端 IP（X-Forwarded-For）
      * @param formId         表单 ID
-     * @param max            窗口内最大允许次数
-     * @param windowSeconds  窗口秒数
+     * @param max            窗口内最大允许次数（&lt;=0 跳过频控）
+     * @param windowSeconds  窗口秒数（&lt;=0 跳过频控，防御非法配置）
      */
     public boolean isRateLimited(String ip, String formId, int max, int windowSeconds) {
-        if (ip == null || ip.isBlank() || formId == null || max <= 0) {
+        if (ip == null || ip.isBlank() || formId == null || max <= 0 || windowSeconds <= 0) {
             return false;
         }
-        String key = key(ip, formId);
-        Long count = redis.opsForValue().increment(key);
-        if (count != null && count == 1L) {
-            redis.expire(key, Duration.ofSeconds(windowSeconds));
-        }
+        Long count = redis.execute(RATE_LIMIT_SCRIPT, List.of(key(ip, formId)),
+                String.valueOf(windowSeconds));
         return count != null && count > max;
     }
 

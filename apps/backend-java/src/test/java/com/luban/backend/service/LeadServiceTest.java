@@ -218,6 +218,88 @@ class LeadServiceTest {
                 .isEqualTo("FORM_NOT_FOUND");
     }
 
+    // === 防刷参数配置化（close-tech-debt-1 3.1：form.antiSpamJson → AntiSpamService，回退 5/60s） ===
+
+    @Test
+    void submitPassesCustomAntiSpamConfigToRateLimiter() {
+        Form f = sampleForm();
+        f.setAntiSpamJson("{\"max\":2,\"windowSeconds\":30}");
+        when(formMapper.getById("form-1")).thenReturn(f);
+        when(antiSpamService.isRateLimited("1.2.3.4", "form-1", 2, 30)).thenReturn(false);
+        when(leadMapper.countByFormHashInWindow(eq("form-1"), anyString(), any())).thenReturn(0);
+
+        service.submit(req("13800000001"));
+
+        // 不再使用硬编码 5/60：表单配置 {max:2, windowSeconds:30} 生效
+        verify(antiSpamService).isRateLimited("1.2.3.4", "form-1", 2, 30);
+    }
+
+    @Test
+    void submitCustomAntiSpamConfigThirdHitSpamBlocked() {
+        Form f = sampleForm();
+        f.setAntiSpamJson("{\"max\":2,\"windowSeconds\":30}");
+        when(formMapper.getById("form-1")).thenReturn(f);
+        // max=2 窗口 30s：第 3 次提交（计数 3 > 2）被限流
+        when(antiSpamService.isRateLimited("1.2.3.4", "form-1", 2, 30)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.submit(req("13800000001")))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getCode())
+                .isEqualTo("LEAD_SPAM_BLOCKED"); // 429
+        verify(leadMapper, never()).insert(any());
+    }
+
+    @Test
+    void submitUnconfiguredFormFallsBackToDefaultAntiSpam() {
+        when(formMapper.getById("form-1")).thenReturn(sampleForm()); // antiSpamJson = null
+        when(antiSpamService.isRateLimited(anyString(), anyString(), anyInt(), anyInt())).thenReturn(false);
+        when(leadMapper.countByFormHashInWindow(eq("form-1"), anyString(), any())).thenReturn(0);
+
+        service.submit(req("13800000001"));
+
+        verify(antiSpamService).isRateLimited("1.2.3.4", "form-1",
+                LeadService.DEFAULT_RATE_MAX, LeadService.DEFAULT_RATE_WINDOW_SEC);
+    }
+
+    @Test
+    void submitInvalidAntiSpamJsonFallsBackToDefault() {
+        Form f = sampleForm();
+        f.setAntiSpamJson("{not-valid-json");
+        when(formMapper.getById("form-1")).thenReturn(f);
+        when(antiSpamService.isRateLimited(anyString(), anyString(), anyInt(), anyInt())).thenReturn(false);
+        when(leadMapper.countByFormHashInWindow(eq("form-1"), anyString(), any())).thenReturn(0);
+
+        service.submit(req("13800000001"));
+
+        verify(antiSpamService).isRateLimited("1.2.3.4", "form-1", 5, 60);
+    }
+
+    @Test
+    void submitNonPositiveAntiSpamValuesFallBackToDefault() {
+        Form f = sampleForm();
+        f.setAntiSpamJson("{\"max\":0,\"windowSeconds\":-5}");
+        when(formMapper.getById("form-1")).thenReturn(f);
+        when(antiSpamService.isRateLimited(anyString(), anyString(), anyInt(), anyInt())).thenReturn(false);
+        when(leadMapper.countByFormHashInWindow(eq("form-1"), anyString(), any())).thenReturn(0);
+
+        service.submit(req("13800000001"));
+
+        verify(antiSpamService).isRateLimited("1.2.3.4", "form-1", 5, 60);
+    }
+
+    @Test
+    void submitPartiallyConfiguredAntiSpamFallsBackPerField() {
+        Form f = sampleForm();
+        f.setAntiSpamJson("{\"max\":2}"); // windowSeconds 缺省 → 默认 60
+        when(formMapper.getById("form-1")).thenReturn(f);
+        when(antiSpamService.isRateLimited(anyString(), anyString(), anyInt(), anyInt())).thenReturn(false);
+        when(leadMapper.countByFormHashInWindow(eq("form-1"), anyString(), any())).thenReturn(0);
+
+        service.submit(req("13800000001"));
+
+        verify(antiSpamService).isRateLimited("1.2.3.4", "form-1", 2, 60);
+    }
+
     // === lead_capture gate（wire-e2e-feature-gaps 1.3：关闭 → LEAD_DISABLED） ===
 
     @Test

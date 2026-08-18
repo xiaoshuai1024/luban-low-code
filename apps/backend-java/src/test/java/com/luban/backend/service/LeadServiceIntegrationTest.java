@@ -25,6 +25,11 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * LeadService 端到端集成测试：真实 MySQL（schema.sql 建表）+ 真实 Redis（防刷频控）。
@@ -176,6 +181,24 @@ class LeadServiceIntegrationTest {
         // H2 验证：merge→update 路径（findLatestByFormHash + updateContactByDedup SQL 跑通），无第二条 lead
         List<Lead> leads = leadMapper.listByQuery(rejectForm.getSiteId(), null, mergeFormId, null, 0, 10);
         assertThat(leads).hasSize(1); // 若误 insert 会撞 uk_form_dedup 抛异常或产生 2 行
+    }
+
+    // === 防刷参数配置化（close-tech-debt-1 3.1：anti_spam_json 持久化往返 + submit 链路解析） ===
+
+    @Test
+    void submitParsesAntiSpamConfigFromPersistedForm() {
+        String formId = seed();
+        Form form = formMapper.getById(formId);
+        form.setAntiSpamJson("{\"max\":2,\"windowSeconds\":30}");
+        formMapper.update(form);
+
+        when(antiSpamService.isRateLimited(anyString(), eq(formId), eq(2), eq(30))).thenReturn(false);
+        leadService.submit(new LeadSubmitRequest(
+                formId, Map.of("phone", "13800022222"), null, null, null, uniqueIp(), "v-aspam", null));
+
+        // H2 CLOB 往返后 submit 链路读到配置值（不再硬编码默认 5/60）
+        verify(antiSpamService).isRateLimited(anyString(), eq(formId), eq(2), eq(30));
+        verify(antiSpamService, never()).isRateLimited(anyString(), eq(formId), eq(5), eq(60));
     }
 
     @Test

@@ -130,6 +130,27 @@ public class PageService {
         }
         return PageResponse.fromEntity(page);
     }
+    /** 下线页面（published→archived，幂等）。下线后公开端点不再可见（仅 published 可读）。 */
+    @Transactional(rollbackFor = Exception.class)
+    public PageResponse unpublish(String siteId, String pageId) {
+        ownershipGuard.assertCanWrite(siteId);
+        Page page = pageMapper.getByIdAndSiteId(pageId, siteId);
+        if (page == null) throw BusinessException.pageNotFound();
+        Instant now = Instant.now();
+        int n = pageMapper.updateStatus(pageId, siteId, "archived", now);
+        if (n == 0) throw BusinessException.pageNotFound();
+        page.setStatus("archived");
+        page.setUpdatedAt(now);
+        return PageResponse.fromEntity(page);
+    }
+
+    /** 预览页面（返回当前内容，draft 亦可读；供编辑器预览/外链审阅）。 */
+    public PageResponse preview(String siteId, String pageId) {
+        ownershipGuard.assertVisible(siteId);
+        Page page = pageMapper.getByIdAndSiteId(pageId, siteId);
+        if (page == null) throw BusinessException.pageNotFound();
+        return PageResponse.fromEntity(page);
+    }
 
     /**
      * 删除页面（事务内级联删表单）。forms.page_id FK（RESTRICT，无 CASCADE）：

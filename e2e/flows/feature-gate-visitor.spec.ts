@@ -18,16 +18,33 @@ const BFF_BASE = process.env.LUBAN_E2E_BFF_URL ?? 'http://127.0.0.1:3100';
 const ACCOUNT = process.env.LUBAN_E2E_ACCOUNT!;
 const PASSWORD = process.env.LUBAN_E2E_PASSWORD!;
 
-// v02 已 seed 的测试站点（见 v02-funnel.spec.ts）
-const TEST_SITE_ID = '33111bfc-778d-4efc-a1fa-5c49f0437307';
-
+// 自建测试站点（原硬编码 dev 库 UUID 已随环境失效；fresh e2e 库须自建，含清理）
+const RUN_ID = `e2e-fgv-${Date.now()}`;
+let TEST_SITE_ID = '';
 let token = '';
+let setupCtx: APIRequestContext;
 
 test.beforeAll(async () => {
   if (!ACCOUNT || !PASSWORD) throw new Error('[feature-gate] 缺 LUBAN_E2E_ACCOUNT/PASSWORD');
-  const ctx = await apiRequest.newContext();
-  token = await login(ctx);
-  await ctx.dispose();
+  setupCtx = await apiRequest.newContext();
+  token = await login(setupCtx);
+  const siteRes = await setupCtx.post(`${BFF_BASE}/api/sites`, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    data: { name: `${RUN_ID}-site`, slug: `${RUN_ID}-site` },
+  });
+  TEST_SITE_ID = ((await siteRes.json()) as { id?: string }).id ?? '';
+  if (!TEST_SITE_ID) throw new Error('[feature-gate] 测试站点创建失败');
+});
+
+test.afterAll(async () => {
+  if (TEST_SITE_ID && setupCtx) {
+    await setupCtx
+      .delete(`${BFF_BASE}/api/sites/${TEST_SITE_ID}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .catch(() => {});
+    await setupCtx.dispose().catch(() => {});
+  }
 });
 
 test.describe('访客侧 FeatureGate @J-feature-gate-visitor', () => {
